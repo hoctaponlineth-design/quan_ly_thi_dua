@@ -1,0 +1,971 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    
+    <!-- CẤU HÌNH PWA - APP HÓA TRÌNH DUYỆT -->
+    <link rel="manifest" href="/manifest.json">
+    <meta name="theme-color" content="#dc3545">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="mobile-web-app-capable" content="yes"> 
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Sổ Đầu Bài">
+
+    <title>Chấm Điểm Thi Đua - Đội Sao Đỏ</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <style>
+        body { 
+            background-color: #f0f2f5; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif; 
+            padding-bottom: 90px; -webkit-tap-highlight-color: transparent; scroll-behavior: smooth;
+        }
+        
+        .app-header { 
+            background: linear-gradient(135deg, #dc3545, #c82333); color: white; 
+            padding: 15px 20px; padding-top: max(15px, env(safe-area-inset-top));
+            position: sticky; top: 0; z-index: 1000; box-shadow: 0 4px 15px rgba(220,53,69,0.3);
+            border-bottom-left-radius: 20px; border-bottom-right-radius: 20px;
+        }
+        .app-title { margin: 0; font-weight: 800; font-size: 19px; letter-spacing: 0.5px; }
+        
+        .user-welcome { background: #fffcf2; margin: 15px; padding: 18px; border-radius: 16px; box-shadow: 0 4px 12px rgba(0,0,0,0.04); border-left: 5px solid #0d6efd; border: 1px solid #ffe69c; }
+        
+        .accordion-item { border: none; border-radius: 16px !important; margin: 0 15px 15px 15px; box-shadow: 0 4px 12px rgba(0,0,0,0.04); overflow: hidden; }
+        .accordion-button { font-weight: 700; font-size: 16px; color: #004080; padding: 18px 15px; background-color: #ffffff; }
+        .accordion-button:not(.collapsed) { background-color: #eff5ff; color: #0d6efd; box-shadow: none; border-bottom: 2px solid #0d6efd; }
+        
+        .form-control, .form-select { border-radius: 8px; padding: 10px 12px; font-size: 14px; box-shadow: inset 0 1px 2px rgba(0,0,0,0.02); }
+        .btn-submit { border-radius: 12px; padding: 14px; font-weight: 800; font-size: 15px; letter-spacing: 0.5px; transition: transform 0.1s; }
+        .btn-submit:active { transform: scale(0.97); }
+        .btn-submit:disabled { opacity: 0.8; cursor: not-allowed; }
+
+        .card-custom { border-radius: 10px; overflow: hidden; box-shadow: 0 2px 5px rgba(0,0,0,0.02); margin-bottom: 15px; }
+        .card-custom-header { padding: 10px 15px; font-weight: 800; font-size: 14px; color: white; display: flex; justify-content: space-between; align-items: center;}
+        
+        .table-scores th { font-size: 11px; padding: 8px 4px; text-align: center; vertical-align: middle; background: #e9ecef; border-bottom: 1px solid #dee2e6;}
+        .table-scores td { padding: 4px; vertical-align: middle; border-bottom: 1px solid #dee2e6;}
+        .input-score { text-align: center; font-weight: 800; font-size: 14px; padding: 5px; height: 35px; transition: 0.2s;}
+        .input-score:focus { transform: scale(1.1); z-index: 10; position: relative; box-shadow: 0 0 10px rgba(13,110,253,0.3);}
+        .input-subj { font-weight: 700; font-size: 13px; padding: 5px 8px; height: 35px; color: #004080;}
+
+        .bottom-nav {
+            position: fixed; bottom: 0; left: 0; right: 0;
+            background: rgba(255, 255, 255, 0.95); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
+            box-shadow: 0 -2px 15px rgba(0,0,0,0.05); display: flex; justify-content: space-around; align-items: center;
+            padding: 10px 0; padding-bottom: max(10px, env(safe-area-inset-bottom));
+            z-index: 1050; border-top-left-radius: 20px; border-top-right-radius: 20px;
+        }
+        .nav-item { text-align: center; color: #adb5bd; font-size: 11px; text-decoration: none; flex: 1; font-weight: 600; display: flex; flex-direction: column; align-items: center; gap: 4px; }
+        .nav-item.active { color: #dc3545; }
+        .nav-item i { font-size: 22px; transition: transform 0.2s; }
+
+        .toast-container { position: fixed; top: env(safe-area-inset-top, 20px); left: 50%; transform: translateX(-50%); z-index: 2000; width: 90%; max-width: 400px; display: flex; flex-direction: column; gap: 10px;}
+        .native-toast { background: rgba(40, 167, 69, 0.95); backdrop-filter: blur(5px); color: white; border-radius: 30px; padding: 12px 20px; font-weight: 700; font-size: 14px; text-align: center; box-shadow: 0 4px 15px rgba(0,0,0,0.15); animation: slideDown 0.4s forwards; display: flex; align-items: center; justify-content: center; gap: 8px;}
+        .native-toast.error { background: rgba(220, 53, 69, 0.95); }
+        @keyframes slideDown { from { transform: translateY(-50px); opacity: 0; } to { transform: translateY(10px); opacity: 1; } }
+        @keyframes slideUpOut { from { transform: translateY(10px); opacity: 1; } to { transform: translateY(-50px); opacity: 0; } }
+
+        .modal-dialog-bottom { display: flex; align-items: flex-end; min-height: calc(100% - 1rem); margin: 0;}
+        .modal.fade .modal-dialog-bottom { transform: translate(0, 50px); transition: transform 0.3s ease-out; }
+        .modal.show .modal-dialog-bottom { transform: none; }
+        
+        .quick-tag { border: 1px solid #dc3545; color: #dc3545; border-radius: 8px; padding: 4px 8px; font-size: 11px; font-weight: bold; cursor: pointer; transition: 0.2s; display: inline-block; margin-bottom: 5px; margin-right: 3px; background: white;}
+        .quick-tag:active { transform: scale(0.95); }
+        
+        .class-quick-btn { transition: all 0.15s ease-in-out; }
+        .class-quick-btn:active { transform: scale(0.92); }
+        .modal-quick-tag { transition: all 0.2s; }
+        .modal-quick-tag.active { background-color: #dc3545 !important; color: white !important; box-shadow: 0 4px 10px rgba(220,53,69,0.3); border-color: #c82333 !important; transform: scale(1.05); }
+    </style>
+</head>
+<body>
+
+    <div class="app-header">
+        <div class="d-flex align-items-center justify-content-center w-100">
+            <i class="fa-solid fa-shield-halved fs-4 me-2"></i>
+            <div>
+                <div class="app-title">Chấm Điểm Thi Đua</div>
+                <div style="font-size: 11px; opacity: 0.9; text-align: center;">Hệ thống Đội Sao đỏ</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="toast-container" id="toastContainer"></div>
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            <script>
+                document.addEventListener("DOMContentLoaded", function() {
+                    {% for category, message in messages %}
+                        showNativeToast("{{ message }}", "{{ category }}");
+                    {% endfor %}
+                });
+            </script>
+        {% endif %}
+    {% endwith %}
+
+    <div id="homeSection">
+        <div class="user-welcome">
+            <!-- NÚT ĐỔI MẬT KHẨU TÍCH HỢP TRỰC TIẾP -->
+            <div class="d-flex justify-content-between align-items-start mb-3">
+                <h6 class="fw-bold text-dark m-0" style="line-height: 1.5;">👤 Xin chào, SĐ:<br>{{ session.get('full_name') | replace('SĐ: ', '') }}!</h6>
+                <button class="btn btn-sm text-primary bg-primary bg-opacity-10 border-0 rounded-pill px-3 py-1 fw-bold shadow-sm" onclick="openChangePasswordModal()" style="font-size: 12px; transition: transform 0.1s;">
+                    <i class="fa-solid fa-key me-1"></i> Đổi MK
+                </button>
+            </div>
+            
+            {% if assignment %}
+                <div class="text-muted small mb-3"><i class="fa-regular fa-calendar-check me-1"></i> Đang mở: <strong class="text-primary">{{ current_week }}</strong></div>
+                
+                <div class="fw-bold text-dark mb-1" style="font-size: 13px;"><i class="fa-solid fa-location-dot text-danger me-1"></i> Nhiệm vụ của bạn:</div>
+                <div class="mb-1">
+                    <div class="text-danger fw-bold m-0" style="font-size: 22px;">{{ assignment.duty_area.name if assignment.duty_area else 'Chưa phân cụm' }}</div>
+                </div>
+                <div class="text-muted small fw-bold"><i class="fa-regular fa-clock me-1"></i> Ca trực: {{ assignment.shift }}</div>
+                
+                {% if start_date and end_date %}
+                <div class="mt-2 text-muted" style="font-size: 13.5px;">
+                    <i class="fa-regular fa-calendar-days me-1 text-primary"></i> 
+                    Áp dụng: <span class="fw-bold text-dark">{{ start_date }}</span> <i class="fa-solid fa-arrow-right-long text-secondary mx-1" style="font-size: 10px;"></i> <span class="fw-bold text-dark">{{ end_date }}</span>
+                </div>
+                {% endif %}
+                
+            {% else %}
+                <div class="alert alert-secondary mt-3 mb-0 border-0 p-3 rounded-4" style="font-size: 14px; background: #e9ecef;">
+                    <i class="fa-solid fa-mug-hot me-1 text-secondary"></i> Tuần này bạn không có lịch phân công trực. Hãy nghỉ ngơi nhé!
+                </div>
+            {% endif %}
+        </div>
+
+        <div class="px-3 mt-3">
+            <button type="button" class="btn w-100 fw-bold shadow-sm d-flex align-items-center justify-content-center gap-2" 
+                    style="background: #20c997; color: white; border-radius: 12px; padding: 14px; font-size: 16px;"
+                    data-bs-toggle="modal" data-bs-target="#quickLogModal" onclick="triggerHaptic(30)">
+                <i class="fa-solid fa-bolt fs-4 text-warning"></i>
+                <span>TRỰC CỔNG (GHI NHẬN NHANH)</span>
+            </button>
+        </div>
+    </div>
+
+    {% if assignment and target_classes %}
+        <div class="px-3 mb-2 mt-4" id="taskSection">
+            <h6 class="fw-bold m-0" style="color: #6c757d; font-size: 12px; letter-spacing: 0.5px;">📚 CHẤM CHI ĐOÀN:</h6>
+        </div>
+
+        <div class="accordion" id="classesAccordion">
+            {% for b in target_classes %}
+            {% set sc = existing_scores.get(b.id) %}
+            <div class="accordion-item">
+                <h2 class="accordion-header" id="heading{{ b.id }}">
+                    <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapse{{ b.id }}" onclick="triggerHaptic(20);">
+                        <i class="fa-solid fa-school-flag me-3 fs-5" style="color: #004080;"></i> 
+                        <span class="fs-5 fw-bold">Chi đoàn {{ b.name }}</span>
+                        {% if sc %}
+                            <span class="badge bg-success ms-auto me-2" style="font-size: 11px;">Đã nộp</span>
+                        {% endif %}
+                    </button>
+                </h2>
+                <div id="collapse{{ b.id }}" class="accordion-collapse collapse" data-bs-parent="#classesAccordion">
+                    <div class="accordion-body p-2" style="background-color: #f8f9fa;">
+                        
+                        <form method="POST" action="/submit_mobile_sao_do" id="form_submit_{{ b.id }}">
+                            <input type="hidden" name="week_name" value="{{ current_week }}">
+                            <input type="hidden" name="branch_id" value="{{ b.id }}">
+                            <input type="hidden" name="raw_scores_json" id="raw_scores_json_{{ b.id }}" value="[]">
+                            <input type="hidden" name="c10" id="hidden_c10_{{ b.id }}" value="0">
+                            <input type="hidden" name="c9" id="hidden_c9_{{ b.id }}" value="0">
+                            <input type="hidden" name="c8" id="hidden_c8_{{ b.id }}" value="0">
+
+                            <input type="hidden" id="old_penalty_{{ b.id }}" value="{{ sc.score_tru if sc else 0 }}">
+                            <div id="autoPenaltyPreview_{{ b.id }}" class="d-none" data-penalty="0"></div>
+
+                            <div id="hidden_viols_{{ b.id }}">
+                                {% for cat in violations_bank %}
+                                    <input type="hidden" name="viol_{{ cat.id }}" id="viol_{{ b.id }}_{{ cat.id }}" value="0">
+                                    <input type="hidden" name="student_{{ cat.id }}" id="student_{{ b.id }}_{{ cat.id }}" value="">
+                                {% endfor %}
+                                <input type="hidden" name="manual_note" id="manual_note_{{ b.id }}" value="">
+                            </div>
+
+                            <!-- 1. BẢNG MÔN HỌC -->
+                            <div class="card-custom" style="border: 1.5px solid #0d6efd;">
+                                <div class="card-custom-header" style="background-color: #0d6efd;">
+                                    <span><i class="fa-solid fa-book"></i> Điểm Học Tập (Sổ đầu bài)</span>
+                                </div>
+                                <div class="bg-white p-2">
+                                    <table class="table table-borderless table-scores w-100 m-0">
+                                        <thead>
+                                            <tr>
+                                                <th style="width: 36%;">Môn học</th>
+                                                <th style="width: 17%; color: #dc3545;">SL 10</th>
+                                                <th style="width: 17%; color: #0d6efd;">SL 9</th>
+                                                <th style="width: 17%; color: #6c757d;">SL 8</th>
+                                                <th style="width: 13%;">Xóa</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="subjectsBody_{{ b.id }}">
+                                            <tr><td colspan="5" class="text-center py-3 text-muted"><i class="fa-solid fa-spinner fa-spin"></i> Đang tải...</td></tr>
+                                        </tbody>
+                                    </table>
+                                    <div class="mt-2 text-center">
+                                        <button type="button" class="btn btn-sm fw-bold w-100" style="color: #0d6efd; border: 1px dashed #0d6efd; background: #f8f9fa;" onclick="addSubjectRow('{{ b.id }}', '{{ b.group }}')">
+                                            <i class="fa-solid fa-plus"></i> Thêm môn học
+                                        </button>
+                                    </div>
+                                    <div class="alert alert-success text-center fw-bold py-2 mt-2 mb-0" id="liveCounter_{{ b.id }}" style="font-size: 13px; border-radius: 8px;">
+                                        Tổng số con điểm Tốt: 0 / 14
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- 2. ĐÁNH GIÁ TUẦN -->
+                            <div class="card-custom" style="border: 1.5px solid #fd7e14;">
+                                <div class="card-custom-header" style="background-color: #fd7e14;">
+                                    <span><i class="fa-solid fa-scale-balanced"></i> Đánh giá Tuần</span>
+                                </div>
+                                <div class="bg-white p-2">
+                                    <select class="form-select fw-bold text-danger border-warning bg-light" name="rating" onchange="calculateFinalScore('{{ b.id }}', '{{ b.group }}')">
+                                        <option value="Bình thường" {% if not sc or sc.week_rating == 'Bình thường' %}selected{% endif %}>⚪ Bình thường</option>
+                                        <option value="Tuần Khá" {% if sc and sc.week_rating == 'Tuần Khá' %}selected{% endif %}>🟡 Đạt loại: Tuần Khá</option>
+                                        <option value="Tuần Tốt" {% if sc and sc.week_rating == 'Tuần Tốt' %}selected{% endif %}>🟢 Đạt loại: Tuần Tốt</option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            <!-- 3. QUÉT LỖI TỰ ĐỘNG & GHI CHÚ TÊN HỌC SINH -->
+                            <div class="fw-bold mb-2 text-dark" style="font-size: 14px;"><i class="fa-solid fa-triangle-exclamation text-danger me-1"></i> 3. Quét Lỗi Vi Phạm & Ghi Chú</div>
+                            <div class="mb-4 bg-white p-2 rounded-3 border">
+                                
+                                <div class="text-muted small mb-2" style="font-size: 12px;">
+                                    <i class="fa-solid fa-circle-info text-primary"></i> Gõ lỗi cần THÊM MỚI hoặc bấm thẻ nhanh. Để ghi tên học sinh vào Sổ đen, hãy đặt trong ngoặc vuông, ví dụ: <code class="text-danger">Đi học muộn [Nguyễn Văn A]</code>
+                                </div>
+                                <div style="position: relative;">
+                                    <textarea class="form-control border-2 border-danger border-opacity-50 fw-bold text-danger mb-2" id="detailNote_{{ b.id }}" rows="3" placeholder="Gõ thêm lỗi mới kèm tên học sinh (nếu có)..." oninput="handleNoteInput('{{ b.id }}', '{{ b.group }}')">{{ sc.note if sc else '' }}</textarea>
+                                    <div id="suggestionBox_{{ b.id }}" class="list-group" style="position: absolute; top: 100%; left: 0; z-index: 1000; width: 100%; display: none; max-height: 150px; overflow-y: auto; box-shadow: 0 4px 10px rgba(0,0,0,0.15);"></div>
+                                </div>
+                                
+                                <div class="d-flex flex-wrap mt-1">
+                                    <span class="badge bg-secondary text-white mb-1 w-100 text-start" style="font-size: 10px;">Thẻ chọn nhanh:</span>
+                                    {% for cat in violations_bank %}
+                                        {% if cat.point_type == 'Điểm trừ' %}
+                                            <span class="quick-tag" onclick="appendQuickTag('{{ b.id }}', '{{ b.group }}', '{{ cat.name }}')">{{ cat.name }} (-{{ cat.penalty_points|int if cat.penalty_points%1==0 else cat.penalty_points }})</span>
+                                        {% endif %}
+                                    {% endfor %}
+                                </div>
+                            </div>
+
+                            <!-- 4. KHỐI TỔNG ĐIỂM DỰ KIẾN (LIVE) -->
+                            <div class="card-custom mb-3" style="border: 2px solid #20c997; border-radius: 12px; box-shadow: 0 4px 8px rgba(32, 201, 151, 0.15);">
+                                <div class="p-3 d-flex justify-content-between align-items-center bg-white" style="border-radius: 10px;">
+                                    <div class="d-flex align-items-center">
+                                        <div class="bg-success bg-opacity-10 text-success rounded-circle d-flex justify-content-center align-items-center me-2" style="width: 35px; height: 35px;">
+                                            <i class="fa-solid fa-calculator"></i>
+                                        </div>
+                                        <span class="fw-bold text-dark" style="font-size: 14px;">Tổng điểm dự kiến:</span>
+                                    </div>
+                                    <span class="fw-bold fs-3 text-danger" id="live_total_score_{{ b.id }}">{{ sc.total_score if sc else 100.0 }}</span>
+                                </div>
+                            </div>
+
+                            <button type="button" class="btn btn-primary w-100 btn-submit text-white mt-1" style="background-color: #0d6efd;" onclick="submitFormSafe(this, '{{ b.id }}', '{{ b.name }}', '{{ b.group }}')">
+                                <i class="fa-solid fa-floppy-disk me-2"></i> CHUYỂN LÊN HỆ THỐNG
+                            </button>
+                        </form>
+                        
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    {% elif assignment %}
+        <div class="alert alert-warning m-3 shadow-sm border-warning rounded-4" style="font-size: 14px;">
+            <i class="fa-solid fa-circle-exclamation me-1"></i> Không tìm thấy danh sách Lớp học. Hãy báo cho Bí thư Đoàn trường kiểm tra Sơ đồ Cụm trực.
+        </div>
+    {% endif %}
+
+    <!-- ĐÁNH GIÁ ĐỒNG ĐỘI (KPI 360) ĐÃ MỞ KHÓA -->
+    {% if assignment %}
+    <div class="px-3 mb-4 mt-4" id="teamSection">
+        <h6 class="fw-bold m-0" style="color: #6c757d; font-size: 12px; letter-spacing: 0.5px;">🤝 ĐÁNH GIÁ ĐỒNG ĐỘI CÙNG CA:</h6>
+        
+        {% if teammates %}
+            <div class="alert alert-info mt-2 border-0 shadow-sm rounded-4" style="font-size: 13px; background-color: #e0f2fe; color: #0369a1;">
+                <i class="fa-solid fa-circle-info me-1"></i> Việc đánh giá được bảo mật hoàn toàn ẩn danh, chỉ Bí thư Đoàn trường mới xem được kết quả.
+            </div>
+            
+            <div class="d-flex flex-column gap-3 mt-3">
+                {% for mate in teammates %}
+                <div class="bg-white p-3 rounded-4 shadow-sm border d-flex justify-content-between align-items-center">
+                    <div class="d-flex align-items-center gap-3">
+                        <div class="bg-primary bg-opacity-10 text-primary rounded-circle d-flex align-items-center justify-content-center fw-bold" style="width: 45px; height: 45px; font-size: 18px;">
+                            {{ mate.red_star.full_name[0] if mate.red_star.full_name else 'S' }}
+                        </div>
+                        <div>
+                            <h6 class="fw-bold m-0 text-dark" style="font-size: 15px;">{{ mate.red_star.full_name }}</h6>
+                            <small class="text-muted" style="font-size: 12px;"><i class="fa-solid fa-school me-1"></i> Lớp {{ mate.red_star.branch.name if mate.red_star.branch else 'Không rõ' }}</small>
+                        </div>
+                    </div>
+                    <button type="button" class="btn btn-sm text-warning bg-warning bg-opacity-10 border border-warning fw-bold rounded-pill px-3 py-2" style="transition: all 0.15s ease-in-out;"
+                            onclick="openTeamEvalModal('{{ mate.red_star.id }}', '{{ mate.red_star.full_name }}', '{{ current_week }}')">
+                        <i class="fa-solid fa-star"></i> Chấm
+                    </button>
+                </div>
+                {% endfor %}
+            </div>
+        {% else %}
+            <!-- HIỂN THỊ THÔNG BÁO NẾU ĐI TRỰC MỘT MÌNH THAY VÌ ẨN ĐI -->
+            <div class="alert alert-secondary mt-3 border-0 shadow-sm rounded-4 text-center p-4" style="background-color: #e9ecef;">
+                <i class="fa-solid fa-user-slash fs-1 text-muted mb-3 opacity-50"></i>
+                <div class="text-secondary fw-bold" style="font-size: 14px;">Bạn đang trực một mình</div>
+                <div class="text-muted mt-1" style="font-size: 13px;">Không có đồng đội nào được phân công cùng Cụm và cùng Ca trực với bạn trong tuần này.</div>
+            </div>
+        {% endif %}
+    </div>
+    {% endif %}
+
+    <!-- MODAL TRỰC CỔNG TỐC ĐỘ CAO CÓ TÌM KIẾM THÔNG MINH -->
+    <div class="modal fade" id="quickLogModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-bottom m-0" style="position: absolute; bottom: 0; width: 100%;">
+            <div class="modal-content border-0" style="border-top-left-radius: 24px; border-top-right-radius: 24px; box-shadow: 0 -10px 25px rgba(0,0,0,0.1);">
+                <div class="modal-header border-0 pb-0 justify-content-center position-relative">
+                    <div style="width: 40px; height: 5px; background: #dee2e6; border-radius: 10px; position: absolute; top: 12px;"></div>
+                    <h5 class="modal-title fw-bold text-dark mt-3 fs-5"><i class="fa-solid fa-bolt text-warning me-1"></i> Trực Cổng (Ghi Nhanh)</h5>
+                    <button type="button" class="btn-close position-absolute top-0 end-0 mt-3 me-3" data-bs-dismiss="modal"></button>
+                </div>
+                
+                <form action="/sao_do_quick_submit_form" method="POST" onsubmit="triggerHaptic(40); let btn=document.getElementById('btnSubmitQuickLog'); btn.disabled=true; btn.innerHTML='<i class=\'fa-solid fa-spinner fa-spin me-2\'></i> ĐANG XỬ LÝ...';">
+                    <div class="modal-body pt-2 pb-4">
+                        <input type="hidden" name="week_name" value="{{ current_week }}">
+                        
+                        <!-- 1. CHỌN LỚP CÓ TÌM KIẾM -->
+                        <div class="mb-3">
+                            <div class="d-flex justify-content-between align-items-end mb-1">
+                                <label class="form-label small fw-bold text-secondary mb-0">1. Chọn Lớp vi phạm:</label>
+                            </div>
+                            <input type="hidden" name="branch_id" id="quickSelectedBranchId" required>
+                            
+                            <!-- Thanh tìm kiếm lớp -->
+                            <input type="text" class="form-control form-control-sm mb-2" id="searchClassInput" placeholder="🔍 Gõ nhanh tên lớp (VD: 10A1)..." onkeyup="filterQuickClasses()" style="border-radius: 8px; background-color: #f8f9fa;">
+
+                            <div class="p-2 mb-2 rounded-3 text-center fw-bold text-danger border border-danger border-opacity-50 bg-light" id="quickSelectedBranchLabel" style="font-size: 14px;">
+                                ⚠️ Chưa chọn lớp nào
+                            </div>
+
+                            <div class="p-2 bg-white border rounded-3" style="max-height: 160px; overflow-y: auto;">
+                                <div class="d-flex flex-wrap gap-1 justify-content-start" id="quickClassGrid">
+                                    {% if all_branches %}
+                                        {% for b in all_branches %}
+                                        <button type="button" class="btn btn-sm btn-outline-primary fw-bold px-2 py-1 class-quick-btn" 
+                                                data-id="{{ b.id }}" data-name="{{ b.name }}" onclick="selectQuickClass(this)"
+                                                style="border-radius: 6px; font-size: 12px; min-width: 50px;">
+                                            {{ b.name }}
+                                        </button>
+                                        {% endfor %}
+                                    {% else %}
+                                        <div class="text-muted small text-center py-2">Không có dữ liệu lớp học</div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- 2. TÊN HỌC SINH (TỰ ĐỘNG VIẾT HOA) -->
+                        <div class="mb-3">
+                            <label class="form-label small fw-bold text-secondary mb-1">2. Tên học sinh vi phạm:</label>
+                            <input type="text" class="form-control fw-bold" id="quickName" required placeholder="Gõ tên học sinh..." style="font-size: 16px; height: 45px;" autocomplete="off" name="student_name" oninput="autoCapitalize(this); checkQuickFormValidity();">
+                        </div>
+
+                        <!-- 3. CHỌN NHANH LỖI -->
+                        <div class="mb-4">
+                            <label class="form-label small fw-bold text-secondary mb-2">3. Chạm nhanh vào Lỗi:</label>
+                            <div class="d-flex flex-wrap gap-1" style="max-height: 120px; overflow-y: auto;">
+                                {% for cat in violations_bank %}
+                                {% if cat.point_type == 'Điểm trừ' %}
+                                <div class="quick-tag modal-quick-tag px-2 py-1" data-id="{{ cat.id }}" onclick="selectQuickViolation(this)" style="font-size: 12px;">
+                                    {{ cat.name }} (-{{ cat.penalty_points|int if cat.penalty_points%1==0 else cat.penalty_points }})
+                                </div>
+                                {% endif %}
+                                {% endfor %}
+                            </div>
+                        </div>
+                        <input type="hidden" name="violation_id" id="hiddenQuickViolationId" required>
+
+                        <!-- NÚT GỬI ĐƯỢC KHÓA BẢO VỆ -->
+                        <button type="submit" class="btn btn-secondary w-100 fw-bold btn-submit" id="btnSubmitQuickLog" style="height: 50px; border-radius: 14px;" disabled>
+                            <i class="fa-solid fa-lock me-1"></i> VUI LÒNG ĐIỀN ĐỦ THÔNG TIN
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL ĐÁNH GIÁ ĐỒNG ĐỘI TRƯỢT LÊN -->
+    <div class="modal fade" id="evalTeamModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-bottom m-0" style="position: absolute; bottom: 0; width: 100%;">
+            <div class="modal-content border-0" style="border-top-left-radius: 24px; border-top-right-radius: 24px; box-shadow: 0 -10px 25px rgba(0,0,0,0.1);">
+                <div class="modal-header border-0 pb-0 justify-content-center position-relative">
+                    <div style="width: 40px; height: 5px; background: #dee2e6; border-radius: 10px; position: absolute; top: 12px;"></div>
+                    <h5 class="modal-title fw-bold text-dark mt-3 fs-5"><i class="fa-solid fa-star text-warning me-1"></i> Nhận xét đồng đội</h5>
+                    <button type="button" class="btn-close position-absolute top-0 end-0 mt-3 me-3" data-bs-dismiss="modal"></button>
+                </div>
+                
+                <div class="modal-body pt-3 pb-4" style="max-height: 75vh; overflow-y: auto;">
+                    <div class="text-center mb-3">
+                        <span class="badge bg-primary px-3 py-2 rounded-pill fs-6 shadow-sm" id="evalTeamStarName">...</span>
+                    </div>
+
+                    <form id="evalTeamForm">
+                        <input type="hidden" id="evalTeamStarId">
+                        <input type="hidden" id="evalTeamWeek">
+                        <input type="hidden" name="score_cong_tam" value="5">
+
+                        <div class="mb-3 p-3 bg-light rounded-4 border">
+                            <label class="fw-bold text-primary mb-2 small"><i class="fa-regular fa-clock me-1"></i> Giờ giấc trực:</label>
+                            <select class="form-select border-0 shadow-sm fw-bold text-dark" name="score_gio_giac">
+                                <option value="5">🟢 Đi sớm, cực kỳ đúng giờ (5đ)</option>
+                                <option value="3">🟡 Có muộn một chút nhưng vẫn làm (3đ)</option>
+                                <option value="1">🔴 Đi rất muộn hoặc vắng mặt (1đ)</option>
+                            </select>
+                        </div>
+
+                        <div class="mb-3 p-3 bg-light rounded-4 border">
+                            <label class="fw-bold text-primary mb-2 small"><i class="fa-solid fa-shirt me-1"></i> Tác phong đồng phục:</label>
+                            <select class="form-select border-0 shadow-sm fw-bold text-dark" name="score_tac_phong">
+                                <option value="5">🟢 Chỉnh tề, đeo băng/thẻ đầy đủ (5đ)</option>
+                                <option value="3">🟡 Đúng quy định nhưng quên thẻ (3đ)</option>
+                                <option value="1">🔴 Vi phạm nội quy đồng phục (1đ)</option>
+                            </select>
+                        </div>
+
+                        <div class="mb-3 p-3 bg-light rounded-4 border">
+                            <label class="fw-bold text-primary mb-2 small"><i class="fa-regular fa-face-smile me-1"></i> Thái độ làm việc:</label>
+                            <select class="form-select border-0 shadow-sm fw-bold text-dark" name="score_thai_do">
+                                <option value="5">🟢 Vui vẻ, tích cực, hòa nhã (5đ)</option>
+                                <option value="3">🟡 Bình thường, đôi lúc lười (3đ)</option>
+                                <option value="1">🔴 Thái độ kém, hay cáu gắt (1đ)</option>
+                            </select>
+                        </div>
+
+                        <button type="button" class="btn btn-primary w-100 fw-bold btn-submit shadow-sm" id="btnSubmitTeamEval" onclick="submitTeamEvaluation()" style="height: 50px; border-radius: 14px;">
+                            <i class="fa-solid fa-paper-plane me-1"></i> GỬI ĐÁNH GIÁ ẨN DANH
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL ĐỔI MẬT KHẨU CHO SAO ĐỎ -->
+    <div class="modal fade" id="changePasswordModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-bottom m-0" style="position: absolute; bottom: 0; width: 100%;">
+            <div class="modal-content border-0" style="border-top-left-radius: 24px; border-top-right-radius: 24px; box-shadow: 0 -10px 25px rgba(0,0,0,0.1);">
+                <div class="modal-header border-0 pb-0 justify-content-center position-relative">
+                    <div style="width: 40px; height: 5px; background: #dee2e6; border-radius: 10px; position: absolute; top: 12px;"></div>
+                    <h5 class="modal-title fw-bold text-dark mt-3 fs-5"><i class="fa-solid fa-user-lock text-primary me-1"></i> Đổi Mật Khẩu</h5>
+                    <button type="button" class="btn-close position-absolute top-0 end-0 mt-3 me-3" data-bs-dismiss="modal"></button>
+                </div>
+                
+                <form id="changePwdForm" action="/change-password" method="POST" onsubmit="return validatePasswordMatch(event)">
+                    <div class="modal-body pt-3 pb-4">
+                        <input type="hidden" name="login_id" value="{{ session.get('username') }}">
+                        
+                        <div class="alert alert-warning bg-warning bg-opacity-10 border-0 text-dark small rounded-3 mb-3 fw-bold">
+                            <i class="fa-solid fa-triangle-exclamation text-warning me-1"></i> Lưu ý: Đổi mật khẩu thành công, hệ thống sẽ yêu cầu đăng nhập lại.
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label small fw-bold text-secondary mb-1">Mật khẩu mới:</label>
+                            <input type="password" class="form-control fw-bold" name="new_password" required placeholder="Nhập ít nhất 3 ký tự" minlength="3" style="background-color: #f8f9fa; height: 45px; border-radius: 10px;">
+                        </div>
+
+                        <div class="mb-4">
+                            <label class="form-label small fw-bold text-secondary mb-1">Xác nhận mật khẩu mới:</label>
+                            <input type="password" class="form-control fw-bold" name="confirm_password" required placeholder="Nhập lại mật khẩu mới" minlength="3" style="background-color: #f8f9fa; height: 45px; border-radius: 10px;">
+                        </div>
+
+                        <button type="submit" class="btn btn-primary w-100 fw-bold btn-submit shadow-sm" id="btnSubmitChangePwd" style="height: 50px; border-radius: 14px;">
+                            <i class="fa-solid fa-floppy-disk me-1"></i> LƯU MẬT KHẨU MỚI
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- BOTTOM NAV MỞ KHÓA LUÔN HIỆN NÚT -->
+    <div class="bottom-nav">
+        <a href="#homeSection" class="nav-item active" onclick="switchNav(this)"><i class="fa-solid fa-house"></i>Trang chủ</a>
+        <a href="#taskSection" class="nav-item" onclick="switchNav(this)"><i class="fa-solid fa-clipboard-list"></i>Chấm điểm</a>
+        {% if assignment %}
+        <a href="#teamSection" class="nav-item" onclick="switchNav(this)"><i class="fa-solid fa-users"></i>Đồng đội</a>
+        {% endif %}
+        <a href="/logout" class="nav-item" onclick="return confirm('Bạn chắc chắn muốn đăng xuất?');"><i class="fa-solid fa-right-from-bracket"></i>Đăng xuất</a>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        const BAREM = { d10: 5, d9: 3, d8: 1, kha: 20, tot: 30, maxMon: 4, maxTot: 14, base: 100 };
+        const DEFAULT_SUBJECTS = ["Toán", "Ngữ Văn", "Ngoại Ngữ", "Vật Lý", "Hóa Học", "Sinh Học", "Lịch Sử", "Địa Lí", "GDCD", "Tin Học", "Công Nghệ", "GDQP", "Thể Dục"];
+        
+        const violationBank = [
+            {% for cat in violations_bank %}
+            { id: {{ cat.id }}, name: "{{ cat.name }}", points: {{ cat.penalty_points }}, type: "{{ cat.point_type }}" },
+            {% endfor %}
+        ];
+
+        document.addEventListener("DOMContentLoaded", () => {
+            {% if target_classes %}
+                {% for b in target_classes %}
+                    loadRawScoresSilent('{{ current_week }}', {{ b.id }}, '{{ b.group }}');
+                    handleNoteInput('{{ b.id }}', '{{ b.group }}');
+                {% endfor %}
+            {% endif %}
+        });
+
+        async function loadRawScoresSilent(weekName, branchId, branchGroup) {
+            try {
+                let res = await fetch(`/api/raw_scores/${weekName}/${branchId}`);
+                let json = await res.json();
+                
+                if (json.data && json.data.length > 0) {
+                    renderSubjectsTable(branchId, branchGroup, json.data);
+                } else {
+                    renderSubjectsTable(branchId, branchGroup, []);
+                    addSubjectRow(branchId, branchGroup, "", 0, 0, 0);
+                }
+            } catch (e) {
+                renderSubjectsTable(branchId, branchGroup, []);
+                addSubjectRow(branchId, branchGroup, "", 0, 0, 0);
+            }
+            calculateFinalScore(branchId, branchGroup);
+        }
+
+        function renderSubjectsTable(branchId, branchGroup, subjects) {
+            const tbody = document.getElementById(`subjectsBody_${branchId}`);
+            if(!tbody) return;
+            tbody.innerHTML = "";
+            subjects.forEach(item => addSubjectRow(branchId, branchGroup, item.subj, item.c10, item.c9, item.c8));
+        }
+
+        function addSubjectRow(branchId, branchGroup, subj = "", c10 = 0, c9 = 0, c8 = 0) {
+            const tbody = document.getElementById(`subjectsBody_${branchId}`);
+            if(!tbody) return;
+            const tr = document.createElement('tr');
+            
+            const isGroup1 = branchGroup.includes("1");
+            const c8Input = isGroup1 
+                ? `<input type="number" class="form-control input-score text-secondary border-0 bg-transparent sub-c8" value="0" readonly title="Nhóm 1 Không có Đ.8">`
+                : `<input type="number" class="form-control input-score text-secondary border-secondary border-opacity-50 sub-c8" value="${c8}" min="0" oninput="calculateFinalScore('${branchId}', '${branchGroup}')">`;
+
+            tr.innerHTML = `
+                <td><input type="text" class="form-control input-subj sub-name-input" value="${subj}" placeholder="Tên môn..."></td>
+                <td><input type="number" class="form-control input-score text-danger border-danger border-opacity-50 sub-c10" value="${c10}" min="0" oninput="calculateFinalScore('${branchId}', '${branchGroup}')"></td>
+                <td><input type="number" class="form-control input-score text-primary border-primary border-opacity-50 sub-c9" value="${c9}" min="0" oninput="calculateFinalScore('${branchId}', '${branchGroup}')"></td>
+                <td>${c8Input}</td>
+                <td class="text-center"><button type="button" class="btn btn-sm text-danger px-1" onclick="this.parentElement.parentElement.remove(); calculateFinalScore('${branchId}', '${branchGroup}');"><i class="fa-solid fa-trash-can fs-5"></i></button></td>
+            `;
+            tbody.appendChild(tr);
+        }
+
+        function calculateFinalScore(branchId, branchGroup) {
+            const tbody = document.getElementById(`subjectsBody_${branchId}`);
+            if(!tbody) return;
+
+            let total10 = 0, total9 = 0, total8 = 0;
+            tbody.querySelectorAll('tr').forEach(row => {
+                let c10Input = row.querySelector('.sub-c10');
+                let c9Input = row.querySelector('.sub-c9');
+                let c8Input = row.querySelector('.sub-c8');
+                
+                let c10 = c10Input ? parseInt(c10Input.value) || 0 : 0;
+                let c9 = c9Input ? parseInt(c9Input.value) || 0 : 0;
+                let c8 = c8Input ? parseInt(c8Input.value) || 0 : 0;
+                if (branchGroup.includes("1")) c8 = 0;
+
+                let k10 = Math.min(c10, BAREM.maxMon);
+                let k9 = Math.min(c9, BAREM.maxMon - k10);
+                let k8 = Math.min(c8, BAREM.maxMon - k10 - k9);
+
+                total10 += k10; total9 += k9; total8 += k8;
+            });
+
+            let sum = total10 + total9 + total8;
+            const counterDiv = document.getElementById(`liveCounter_${branchId}`);
+            
+            if (sum > BAREM.maxTot) {
+                let excess = sum - BAREM.maxTot;
+                let cut8 = Math.min(total8, excess); total8 -= cut8; excess -= cut8;
+                if (excess > 0) { let cut9 = Math.min(total9, excess); total9 -= cut9; excess -= cut9; }
+                if (excess > 0) { total10 -= excess; }
+                
+                if(counterDiv) {
+                    counterDiv.innerHTML = `Tổng số con điểm Tốt: ${sum} / 14 (VƯỢT TRẦN)`;
+                    counterDiv.className = "alert text-center fw-bold py-2 mt-2 mb-0 alert-danger";
+                }
+            } else {
+                if(counterDiv) {
+                    counterDiv.innerHTML = `Tổng số con điểm Tốt: ${sum} / 14`;
+                    counterDiv.className = "alert text-center fw-bold py-2 mt-2 mb-0 alert-success";
+                }
+            }
+
+            let diemHocTap = (total10 * BAREM.d10) + (total9 * BAREM.d9) + (total8 * BAREM.d8);
+
+            let ratingSelect = document.querySelector(`#form_submit_${branchId} select[name="rating"]`);
+            let diemRating = 0;
+            if (ratingSelect) {
+                if (ratingSelect.value === "Tuần Tốt") diemRating = BAREM.tot;
+                else if (ratingSelect.value === "Tuần Khá") diemRating = BAREM.kha;
+            }
+
+            let previewLabel = document.getElementById(`autoPenaltyPreview_${branchId}`);
+            let penaltyAttr = previewLabel ? previewLabel.getAttribute('data-penalty') : '0';
+            let diemTruHienTai = parseFloat(penaltyAttr) || 0; 
+
+            let diemNenGoc = 100.0;
+            let finalScore = diemNenGoc + diemHocTap + diemRating - diemTruHienTai;
+            
+            let scoreDisplay = document.getElementById(`live_total_score_${branchId}`);
+            if(scoreDisplay) {
+                scoreDisplay.innerText = finalScore.toFixed(1) + " đ";
+            }
+        }
+
+        function handleNoteInput(branchId, branchGroup) {
+            let noteInput = document.getElementById(`detailNote_${branchId}`);
+            if(!noteInput) return;
+            
+            let noteText = noteInput.value;
+            let penalty = 0;
+            
+            const suggestionBox = document.getElementById(`suggestionBox_${branchId}`);
+            const parts = noteText.split(',');
+            const searchTerm = parts[parts.length - 1].trim().toLowerCase();
+            
+            if (searchTerm && suggestionBox) {
+                const matches = violationBank.filter(cat => cat.name.toLowerCase().includes(searchTerm) && cat.type !== 'Điểm cộng');
+                if (matches.length > 0) {
+                    suggestionBox.innerHTML = '';
+                    suggestionBox.style.display = 'block';
+                    matches.forEach(match => {
+                        let btn = document.createElement('a');
+                        btn.className = 'list-group-item list-group-item-action py-2 text-danger fw-bold';
+                        btn.innerHTML = `<i class="fa-solid fa-triangle-exclamation"></i> ${match.name} <span class="badge bg-danger float-end">-${match.points}đ</span>`;
+                        btn.onclick = () => { appendQuickTag(branchId, branchGroup, match.name); suggestionBox.style.display = 'none'; };
+                        suggestionBox.appendChild(btn);
+                    });
+                } else { suggestionBox.style.display = 'none'; }
+            } else if(suggestionBox) { suggestionBox.style.display = 'none'; }
+
+            parts.forEach(part => {
+                let p = part.toLowerCase();
+                violationBank.forEach(cat => {
+                    let catName = cat.name.toLowerCase();
+                    if (p.includes(catName) && cat.type !== 'Điểm cộng') {
+                        let regex = new RegExp(catName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + "\\s*(?::|-|x|,)?\\s*(\\d+)", "i");
+                        let match = p.match(regex);
+                        let qty = match ? parseInt(match[1]) : 1;
+                        penalty += (cat.points * qty);
+                    }
+                });
+            });
+            
+            let previewLabel = document.getElementById(`autoPenaltyPreview_${branchId}`);
+            if(previewLabel) {
+                previewLabel.setAttribute('data-penalty', penalty);
+            }
+            
+            calculateFinalScore(branchId, branchGroup);
+        }
+
+        function appendQuickTag(branchId, branchGroup, catName) {
+            triggerHaptic(20);
+            let input = document.getElementById(`detailNote_${branchId}`);
+            if(!input) return;
+            let val = input.value.trim();
+            let appendText = `${catName} x1`;
+            input.value = val ? `${val}, ${appendText}` : appendText;
+            handleNoteInput(branchId, branchGroup);
+        }
+
+        function submitFormSafe(btnElement, branchId, branchName, branchGroup) {
+            triggerHaptic(50);
+            if (confirm('Xác nhận gửi điểm chi tiết cho ' + branchName + '? Toàn bộ môn học và lỗi sẽ được gửi lên hệ thống.')) {
+                btnElement.disabled = true;
+                btnElement.classList.replace('btn-primary', 'btn-secondary');
+                btnElement.innerHTML = '<i class="fa-solid fa-spinner fa-spin me-2"></i> ĐANG TẢI LÊN...';
+
+                const tbody = document.getElementById(`subjectsBody_${branchId}`);
+                let rawList = []; 
+                let rawTotal10 = 0, rawTotal9 = 0, rawTotal8 = 0;
+
+                if(tbody) {
+                    tbody.querySelectorAll('tr').forEach(row => {
+                        let subj = row.querySelector('.sub-name-input').value.trim();
+                        if (subj) {
+                            let c10 = parseInt(row.querySelector('.sub-c10').value) || 0;
+                            let c9 = parseInt(row.querySelector('.sub-c9').value) || 0;
+                            let c8 = parseInt(row.querySelector('.sub-c8').value) || 0;
+                            if (branchGroup.includes("1")) c8 = 0;
+
+                            let k10 = Math.min(c10, BAREM.maxMon);
+                            let k9 = Math.min(c9, BAREM.maxMon - k10);
+                            let k8 = Math.min(c8, BAREM.maxMon - k10 - k9);
+
+                            rawList.push({ subj: subj, c10: k10, c9: k9, c8: k8 });
+                            rawTotal10 += k10; rawTotal9 += k9; rawTotal8 += k8;
+                        }
+                    });
+                }
+
+                let sum = rawTotal10 + rawTotal9 + rawTotal8;
+                if (sum > BAREM.maxTot) {
+                    let excess = sum - BAREM.maxTot;
+                    let cut8 = Math.min(rawTotal8, excess); rawTotal8 -= cut8; excess -= cut8;
+                    if (excess > 0) { let cut9 = Math.min(rawTotal9, excess); rawTotal9 -= cut9; excess -= cut9; }
+                    if (excess > 0) { rawTotal10 -= excess; }
+                }
+
+                document.getElementById(`raw_scores_json_${branchId}`).value = JSON.stringify(rawList);
+                document.getElementById(`hidden_c10_${branchId}`).value = rawTotal10;
+                document.getElementById(`hidden_c9_${branchId}`).value = rawTotal9;
+                document.getElementById(`hidden_c8_${branchId}`).value = rawTotal8;
+
+                let noteText = document.getElementById(`detailNote_${branchId}`).value;
+                let parts = noteText.split(',');
+                let violCounts = {}; let studentNames = {}; let manualNotes = [];
+
+                parts.forEach(part => {
+                    let p = part.trim();
+                    if (!p) return;
+                    let matched = false;
+                    violationBank.forEach(cat => {
+                        let catName = cat.name.toLowerCase();
+                        if (p.toLowerCase().includes(catName) && cat.type !== 'Điểm cộng') {
+                            matched = true;
+                            let qtyMatch = p.match(/(?::|-|x|\s)\s*(\d+)/i);
+                            let qty = qtyMatch ? parseInt(qtyMatch[1]) : 1;
+                            let nameMatch = p.match(/\[(.*?)\]|\((.*?)\)/);
+                            let sName = nameMatch ? (nameMatch[1] || nameMatch[2]).trim() : '';
+
+                            if (!violCounts[cat.id]) { violCounts[cat.id] = 0; studentNames[cat.id] = []; }
+                            violCounts[cat.id] += qty;
+                            if (sName) studentNames[cat.id].push(sName);
+                        }
+                    });
+                    if (!matched) manualNotes.push(p);
+                });
+
+                violationBank.forEach(cat => {
+                    let qtyInput = document.getElementById(`viol_${branchId}_${cat.id}`);
+                    let stuInput = document.getElementById(`student_${branchId}_${cat.id}`);
+                    if (qtyInput) {
+                        if (violCounts[cat.id]) {
+                            qtyInput.value = violCounts[cat.id];
+                            if (stuInput) stuInput.value = studentNames[cat.id].join(', ');
+                        } else {
+                            qtyInput.value = 0;
+                            if (stuInput) stuInput.value = '';
+                        }
+                    }
+                });
+                let manualInput = document.getElementById(`manual_note_${branchId}`);
+                if(manualInput) manualInput.value = manualNotes.join(', ');
+
+                document.getElementById('form_submit_' + branchId).submit(); 
+            }
+        }
+
+        // =========================================================
+        // JS ĐÁNH GIÁ ĐỒNG ĐỘI
+        // =========================================================
+        function openTeamEvalModal(starId, starName, weekName) {
+            triggerHaptic(20);
+            document.getElementById('evalTeamStarId').value = starId;
+            document.getElementById('evalTeamStarName').innerText = starName;
+            document.getElementById('evalTeamWeek').value = weekName;
+            
+            document.getElementById('evalTeamForm').reset();
+            var myModal = new bootstrap.Modal(document.getElementById('evalTeamModal'));
+            myModal.show();
+        }
+
+        async function submitTeamEvaluation() {
+            triggerHaptic(40);
+            const btn = document.getElementById('btnSubmitTeamEval');
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin me-2"></i> Đang xử lý...';
+
+            const payload = {
+                evaluatee_id: document.getElementById('evalTeamStarId').value,
+                week_name: document.getElementById('evalTeamWeek').value,
+                score_gio_giac: document.querySelector('#evalTeamForm select[name="score_gio_giac"]').value,
+                score_tac_phong: document.querySelector('#evalTeamForm select[name="score_tac_phong"]').value,
+                score_thai_do: document.querySelector('#evalTeamForm select[name="score_thai_do"]').value,
+                score_cong_tam: document.querySelector('#evalTeamForm input[name="score_cong_tam"]').value,
+                comment: "" 
+            };
+
+            try {
+                const response = await fetch('/api/submit_evaluation', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                
+                const textResponse = await response.text();
+                let result;
+                try { result = JSON.parse(textResponse); } 
+                catch (e) { throw new Error("Phản hồi máy chủ lỗi"); }
+
+                if (result.success) {
+                    showNativeToast(result.message, "success");
+                    bootstrap.Modal.getInstance(document.getElementById('evalTeamModal')).hide();
+                } else {
+                    showNativeToast("Lỗi: " + result.error, "error");
+                }
+            } catch (error) {
+                showNativeToast("Lỗi kết nối máy chủ!", "error");
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = '<i class="fa-solid fa-paper-plane me-1"></i> GỬI ĐÁNH GIÁ ẨN DANH';
+            }
+        }
+
+        // =========================================================
+        // HÀM TIỆN ÍCH CHUNG VÀ TRỰC CỔNG GHI NHANH
+        // =========================================================
+        function triggerHaptic(duration = 40) { 
+            if (navigator.vibrate) { navigator.vibrate(duration); } 
+        }
+
+        function showNativeToast(msg, type) { 
+            triggerHaptic([50, 50, 50]); 
+            const container = document.getElementById('toastContainer'); 
+            const toast = document.createElement('div'); 
+            toast.className = `native-toast ${type === 'error' ? 'error' : ''}`; 
+            toast.innerHTML = (type === 'error' ? '<i class="fa-solid fa-circle-exclamation fs-5"></i>' : '<i class="fa-solid fa-circle-check fs-5"></i>') + ` <span>${msg}</span>`; 
+            container.appendChild(toast); 
+            setTimeout(() => { toast.style.animation = 'slideUpOut 0.4s forwards'; setTimeout(() => toast.remove(), 400); }, 2500); 
+        }
+
+        function switchNav(element) { 
+            triggerHaptic(20); 
+            document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active')); 
+            element.classList.add('active'); 
+        }
+
+        if ('serviceWorker' in navigator) { 
+            window.addEventListener('load', () => { navigator.serviceWorker.register('/sw.js').catch(err => console.log('Lỗi PWA:', err)); }); 
+        }
+
+        // --- HÀM XỬ LÝ ĐỔI MẬT KHẨU ---
+        function openChangePasswordModal() {
+            triggerHaptic(20);
+            document.getElementById('changePwdForm').reset();
+            var myModal = new bootstrap.Modal(document.getElementById('changePasswordModal'));
+            myModal.show();
+        }
+
+        function validatePasswordMatch(event) {
+            const newPwd = document.querySelector('#changePwdForm input[name="new_password"]').value;
+            const confirmPwd = document.querySelector('#changePwdForm input[name="confirm_password"]').value;
+            
+            if (newPwd.length < 3) {
+                event.preventDefault();
+                showNativeToast("Mật khẩu phải có ít nhất 3 ký tự!", "error");
+                return false;
+            }
+            
+            if (newPwd !== confirmPwd) {
+                event.preventDefault();
+                showNativeToast("Mật khẩu xác nhận không khớp!", "error");
+                return false;
+            }
+            
+            triggerHaptic(40);
+            let btn = document.getElementById('btnSubmitChangePwd'); 
+            btn.disabled = true; 
+            btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin me-2"></i> ĐANG LƯU...';
+            return true;
+        }
+
+        // --- CÁC HÀM NÂNG CẤP TRỰC CỔNG THÔNG MINH ---
+        function filterQuickClasses() {
+            let input = document.getElementById('searchClassInput').value.toUpperCase();
+            let buttons = document.querySelectorAll('.class-quick-btn');
+            buttons.forEach(btn => {
+                let txtValue = btn.textContent || btn.innerText;
+                if (txtValue.toUpperCase().indexOf(input) > -1) {
+                    btn.style.display = "";
+                } else {
+                    btn.style.display = "none";
+                }
+            });
+        }
+
+        function autoCapitalize(inputElement) {
+            let words = inputElement.value.split(' ');
+            for (let i = 0; i < words.length; i++) {
+                if (words[i].length > 0) {
+                    words[i] = words[i][0].toUpperCase() + words[i].substr(1).toLowerCase();
+                }
+            }
+            inputElement.value = words.join(' ');
+        }
+
+        function checkQuickFormValidity() {
+            let branchId = document.getElementById('quickSelectedBranchId').value;
+            let violId = document.getElementById('hiddenQuickViolationId').value;
+            let stuName = document.getElementById('quickName').value.trim();
+            let btnSubmit = document.getElementById('btnSubmitQuickLog');
+
+            if (branchId && violId && stuName) {
+                btnSubmit.disabled = false;
+                btnSubmit.classList.remove('btn-secondary');
+                btnSubmit.classList.add('btn-danger');
+                btnSubmit.innerHTML = '<i class="fa-solid fa-paper-plane me-1"></i> GỬI LỖI VÀO SỔ ĐEN';
+            } else {
+                btnSubmit.disabled = true;
+                btnSubmit.classList.remove('btn-danger');
+                btnSubmit.classList.add('btn-secondary');
+                btnSubmit.innerHTML = '<i class="fa-solid fa-lock me-1"></i> VUI LÒNG ĐIỀN ĐỦ THÔNG TIN';
+            }
+        }
+
+        function selectQuickClass(btnElement) {
+            triggerHaptic(25);
+            document.querySelectorAll('.class-quick-btn').forEach(btn => {
+                btn.classList.remove('btn-primary', 'text-white');
+                btn.classList.add('btn-outline-primary');
+            });
+            btnElement.classList.remove('btn-outline-primary');
+            btnElement.classList.add('btn-primary', 'text-white');
+
+            const bId = btnElement.getAttribute('data-id');
+            const bName = btnElement.getAttribute('data-name');
+            document.getElementById('quickSelectedBranchId').value = bId;
+            
+            const labelDiv = document.getElementById('quickSelectedBranchLabel');
+            labelDiv.innerHTML = `<i class="fa-solid fa-circle-check text-success me-1"></i> Đã chọn: Chi đoàn ${bName}`;
+            labelDiv.className = "p-2 mb-2 rounded-3 text-center fw-bold text-success border border-success bg-white shadow-sm";
+            
+            checkQuickFormValidity();
+        }
+
+        function selectQuickViolation(tagElement) {
+            triggerHaptic(20);
+            document.querySelectorAll('.modal-quick-tag').forEach(tag => {
+                tag.classList.remove('active');
+            });
+            tagElement.classList.add('active');
+            
+            const violId = tagElement.getAttribute('data-id');
+            document.getElementById('hiddenQuickViolationId').value = violId;
+            
+            checkQuickFormValidity();
+        }
+    </script>
+</body>
+</html>

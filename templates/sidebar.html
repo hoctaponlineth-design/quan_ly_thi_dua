@@ -1,0 +1,157 @@
+<!-- ========================================== -->
+<!-- BỘ MÃ CSS PHỤC HỒI GIAO DIỆN KHUNG         -->
+<!-- ========================================== -->
+<style>
+    .sidebar { width: 260px; height: 100vh; position: fixed; top: 0; left: 0; background-color: #004080; color: white; padding-top: 20px; z-index: 1000; overflow-y: auto; overflow-x: hidden; }
+    .sidebar h4 { font-size: 18px; font-weight: bold; text-align: center; padding-bottom: 15px; border-bottom: 1px solid #0054a6; }
+    .sidebar .nav-link { color: #cce6ff; font-weight: 600; padding: 12px 20px; font-size: 14px; }
+    .sidebar .nav-link:hover, .sidebar .nav-link.active { background-color: #002244; color: white; border-left: 4px solid #4da6ff; }
+    .main-content { margin-left: 260px; padding: 20px 25px; }
+
+    /* [NÂNG CẤP MỚI]: TỐI ƯU THANH ĐIỀU HƯỚNG TỐI GIẢN CHO APP BAN GIÁM HIỆU */
+    {% if session.get('role') == 'Ban Giám hiệu' %}
+    .sidebar {
+        background-color: #0f172a !important; /* Xanh đậm trang trọng */
+    }
+    .sidebar h4 {
+        background: #1e293b;
+        border-bottom: 1px solid #334155;
+        padding: 18px 10px;
+        font-size: 16px;
+    }
+    .sidebar .nav-link {
+        padding: 16px 20px; /* Tăng kích thước vùng chạm để thao tác một tay trên mobile */
+        font-size: 15px;
+        border-radius: 8px;
+        margin: 6px 12px;
+    }
+    .sidebar .nav-link:hover, .sidebar .nav-link.active {
+        background-color: #2563eb !important;
+        border-left: none !important;
+    }
+    {% endif %}
+</style>
+
+<!-- SIDEBAR -->
+<div class="sidebar d-flex flex-column">
+    <h4>QUẢN LÝ THI ĐUA</h4>
+    
+    <ul class="nav nav-pills flex-column mb-auto mt-2 w-100" id="mainSidebar">
+        
+        <!-- [NÂNG CẤP LÕI]: CHỈ ADMIN VÀ BÍ THƯ MỚI THẤY NHÓM QUẢN LÝ VÀ THI ĐUA (ẨN VỚI BGH VÀ GVCN) -->
+        {% if session.get('role') not in ['Giáo viên chủ nhiệm', 'Ban Giám hiệu'] %}
+        
+        <!-- NHÓM 1: QUẢN LÝ CHUNG -->
+        <div class="text-info small fw-bold mt-2 mb-1 px-3" style="font-size: 11px; letter-spacing: 1px;">_____ 📁 QUẢN LÝ CHUNG _____</div>
+        <li><a href="/dashboard" class="nav-link"><i class="fa-solid fa-chart-pie me-2"></i> Tổng quan</a></li>
+        <li><a href="/branches" class="nav-link"><i class="fa-solid fa-school me-2"></i> Quản lý Chi đoàn</a></li>
+        
+        <li class="nav-item">
+            <a class="nav-link d-flex justify-content-between align-items-center" data-bs-toggle="collapse" href="#redStarSubMenu">
+                <span><i class="fa-solid fa-star me-2"></i> Đội Sao đỏ</span>
+                <i class="fa-solid fa-chevron-down" style="font-size: 11px;"></i>
+            </a>
+            <div class="collapse ms-3 mt-1" id="redStarSubMenu">
+                <ul class="nav flex-column border-start border-secondary ms-2 ps-1">
+                    <li class="nav-item mb-1"><a href="/red-stars" class="nav-link py-1 ps-2 text-light" style="font-size: 13px;">Danh sách Sao đỏ</a></li>
+                    <li class="nav-item mb-1"><a href="/duty-areas" class="nav-link py-1 ps-2 text-light" style="font-size: 13px;">Khu vực trực</a></li>
+                    <li class="nav-item mb-1"><a href="/assignments" class="nav-link py-1 ps-2 text-light" style="font-size: 13px;">Phân công Lịch trực</a></li>
+                    <li class="nav-item mb-1"><a href="/star-evaluations" class="nav-link py-1 ps-2 text-light" style="font-size: 13px;">Đánh giá hằng tuần</a></li>
+                    <li class="nav-item mb-1"><a href="/star-ranking/monthly" class="nav-link py-1 ps-2 text-light" style="font-size: 13px;">Đánh giá Tháng</a></li>
+                    <li class="nav-item mb-1"><a href="/star-ranking/semester" class="nav-link py-1 ps-2 text-light" style="font-size: 13px;">Đánh giá Học kỳ</a></li>
+                    <li class="nav-item mb-1"><a href="/star-ranking/yearly" class="nav-link py-1 ps-2 text-light" style="font-size: 13px;">Tổng kết Năm học</a></li>
+                </ul>
+            </div>
+        </li>
+        <li><a href="/violation-categories" class="nav-link"><i class="fa-solid fa-scale-unbalanced me-2"></i> Thư viện Lỗi tự động</a></li>
+
+        <!-- NHÓM 2: THI ĐUA -->
+        <div class="text-info small fw-bold mt-3 mb-1 px-3" style="font-size: 11px; letter-spacing: 1px;">________ 📝 THI ĐUA ________</div>
+        <li><a href="/weekly" class="nav-link"><i class="fa-solid fa-calendar-week me-2"></i> Điểm thi đua Tuần</a></li>
+        <li><a href="/monthly" class="nav-link"><i class="fa-solid fa-award me-2"></i> Thi đua Tháng</a></li>
+        <li><a href="/semester" class="nav-link"><i class="fa-solid fa-graduation-cap me-2"></i> Thi đua Học kỳ</a></li>
+        <li><a href="/yearly" class="nav-link"><i class="fa-solid fa-trophy me-2"></i> Điểm thi đua Năm học</a></li>
+        
+        {% endif %} <!-- KẾT THÚC VÙNG QUẢN LÝ & THI ĐUA -->
+
+		<!-- NHÓM 3: BÁO CÁO & ĐIỀU HÀNH (HIỂN THỊ CHO CẢ ADMIN, BGH VÀ GVCN) -->
+        <div class="text-info small fw-bold mt-3 mb-1 px-3" style="font-size: 11px; letter-spacing: 1px;">________ 📊 BÁO CÁO ________</div>
+        
+        {% if session.get('role') != 'Giáo viên chủ nhiệm' %}
+        <li><a href="/reports" class="nav-link"><i class="fa-solid fa-chart-line me-2"></i> Báo cáo & Thống kê</a></li>
+        {% endif %}
+        
+        <!-- Nút Tra Cứu (Dành cho GVCN và Quản lý) -->
+        <li><a href="/class-dashboard" class="nav-link"><i class="fa-solid fa-magnifying-glass-chart me-2"></i> Hồ sơ Lớp & Phúc khảo</a></li>
+        
+        <!-- BỘ ĐÔI PHÂN TÍCH CHUYÊN SÂU -->
+        <li><a href="/class_monthly_analysis" class="nav-link text-warning"><i class="fa-solid fa-microscope me-2"></i> Phân tích Tháng </a></li>
+        <li><a href="/class_semester_analysis" class="nav-link text-warning"><i class="fa-solid fa-graduation-cap me-2"></i> Tổng kết Cuối kỳ </a></li>
+        
+        <!-- TRUNG TÂM ĐIỀU HÀNH BGH (Điểm nhấn cho Ban Giám Hiệu) -->
+        {% if session.get('role') in ['Quản trị viên', 'Admin', 'Ban Giám hiệu', 'Bí thư Đoàn trường', 'Bí thư'] %}
+        <li><a href="/bgh/dashboard" class="nav-link text-warning fw-bold"><i class="fa-solid fa-chart-line me-2"></i> Điều Hành BGH</a></li>
+        {% endif %}
+
+        <!-- BÁO CÁO TOÀN TRƯỜNG -->
+        <li><a href="/school_monthly_analysis" class="nav-link text-warning"><i class="fa-solid fa-building-columns me-2"></i> Đánh giá Toàn Trường</a></li>
+        
+        {% if session.get('role') != 'Giáo viên chủ nhiệm' %}
+        <li><a href="/templates" class="nav-link"><i class="fa-solid fa-file-word me-2"></i> Biểu mẫu Báo cáo</a></li>
+        {% endif %}
+
+        <!-- NHÓM 4: HỆ THỐNG (CHỈ DÀNH CHO QUẢN TRỊ VIÊN / ADMIN) -->
+        {% if session.get('role') in ['Quản trị viên', 'Admin'] %}
+        <div class="text-info small fw-bold mt-3 mb-1 px-3" style="font-size: 11px; letter-spacing: 1px;">________ ⚙️ HỆ THỐNG ________</div>
+        <li><a href="/school-years" class="nav-link"><i class="fa-solid fa-calendar-check me-2"></i> Cấu hình Năm học</a></li>
+        <li><a href="/users" class="nav-link"><i class="fa-solid fa-users-gear me-2"></i> Quản lý Người dùng</a></li>
+        
+        <li>
+            <a href="/blacklist" class="nav-link {% if request.path == '/blacklist' %}active{% endif %}">
+                <i class="fa-solid fa-book-skull text-danger me-2"></i> Tra cứu Sổ Đen
+            </a>
+        </li>
+        
+        <li><a href="/action_logs" class="nav-link text-info"><i class="fa-solid fa-clock-rotate-left me-2"></i> Nhật ký Hoạt động</a></li>
+        <li><a href="/backup" class="nav-link text-warning"><i class="fa-solid fa-database me-2"></i> Sao lưu Dữ liệu</a></li>
+        {% endif %}
+    </ul>
+    
+	<!-- FOOTER THÔNG TIN TÀI KHOẢN -->
+    <div class="p-3 mt-4 border-top border-secondary">
+        <div class="text-center mb-2">
+            <span class="badge bg-primary w-100 py-2"><i class="fa-solid fa-user me-1"></i> {{ session.get('username', 'Tài khoản') }}</span>
+            <div class="small mt-1 text-warning fw-bold text-truncate">
+                <i class="fa-solid fa-chalkboard-user me-1"></i> 
+                {% if selected_branch and selected_branch.gvcn %}
+                    {{ selected_branch.gvcn }}
+                {% else %}
+                    {{ session.get('role', 'Giáo viên Chủ nhiệm') }}
+                {% endif %}
+            </div>
+        </div>
+        <a href="/change-password" class="btn btn-outline-light w-100 mb-2" style="font-size: 13px;"><i class="fa-solid fa-key me-2"></i> Đổi mật khẩu</a>
+        <a href="/logout" class="btn btn-danger w-100 fw-bold" style="font-size: 13px;"><i class="fa-solid fa-right-from-bracket me-2"></i> Đăng xuất</a>
+    </div>
+</div>
+
+<!-- SCRIPT TỰ ĐỘNG BÔI ĐẬM MENU HIỆN TẠI -->
+<script>
+    document.addEventListener("DOMContentLoaded", function() {
+        var currentPath = window.location.pathname;
+        var navLinks = document.querySelectorAll('.sidebar .nav-link');
+        navLinks.forEach(function(link) {
+            var href = link.getAttribute('href');
+            if (href && currentPath.startsWith(href)) {
+                link.classList.add('active');
+                if(link.classList.contains('text-light')) {
+                    link.classList.remove('text-light');
+                    link.classList.add('bg-dark', 'text-white', 'fw-bold');
+                }
+                
+                var collapseParent = link.closest('.collapse');
+                if (collapseParent) collapseParent.classList.add('show');
+            }
+        });
+    });
+</script>

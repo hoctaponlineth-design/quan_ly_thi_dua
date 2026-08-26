@@ -1,0 +1,1236 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="theme-color" content="#1e293b">
+    <title>Tra cứu Chi đoàn - Quản lý Thi đua</title>
+    
+    <!-- Nhúng Font Inter chuẩn UI/UX hiện đại -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <style>
+        :root {
+            --primary: #2563eb;
+            --primary-hover: #1d4ed8;
+            --surface: #ffffff;
+            --background: #f8fafc;
+            --border: #e2e8f0;
+            --text-main: #0f172a;
+            --text-muted: #64748b;
+            --sidebar-bg: #1e293b;
+            --radius-lg: 16px;
+            --radius-md: 12px;
+            --shadow-sm: 0 1px 3px rgba(0,0,0,0.05), 0 1px 2px rgba(0,0,0,0.03);
+            --shadow-md: 0 4px 6px -1px rgba(0,0,0,0.05), 0 2px 4px -1px rgba(0,0,0,0.03);
+        }
+
+        /* [BẢN VÁ LỖI TỐI THƯỢNG]: ÉP BUỘC BODY VÀ HTML PHẢI TRẢI DÀI 100% */
+        html, body { 
+            font-family: 'Inter', sans-serif !important; 
+            background-color: var(--background) !important; 
+            color: var(--text-main) !important; 
+            display: block !important; 
+            width: 100% !important;
+            max-width: 100vw !important;
+            min-height: 100vh !important;
+            margin: 0 !important;
+            padding: 0 !important;
+            overflow-x: hidden !important;
+            -webkit-tap-highlight-color: transparent; 
+        }
+        
+        /* SIDEBAR (Desktop) */
+        #desktopSidebar { width: 260px; height: 100vh; position: fixed; top: 0; left: 0; background-color: var(--sidebar-bg); color: white; transition: transform 0.3s ease; z-index: 1050; overflow-y: auto;}
+        #desktopSidebar h4 { font-size: 16px; font-weight: 700; text-align: center; padding: 20px 10px 15px 10px; border-bottom: 1px solid rgba(255,255,255,0.05); text-transform: uppercase; letter-spacing: 1px; color: #cbd5e1; margin: 0;}
+        #desktopSidebar .nav-link { color: #94a3b8; font-weight: 500; padding: 12px 20px; font-size: 14px; border-radius: 0 20px 20px 0; margin-right: 15px; transition: all 0.2s;}
+        #desktopSidebar .nav-link i { width: 24px; }
+        #desktopSidebar .nav-link:hover, #desktopSidebar .nav-link.active { background-color: rgba(255,255,255,0.1); color: #ffffff; border-left: 4px solid var(--primary); font-weight: 600;}
+        
+        /* MAIN CONTENT DESKTOP */
+        .main-content { 
+            margin-left: 260px; 
+            width: calc(100% - 260px); 
+            padding: 30px; 
+            transition: all 0.3s ease; 
+            min-height: 100vh;
+            display: block;
+        }
+        
+        /* HEADER MOBILE */
+        .mobile-header { display: none; background: var(--surface); color: var(--text-main); padding: 15px 20px; padding-top: max(15px, env(safe-area-inset-top)); position: sticky; top: 0; z-index: 1030; box-shadow: var(--shadow-sm); align-items: center; justify-content: space-between; border-bottom: 1px solid var(--border); width: 100%;}
+        .mobile-header .app-title { font-size: 18px; font-weight: 700; margin: 0; white-space: nowrap;}
+        .mobile-header .btn-menu { color: var(--text-main); font-size: 22px; padding: 5px 10px; border: none; background: none; cursor: pointer;}
+
+        /* KHOẢNG TRẮNG & THẺ CHUNG */
+        .glass-card { background: var(--surface); border-radius: var(--radius-lg); box-shadow: var(--shadow-sm); border: 1px solid var(--border); margin-bottom: 24px; overflow: hidden; display: block;}
+        .card-header-modern { padding: 20px 24px; border-bottom: 1px solid var(--border); background: var(--surface); display: flex; justify-content: space-between; align-items: center; }
+        .card-title-modern { font-size: 16px; font-weight: 700; margin: 0; color: var(--text-main); display: flex; align-items: center; gap: 8px;}
+
+        /* WIDGETS TỔNG QUAN */
+        .widget-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 20px; margin-bottom: 24px; width: 100%;}
+        .widget-card { background: var(--surface); border-radius: var(--radius-md); padding: 20px; display: flex; align-items: flex-start; gap: 16px; border: 1px solid var(--border); box-shadow: var(--shadow-sm); transition: transform 0.2s;}
+        .widget-card:hover { transform: translateY(-2px); box-shadow: var(--shadow-md); }
+        .widget-icon { width: 48px; height: 48px; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 20px; flex-shrink: 0; }
+        .widget-content { flex: 1; min-width: 0; }
+        .widget-label { font-size: 12px; font-weight: 600; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 4px; }
+        .widget-value { font-size: 16px; font-weight: 700; color: var(--text-main); margin: 0 0 4px 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;}
+        .widget-sub { font-size: 13px; font-weight: 500; color: var(--primary); text-decoration: none;}
+
+        /* BỘ LỌC TÌM KIẾM */
+        .filter-section { padding: 24px; }
+        .form-select-modern { border-radius: var(--radius-md); border: 1px solid #cbd5e1; font-size: 15px; font-weight: 600; padding: 12px 16px; color: var(--text-main); background-color: #f8fafc; transition: all 0.2s; width: 100%;}
+        .form-select-modern:focus { border-color: var(--primary); box-shadow: 0 0 0 3px rgba(37,99,235,0.1); background-color: var(--surface);}
+        .btn-modern { border-radius: var(--radius-md); font-weight: 600; padding: 12px 20px; font-size: 14px; display: inline-flex; align-items: center; justify-content: center; gap: 8px; transition: all 0.2s; border: none;}
+        .btn-modern-primary { background-color: var(--primary); color: white; }
+        .btn-modern-primary:hover { background-color: var(--primary-hover); }
+        .btn-modern-warning { background-color: #f59e0b; color: white; }
+        .btn-modern-warning:hover { background-color: #d97706; }
+
+        /* TABS HIỆN ĐẠI */
+        .modern-tabs-container { padding: 16px 24px 0 24px; border-bottom: 1px solid var(--border); }
+        .modern-tabs { display: flex; gap: 24px; overflow-x: auto; scrollbar-width: none; margin-bottom: -1px; }
+        .modern-tabs::-webkit-scrollbar { display: none; }
+        .modern-tab { background: none; border: none; padding: 12px 4px; font-size: 14px; font-weight: 600; color: var(--text-muted); border-bottom: 2px solid transparent; white-space: nowrap; transition: all 0.2s; cursor: pointer; display: flex; align-items: center; gap: 8px;}
+        .modern-tab:hover { color: var(--text-main); }
+        .modern-tab.active { color: var(--primary); border-bottom-color: var(--primary); }
+
+        /* BẢNG DỮ LIỆU DESKTOP */
+        .table-responsive-custom { width: 100%; overflow-x: auto; }
+        .table-modern { width: 100%; border-collapse: separate; border-spacing: 0; text-align: left;}
+        .table-modern thead th { background: #f1f5f9; color: var(--text-muted); font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; padding: 16px; border-bottom: 1px solid var(--border); white-space: nowrap;}
+        .table-modern tbody td { padding: 16px; font-size: 14px; font-weight: 500; border-bottom: 1px solid var(--border); color: var(--text-main); vertical-align: middle;}
+        .table-modern tbody tr:last-child td { border-bottom: none; }
+        .table-modern tbody tr:hover { background-color: #f8fafc; }
+
+        /* BADGES (Huy hiệu) */
+        .badge-soft { padding: 6px 12px; border-radius: 20px; font-size: 12px; font-weight: 600; letter-spacing: 0.3px; display: inline-flex; align-items: center; gap: 4px; white-space: nowrap;}
+        .badge-success { background: #dcfce7; color: #166534; }
+        .badge-primary { background: #dbeafe; color: #1e40af; }
+        .badge-warning { background: #fef3c7; color: #92400e; }
+        .badge-danger { background: #fee2e2; color: #991b1b; }
+        .badge-secondary { background: #f1f5f9; color: #475569; }
+
+        /* =========================================
+           MOBILE RESPONSIVE (SỬA LỖI ÉP KHUNG)
+           ========================================= */
+        @media (max-width: 1200px) {
+            #desktopSidebar { transform: translateX(-100%) !important; box-shadow: 10px 0 30px rgba(0,0,0,0.3); }
+            #desktopSidebar.show { transform: translateX(0) !important; }
+            
+            .main-content { 
+                margin-left: 0 !important; 
+                width: 100% !important; 
+                max-width: 100vw !important;
+                padding: 0 !important; 
+                display: block !important;
+            }
+            
+            .mobile-header { display: flex !important; margin-bottom: 15px;}
+            
+            .glass-card, .widget-grid, .empty-state-container { 
+                margin-left: 15px !important; 
+                margin-right: 15px !important; 
+                width: calc(100% - 30px) !important; 
+            }
+            
+            .widget-grid { grid-template-columns: 1fr 1fr; gap: 12px;}
+            
+            .table-modern thead { display: none !important; }
+            .table-modern tbody, .table-modern tr, .table-modern td { display: block !important; width: 100% !important; box-sizing: border-box !important; }
+            .table-responsive-custom { padding: 15px; background: #f0f2f5;}
+            
+            .table-modern tr { 
+                background: var(--surface); 
+                border-radius: var(--radius-md); 
+                box-shadow: var(--shadow-sm); 
+                margin-bottom: 16px; 
+                border: 1px solid var(--border);
+            }
+            
+            .table-modern td { 
+                padding: 12px 16px !important; 
+                display: flex !important; 
+                justify-content: space-between !important; 
+                align-items: center !important; 
+                border-bottom: 1px solid #f1f5f9 !important; 
+                text-align: right !important;
+            }
+            
+            .table-modern td::before { 
+                content: attr(data-label); 
+                font-size: 12px; 
+                font-weight: 600; 
+                color: var(--text-muted); 
+                text-transform: uppercase; 
+                margin-right: 15px;
+                flex-shrink: 0;
+            }
+
+            .table-modern td.mobile-header-row {
+                background: #f8fafc !important;
+                border-bottom: 2px solid var(--border) !important;
+            }
+            
+            .table-modern td.col-details { 
+                display: block !important; 
+                text-align: left !important; 
+                border-bottom: none !important;
+                background: #ffffff !important;
+            }
+            .table-modern td.col-details::before { display: block !important; margin-bottom: 8px !important; }
+        }
+        
+        @media (max-width: 480px) {
+            .widget-grid { grid-template-columns: 1fr; }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- SIDEBAR -->
+    <div id="desktopSidebar">
+        <div style="width: 100%;">
+            {% include 'sidebar.html' %}
+        </div>
+    </div>
+
+    <!-- MAIN CONTENT -->
+    <div class="main-content">
+        
+        <!-- HEADER MOBILE -->
+        <div class="mobile-header">
+            <div class="d-flex align-items-center gap-2">
+                <i class="fa-solid fa-graduation-cap text-primary fs-4"></i>
+                <h1 class="app-title">Hồ Sơ Lớp</h1>
+            </div>
+            <button class="btn-menu" onclick="document.getElementById('desktopSidebar').classList.toggle('show')">
+                <i class="fa-solid fa-bars"></i>
+            </button>
+        </div>
+
+        <!-- BỘ LỌC TÌM KIẾM -->
+        <div class="glass-card">
+            <div class="card-header-modern">
+                <h2 class="card-title-modern"><i class="fa-solid fa-magnifying-glass text-primary"></i> Tra Cứu Dữ Liệu</h2>
+                <div class="badge-soft badge-success d-none d-md-flex">
+                    {% if active_year %} <i class="fa-solid fa-calendar-check"></i> NH: {{ active_year.name }} {% else %} Chưa kích hoạt {% endif %}
+                </div>
+            </div>
+            <div class="filter-section">
+                {% with messages = get_flashed_messages(with_categories=true) %}
+                    {% if messages %}
+                        {% for category, message in messages %}
+                            <div class="alert alert-{{ 'success' if category == 'success' else 'danger' }} bg-opacity-10 border-0 fw-bold rounded-3 mb-3 d-flex align-items-center gap-2">
+                                <i class="fa-solid fa-circle-info"></i> {{ message }}
+                            </div>
+                        {% endfor %}
+                    {% endif %}
+                {% endwith %}
+
+                <form method="GET" action="/class-dashboard" class="row g-3 align-items-end w-100 m-0">
+                    <div class="col-12 col-md-8 px-0 pe-md-2">
+                        <label class="widget-label d-block">Lớp / Chi đoàn</label>
+                        <select class="form-select w-100 form-select-modern" name="branch_id" onchange="this.form.submit()" {% if is_gvcn %}disabled{% endif %}>
+                            {% for b in branches %}
+                                <option value="{{ b.id }}" {% if selected_branch and selected_branch.id == b.id %}selected{% endif %}>
+                                    Lớp {{ b.name }} (Nhóm: {{ b.group }})
+                                </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-12 col-md-4 text-md-end px-0 ps-md-2 mt-3 mt-md-0">
+                        {% if selected_branch %}
+                            <a href="/preview_class_dashboard/{{ selected_branch.id }}" class="btn-modern btn-modern-warning w-100 text-decoration-none shadow-sm">
+                                <i class="fa-solid fa-file-pdf"></i> Xuất Hồ Sơ
+                            </a>
+                        {% endif %}
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        {% if selected_branch %}
+        <!-- NÚT CHỈNH SỬA THÔNG TIN -->
+        {% if is_gvcn or session.get('role') in ['Quản trị viên', 'Admin', 'Bí thư Đoàn trường'] %}
+        <div class="d-flex justify-content-end mb-3 me-2">
+            <button class="btn-modern btn-modern-primary shadow-sm py-2" onclick="openEditBranchModal()">
+                <i class="fa-solid fa-pen-to-square me-2"></i> Cập nhật Thông tin Liên hệ
+            </button>
+        </div>
+        {% endif %}
+        
+        <!-- WIDGETS THÔNG TIN -->
+        <div class="widget-grid">
+            <div class="widget-card">
+                <div class="widget-icon" style="background: #e0e7ff; color: #4338ca;"><i class="fa-solid fa-school-flag"></i></div>
+                <div class="widget-content">
+                    <div class="widget-label">Chi đoàn</div>
+                    <div class="widget-value">{{ selected_branch.name }}</div>
+                </div>
+            </div>
+            <div class="widget-card">
+                <div class="widget-icon" style="background: #fce7f3; color: #be185d;"><i class="fa-solid fa-users"></i></div>
+                <div class="widget-content">
+                    <div class="widget-label">Sĩ số</div>
+                    <div class="widget-value">{{ selected_branch.si_so }} HS</div>
+                    <div class="widget-sub text-muted">{{ selected_branch.group }}</div>
+                </div>
+            </div>
+            <div class="widget-card">
+                <div class="widget-icon" style="background: #dcfce7; color: #15803d;"><i class="fa-solid fa-chalkboard-user"></i></div>
+                <div class="widget-content">
+                    <div class="widget-label">Giáo viên chủ nhiệm</div>
+                    <div class="widget-value">{{ selected_branch.gvcn if selected_branch.gvcn else 'Chưa cập nhật' }}</div>
+                    <a href="tel:{{ selected_branch.phone_gvcn }}" class="widget-sub"><i class="fa-solid fa-phone"></i> {{ selected_branch.phone_gvcn if selected_branch.phone_gvcn else '---' }}</a>
+                </div>
+            </div>
+            <div class="widget-card">
+                <div class="widget-icon" style="background: #fef3c7; color: #b45309;"><i class="fa-solid fa-user-graduate"></i></div>
+                <div class="widget-content">
+                    <div class="widget-label">Lớp Trưởng</div>
+                    <div class="widget-value">{{ selected_branch.class_monitor if selected_branch.class_monitor else 'Chưa cập nhật' }}</div>
+                    <a href="tel:{{ selected_branch.phone_monitor }}" class="widget-sub"><i class="fa-solid fa-phone"></i> {{ selected_branch.phone_monitor if selected_branch.phone_monitor else '---' }}</a>
+                </div>
+            </div>
+        </div>
+
+        <!-- TABS TRÌNH BÀY DỮ LIỆU ĐA TẦNG -->
+        <div class="glass-card mb-4">
+            <div class="modern-tabs-container">
+                <ul class="nav modern-tabs" id="classDataTabs" role="tablist">
+                    <li class="nav-item" role="presentation">
+                        <button class="modern-tab active" data-bs-toggle="tab" data-bs-target="#scores-pane" type="button" role="tab">
+                            <i class="fa-solid fa-chart-line"></i> Điểm Thi Đua
+                        </button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="modern-tab" data-bs-toggle="tab" data-bs-target="#leaderboard-pane" type="button" role="tab" onclick="loadSchoolLeaderboard()">
+                            <i class="fa-solid fa-trophy"></i> BXH Toàn Trường
+                        </button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="modern-tab" data-bs-toggle="tab" data-bs-target="#monitor-pane" type="button" role="tab">
+                            <i class="fa-solid fa-eye"></i> Sao Đỏ Chấm Lớp
+                        </button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="modern-tab" data-bs-toggle="tab" data-bs-target="#assignments-pane" type="button" role="tab">
+                            <i class="fa-solid fa-user-shield"></i> HS Đi Trực
+                        </button>
+                    </li>
+                </ul>
+            </div>
+            
+            <div class="tab-content p-0" id="classDataTabsContent">
+                
+                <!-- TAB 1: ĐIỂM THI ĐUA -->
+                <div class="tab-pane fade show active" id="scores-pane" role="tabpanel">
+                    
+                    {% if warning_students %}
+                    <div class="glass-card mb-4" style="border-color: #fca5a5; background-color: #fef2f2;">
+                        <div class="p-4 d-flex flex-column flex-md-row align-items-md-center gap-3">
+                            <div class="bg-danger text-white rounded-circle d-flex align-items-center justify-content-center flex-shrink-0 shadow-sm" style="width: 56px; height: 56px;">
+                                <i class="fa-solid fa-triangle-exclamation fs-3 fa-beat-fade"></i>
+                            </div>
+                            <div class="flex-grow-1">
+                                <h5 class="fw-bold text-danger mb-1">Báo Động Kỷ Luật ({{ warning_students[0].week }})</h5>
+                                <p class="text-danger opacity-75 mb-0" style="font-size: 14px;">Hệ thống phát hiện các học sinh sau có nguy cơ trượt dốc (vi phạm từ 3 lỗi trở lên):</p>
+                                <div class="d-flex flex-wrap gap-2 mt-3">
+                                    {% for hs in warning_students %}
+                                    <span class="badge bg-white text-danger border border-danger px-3 py-2 fs-6 shadow-sm" style="border-radius: 8px;">
+                                        <i class="fa-solid fa-user-xmark me-1"></i> {{ hs.name }} 
+                                        <span class="badge bg-danger ms-2">{{ hs.count }} lỗi</span>
+                                    </span>
+                                    {% endfor %}
+                                </div>
+                            </div>
+                            <div class="flex-shrink-0 mt-3 mt-md-0">
+                                <button class="btn-modern btn-modern-primary fw-bold shadow-sm w-100" style="background-color: #dc2626;" onclick="window.print()">
+                                    <i class="fa-solid fa-print me-1"></i> In Thông Báo
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    {% endif %}
+
+                    <div class="table-responsive-custom">
+                        <table class="table-modern">
+                            <thead>
+                                <tr>
+                                    <th>Tuần</th>
+                                    <th>Xếp loại / Hạng</th>
+                                    <th class="text-center">Đ. Tốt</th>
+                                    <th class="text-center">Cộng</th>
+                                    <th class="text-center">Trừ</th>
+                                    <th class="text-center">Tổng điểm</th>
+                                    <th style="width: 35%;">Chi tiết Ghi chú / Phúc khảo</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for sc in weekly_scores %}
+                                <tr>
+                                    <td data-label="Tuần" class="fw-bold text-primary mobile-header-row d-md-table-cell d-flex justify-content-between align-items-center">
+                                        <span>{{ sc.week }}</span>
+                                        <span class="badge-soft badge-danger fs-6 d-md-none">{{ sc.total_score }} đ</span>
+                                    </td>
+                                    
+                                    <td data-label="Kết quả">
+                                        <div class="d-flex flex-wrap gap-2 justify-content-end justify-content-md-start">
+                                            <span class="badge-soft {% if sc.rating == 'Tuần Tốt' or sc.rating == 'Tốt' %}badge-success{% elif sc.rating == 'Tuần Khá' or sc.rating == 'Khá' %}badge-primary{% else %}badge-secondary{% endif %}">
+                                                {{ sc.rating }}
+                                            </span>
+                                            <span class="badge-soft badge-warning"><i class="fa-solid fa-trophy text-warning me-1"></i> {{ sc.rank }}</span>
+                                        </div>
+                                    </td>
+                                    
+                                    <td data-label="Điểm Tốt" class="text-md-center fw-bold">{{ sc.diem_tot }}</td>
+                                    <td data-label="Điểm Cộng" class="text-md-center text-success fw-bold">+{{ sc.score_cong }}</td>
+                                    <td data-label="Điểm Trừ" class="text-md-center text-danger fw-bold">-{{ sc.score_tru }}</td>
+                                    <td data-label="Tổng Điểm" class="text-md-center d-none d-md-table-cell">
+                                        <span class="badge-soft badge-danger fs-6 shadow-sm">{{ sc.total_score }}</span>
+                                    </td>
+                                    
+                                    <td data-label="Ghi Chú Lỗi" class="col-details">
+                                        <div class="text-main fw-bold mb-2 auto-color-note" style="line-height: 1.5;">{{ sc.note }}</div>
+                                        
+                                        {% if sc.is_appealed %}
+                                            <div class="p-3 bg-warning bg-opacity-10 border border-warning border-opacity-25 rounded-3 mt-2">
+                                                <div class="widget-label text-dark mb-1"><i class="fa-solid fa-scale-balanced text-warning"></i> Lý do phúc khảo:</div>
+                                                <div class="fst-italic text-secondary mb-3" style="font-size: 13.5px;">"{{ sc.appeal_reason }}"</div>
+                                                
+                                                {% if sc.appeal_response %}
+                                                    <div class="widget-label text-success mb-1"><i class="fa-solid fa-check-double text-success"></i> BCH phản hồi:</div>
+                                                    <div class="fw-bold" style="color: #166534; font-size: 14px;">"{{ sc.appeal_response }}"</div>
+                                                {% else %}
+                                                    <div class="badge-soft badge-secondary">Đang chờ giải quyết...</div>
+                                                    {% if not is_gvcn %}
+                                                        <button class="btn-modern btn-modern-primary mt-2 w-100 p-2" onclick="openResolveModal({{ sc.score_id }}, '{{ selected_branch.name }}', '{{ sc.week }}')">
+                                                            <i class="fa-solid fa-reply"></i> Bấm trả lời ngay
+                                                        </button>
+                                                    {% endif %}
+                                                {% endif %}
+                                            </div>
+                                        {% else %}
+                                            {% if is_gvcn and not sc.is_locked %}
+                                                {% if sc.is_appeal_expired %}
+                                                    <div class="badge-soft mt-2 w-100 justify-content-center py-2" style="background: #f1f5f9; color: #94a3b8; border: 1px dashed #cbd5e1; cursor: not-allowed;" title="Đã quá 3 ngày kể từ khi công bố điểm">
+                                                        <i class="fa-solid fa-clock-rotate-left me-1"></i> Quá hạn phúc khảo (3 ngày)
+                                                    </div>
+                                                {% else %}
+                                                    <button class="btn-modern btn-modern-warning mt-2 py-2 px-3 w-100" style="background: transparent; color: #d97706; border: 1px dashed #f59e0b;" onclick="openAppealModal({{ sc.score_id }}, '{{ sc.week }}')">
+                                                        <i class="fa-solid fa-hand-paper"></i> Xin phúc khảo
+                                                    </button>
+                                                {% endif %}
+                                            {% endif %}
+                                        {% endif %}
+                                    
+                                        {% if sc.is_locked %}
+                                            <div class="badge-soft badge-secondary mt-2 w-100 justify-content-center py-2"><i class="fa-solid fa-lock"></i> Tuần đã chốt sổ</div>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                {% else %}
+                                <tr>
+                                    <td colspan="7" class="text-center py-5 col-details">
+                                        <div class="d-inline-flex align-items-center justify-content-center bg-secondary bg-opacity-10 rounded-circle mb-3" style="width: 64px; height: 64px;">
+                                            <i class="fa-regular fa-folder-open fs-3 text-secondary"></i>
+                                        </div>
+                                        <h6 class="fw-bold text-main">Chưa có dữ liệu</h6>
+                                        <p class="text-muted small mb-0">Lớp chưa có điểm thi đua trong hệ thống.</p>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- TAB: BẢNG XẾP HẠNG TOÀN TRƯỜNG (CÓ CHỌN TUẦN / THÁNG / HỌC KỲ) -->
+                <div class="tab-pane fade" id="leaderboard-pane" role="tabpanel">
+                    <div class="p-4 pb-2">
+                        <div class="d-flex justify-content-between align-items-center flex-wrap gap-3 mb-3">
+                            <div>
+                                <h5 class="fw-bold text-primary m-0"><i class="fa-solid fa-trophy text-warning me-2"></i> Bảng Xếp Hạng Thi Đua Toàn Trường</h5>
+                                <small class="text-muted">Thống kê vị thế các chi đoàn phân theo nhóm và chu kỳ thời gian.</small>
+                            </div>
+                            
+                            <!-- BỘ CHỌN LOẠI CHU KỲ VÀ MỐC THỜI GIAN -->
+                            <div class="d-flex align-items-center gap-2 flex-wrap">
+                                <select class="form-select form-select-sm fw-bold text-secondary" id="bxhPeriodType" style="width: 130px;" onchange="updateBxhTimeOptions()">
+                                    <option value="Tuan">Theo Tuần</option>
+                                    <option value="Thang">Theo Tháng</option>
+                                    <option value="HocKy">Theo Học kỳ</option>
+                                </select>
+                                <select class="form-select form-select-sm fw-bold text-primary" id="bxhWeekSelector" style="width: 140px;" onchange="loadSchoolLeaderboard()">
+                                    <!-- Options sẽ được sinh tự động bằng JS -->
+                                </select>
+                            </div>
+                        </div>
+
+                        <!-- THANH CHUYỂN ĐỔI NHÓM (TABS) -->
+                        <ul class="nav nav-pills nav-fill mb-3 bg-white p-1 rounded shadow-sm border" id="groupTabs" role="tablist">
+                            <li class="nav-item" role="presentation">
+                                <button class="nav-link active fw-bold py-2" id="group1-tab" data-bs-toggle="pill" data-bs-target="#group1Pane" type="button" role="tab">
+                                    🏆 Nhóm 1 (Khối chuyên/chọn)
+                                </button>
+                            </li>
+                            <li class="nav-item" role="presentation">
+                                <button class="nav-link fw-bold py-2" id="group2-tab" data-bs-toggle="pill" data-bs-target="#group2Pane" type="button" role="tab">
+                                    🏅 Nhóm 2 (Khối thường)
+                                </button>
+                            </li>
+                        </ul>
+                    </div>
+
+                    <!-- NỘI DUNG 2 NHÓM -->
+                    <div class="tab-content px-4 pb-4" id="groupTabsContent">
+                        <!-- TAB NHÓM 1 -->
+                        <div class="tab-pane fade show active" id="group1Pane" role="tabpanel">
+                            <div class="table-responsive-custom border rounded-3 bg-white">
+                                <table class="table-modern">
+                                    <thead>
+                                        <tr>
+                                            <th>Hạng</th>
+                                            <th>Chi đoàn (Nhóm 1)</th>
+                                            <th>Đánh giá / Xếp loại</th>
+                                            <th class="text-end pe-4">Tổng điểm</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="leaderboardGroup1Body">
+                                        <tr><td colspan="4" class="text-center py-4 text-muted"><i class="fa-solid fa-spinner fa-spin me-2"></i> Đang tải dữ liệu...</td></tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+
+                        <!-- TAB NHÓM 2 -->
+                        <div class="tab-pane fade" id="group2Pane" role="tabpanel">
+                            <div class="table-responsive-custom border rounded-3 bg-white">
+                                <table class="table-modern">
+                                    <thead>
+                                        <tr>
+                                            <th>Hạng</th>
+                                            <th>Chi đoàn (Nhóm 2)</th>
+                                            <th>Đánh giá / Xếp loại</th>
+                                            <th class="text-end pe-4">Tổng điểm</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="leaderboardGroup2Body">
+                                        <tr><td colspan="4" class="text-center py-4 text-muted"><i class="fa-solid fa-spinner fa-spin me-2"></i> Đang tải dữ liệu...</td></tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- TAB 2: SAO ĐỎ CHẤM ĐIỂM -->
+                <div class="tab-pane fade" id="monitor-pane" role="tabpanel">
+                    <div class="p-4 pb-0">
+                        <div class="alert alert-primary bg-opacity-10 border-0 text-primary fw-bold rounded-3 small mb-0 d-flex gap-2">
+                            <i class="fa-solid fa-circle-info mt-1"></i> Danh sách các đội viên Sao đỏ được phân công giám sát lớp {{ selected_branch.name }}.
+                        </div>
+                    </div>
+                    <div class="table-responsive-custom mt-3">
+                        <table class="table-modern">
+                            <thead>
+                                <tr>
+                                    <th>Tuần</th>
+                                    <th>Ca trực</th>
+                                    <th>Tên Sao đỏ chấm</th>
+                                    <th>Lớp của SĐ</th>
+                                    <th>Khu vực phân công</th>
+                                    <th class="text-center">Hành động</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for assign in monitoring_assignments %}
+                                <tr>
+                                    <td data-label="Tuần" class="fw-bold">Tuần {{ assign.week_number }}</td>
+                                    <td data-label="Ca Trực"><span class="badge-soft badge-warning"><i class="fa-regular fa-clock me-1"></i> {{ assign.shift }}</span></td>
+                                    <td data-label="Sao Đỏ" class="fw-bold text-danger">{{ assign.red_star.full_name if assign.red_star else 'Khuyết' }}</td>
+                                    <td data-label="Lớp SĐ"><span class="badge-soft badge-secondary">{{ assign.red_star.branch.name if assign.red_star and assign.red_star.branch else '-' }}</span></td>
+                                    <td data-label="Khu vực" class="fw-bold text-primary">{{ assign.duty_area.name if assign.duty_area else '-' }}</td>
+                                    
+                                    <td data-label="Hành động" class="text-center">
+                                        {% if assign.red_star %}
+                                            <button type="button" class="btn btn-sm fw-bold rounded-pill shadow-sm" 
+                                                    style="background-color: #fff3cd; color: #fd7e14; border: 1px solid #ffc107;"
+                                                    onclick="openEvalModal('{{ assign.red_star.id }}', '{{ assign.red_star.full_name }}', 'Tuần {{ assign.week_number }}')">
+                                                <i class="fa-solid fa-star text-warning"></i> Đánh giá
+                                            </button>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                {% else %}
+                                <tr>
+                                    <td colspan="6" class="col-details text-center py-5 text-muted">Chưa ghi nhận Sao đỏ chấm điểm lớp này.</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- TAB 3: LỊCH ĐI TRỰC -->
+                <div class="tab-pane fade" id="assignments-pane" role="tabpanel">
+                    <div class="p-4 pb-0">
+                        <div class="alert alert-info bg-opacity-10 border-0 text-primary fw-bold rounded-3 small mb-0 d-flex gap-2">
+                            <i class="fa-solid fa-clipboard-user mt-1"></i> Lịch phân công nhiệm vụ cho các học sinh lớp {{ selected_branch.name }} tham gia Đội Sao đỏ.
+                        </div>
+                    </div>
+                    <div class="table-responsive-custom mt-3">
+                        <table class="table-modern">
+                            <thead>
+                                <tr>
+                                    <th>Tuần</th>
+                                    <th>Họ và tên Học sinh (SĐ)</th>
+                                    <th>Ca trực</th>
+                                    <th>Nhiệm vụ / Vị trí trực</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for assign in assignments %}
+                                <tr>
+                                    <td data-label="Tuần" class="fw-bold">Tuần {{ assign.week_number }}</td>
+                                    <td data-label="Tên HS" class="fw-bold text-primary"><i class="fa-solid fa-user-shield text-muted me-2"></i> {{ assign.red_star.full_name }}</td>
+                                    <td data-label="Ca Trực"><span class="badge-soft badge-primary"><i class="fa-regular fa-clock me-1"></i> {{ assign.shift }}</span></td>
+                                    <td data-label="Nhiệm vụ" class="fw-bold text-main">{{ assign.duty_area.name if assign.duty_area else 'Chưa rõ' }}</td>
+                                </tr>
+                                {% else %}
+                                <tr>
+                                    <td colspan="4" class="col-details text-center py-5 text-muted">Lớp này không có HS tham gia Đội Sao đỏ.</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+        
+        {% else %}
+        <div class="empty-state-container d-flex flex-column align-items-center justify-content-center text-center mt-4" style="min-height: 50vh; background: var(--surface); border-radius: var(--radius-lg); border: 1px solid var(--border);">
+            <div class="bg-primary bg-opacity-10 text-primary rounded-circle d-flex align-items-center justify-content-center mb-4" style="width: 96px; height: 96px;">
+                <i class="fa-solid fa-folder-tree fs-1"></i>
+            </div>
+            <h3 class="fw-bold text-main mb-2">Tra Cứu Hồ Sơ Lớp</h3>
+            <p class="text-muted w-75" style="max-width: 400px;">Vui lòng chọn một chi đoàn trong bộ lọc phía trên để xem chi tiết điểm số và danh sách vi phạm.</p>
+        </div>
+        {% endif %}
+    </div>
+
+	<!-- MODAL GỬI PHÚC KHẢO -->
+    <div class="modal fade" id="appealModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content" style="border-radius: 20px; border: none; box-shadow: 0 20px 40px rgba(0,0,0,0.2);">
+                <div class="modal-header border-0 pb-0" style="padding: 24px 24px 10px 24px;">
+                    <h5 class="modal-title fw-bold text-main fs-5"><i class="fa-solid fa-hand-paper text-warning me-2"></i> Yêu Cầu Phúc Khảo</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <form action="/submit_appeal" method="POST">
+                    <div class="modal-body px-4 pb-4">
+                        <input type="hidden" name="score_id" id="appealScoreId">
+                        
+                        <div class="widget-label mb-2">Đang phúc khảo cho:</div>
+                        <input type="text" class="form-control fw-bold text-primary bg-primary bg-opacity-10 border-0 mb-4" id="appealWeekName" readonly style="font-size: 15px; padding: 12px 16px; border-radius: 12px;">
+                        
+                        <div class="widget-label mb-2">Nội dung giải trình:</div>
+                        <textarea class="form-control" name="reason" rows="4" placeholder="Nhập lý do..." required style="border-radius: 12px; resize: none; padding: 16px; font-size: 14px; background: #f8fafc; border: 1px solid var(--border);"></textarea>
+                    </div>
+                    <div class="modal-footer border-0 px-4 pb-4 pt-0">
+                        <button type="button" class="btn-modern btn-light fw-bold flex-grow-1" style="background: #f1f5f9; color: var(--text-main);" data-bs-dismiss="modal">Hủy</button>
+                        <button type="submit" class="btn-modern btn-modern-warning fw-bold flex-grow-1"><i class="fa-solid fa-paper-plane me-1"></i> Gửi Yêu Cầu</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+    
+    <!-- MODAL TRẢ LỜI PHÚC KHẢO (BCH) -->
+    {% if not is_gvcn %}
+    <div class="modal fade" id="resolveModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content" style="border-radius: 20px; border: none; box-shadow: 0 20px 40px rgba(0,0,0,0.2);">
+                <div class="modal-header border-0 pb-0" style="padding: 24px 24px 10px 24px;">
+                    <h5 class="modal-title fw-bold text-main fs-5"><i class="fa-solid fa-reply text-success me-2"></i> Quyết Định Phúc Khảo</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <form action="/resolve_appeal" method="POST">
+                    <div class="modal-body px-4 pb-4">
+                        <input type="hidden" name="score_id" id="resolveScoreId">
+                        
+                        <div class="widget-label mb-2">Lớp khiếu nại:</div>
+                        <input type="text" class="form-control fw-bold text-primary bg-primary bg-opacity-10 border-0 mb-4" id="resolveBranch" readonly style="font-size: 15px; padding: 12px 16px; border-radius: 12px;">
+                        
+                        <div class="widget-label mb-2">Nội dung phản hồi từ Đoàn trường:</div>
+                        <textarea class="form-control" name="response_text" rows="4" placeholder="Ghi rõ quyết định giải quyết..." required style="border-radius: 12px; resize: none; padding: 16px; font-size: 14px; background: #f8fafc; border: 1px solid var(--border);"></textarea>
+                    </div>
+                    <div class="modal-footer border-0 px-4 pb-4 pt-0">
+                        <button type="button" class="btn-modern btn-light fw-bold flex-grow-1" style="background: #f1f5f9; color: var(--text-main);" data-bs-dismiss="modal">Hủy</button>
+                        <button type="submit" class="btn-modern btn-modern-primary fw-bold flex-grow-1"><i class="fa-solid fa-check me-1"></i> Chốt Quyết Định</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- MODAL ĐÁNH GIÁ SAO ĐỎ -->
+    <div class="modal fade" id="evalModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-lg modal-dialog-centered">
+            <div class="modal-content border-0 shadow-lg" style="border-radius: 20px; overflow: hidden;">
+                <div class="modal-header text-white" style="background: linear-gradient(135deg, #0d6efd, #004080);">
+                    <h5 class="modal-title fw-bold">
+                        <i class="fa-solid fa-clipboard-check me-2"></i>Phiếu Đánh Giá Sao Đỏ
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body bg-light p-4">
+                    <div class="alert alert-info border-0 shadow-sm rounded-4 mb-4">
+                        <i class="fa-solid fa-user-shield me-2"></i>Đang đánh giá: <strong id="evalStarName" class="text-danger fs-5">...</strong>
+                        <br><small class="text-muted"><i class="fa-regular fa-clock me-1"></i>Kỳ đánh giá: <span id="evalWeekName"></span></small>
+                    </div>
+
+                    <form id="evalForm">
+                        <input type="hidden" id="evalStarId">
+                        <input type="hidden" id="evalWeek">
+
+                        <div class="card border-0 shadow-sm rounded-4 mb-3">
+                            <div class="card-body">
+                                <h6 class="fw-bold text-primary mb-3">1. Giờ giấc & Chuyên cần</h6>
+                                <div class="form-check mb-2">
+                                    <input class="form-check-input" type="radio" name="score_gio_giac" id="gg5" value="5" checked>
+                                    <label class="form-check-label fw-bold text-success" for="gg5"> Có mặt trực sớm, đúng giờ quy định (5đ)</label>
+                                </div>
+                                <div class="form-check mb-2">
+                                    <input class="form-check-input" type="radio" name="score_gio_giac" id="gg3" value="3">
+                                    <label class="form-check-label text-warning fw-bold" for="gg3"> Có đi muộn nhưng có xin phép/báo cáo (3đ)</label>
+                                </div>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="radio" name="score_gio_giac" id="gg1" value="1">
+                                    <label class="form-check-label text-danger fw-bold" for="gg1"> Bỏ trực hoặc đi muộn không lý do (1đ)</label>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="card border-0 shadow-sm rounded-4 mb-3">
+                            <div class="card-body">
+                                <h6 class="fw-bold text-primary mb-3">2. Tác phong & Đồng phục</h6>
+                                <div class="form-check mb-2">
+                                    <input class="form-check-input" type="radio" name="score_tac_phong" id="tp5" value="5" checked>
+                                    <label class="form-check-label fw-bold text-success" for="tp5"> Trang phục nghiêm túc, đeo thẻ tên/huy hiệu đầy đủ (5đ)</label>
+                                </div>
+                                <div class="form-check mb-2">
+                                    <input class="form-check-input" type="radio" name="score_tac_phong" id="tp3" value="3">
+                                    <label class="form-check-label text-warning fw-bold" for="tp3"> Đồng phục đúng quy định nhưng quên đeo thẻ tên/ huy hiệu (3đ)</label>
+                                </div>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="radio" name="score_tac_phong" id="tp1" value="1">
+                                    <label class="form-check-label text-danger fw-bold" for="tp1"> Vi phạm nội quy đồng phục của nhà trường (1đ)</label>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="card border-0 shadow-sm rounded-4 mb-3">
+                            <div class="card-body">
+                                <h6 class="fw-bold text-primary mb-3">3. Thái độ & Giao tiếp</h6>
+                                <div class="form-check mb-2">
+                                    <input class="form-check-input" type="radio" name="score_thai_do" id="td5" value="5" checked>
+                                    <label class="form-check-label fw-bold text-success" for="td5"> Lễ phép với giáo viên, nhắc nhở học sinh hòa nhã (5đ)</label>
+                                </div>
+                                <div class="form-check mb-2">
+                                    <input class="form-check-input" type="radio" name="score_thai_do" id="td3" value="3">
+                                    <label class="form-check-label text-warning fw-bold" for="td3"> Hoàn thành nhiệm vụ nhưng giao tiếp còn cứng nhắc (3đ)</label>
+                                </div>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="radio" name="score_thai_do" id="td1" value="1">
+                                    <label class="form-check-label text-danger fw-bold" for="td1"> Có thái độ hách dịch, lớn tiếng, thiếu tôn trọng (1đ)</label>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="card border-0 shadow-sm rounded-4 mb-3">
+                            <div class="card-body">
+                                <h6 class="fw-bold text-primary mb-3">4. Tính Công tâm & Chính xác</h6>
+                                <div class="form-check mb-2">
+                                    <input class="form-check-input" type="radio" name="score_cong_tam" id="ct5" value="5" checked>
+                                    <label class="form-check-label fw-bold text-success" for="ct5"> Ghi nhận lỗi chính xác, trung thực, khách quan (5đ)</label>
+                                </div>
+                                <div class="form-check mb-2">
+                                    <input class="form-check-input" type="radio" name="score_cong_tam" id="ct3" value="3">
+                                    <label class="form-check-label text-warning fw-bold" for="ct3"> Chấm tương đối, đôi chỗ còn bỏ sót lỗi nhỏ (3đ)</label>
+                                </div>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="radio" name="score_cong_tam" id="ct1" value="1">
+                                    <label class="form-check-label text-danger fw-bold" for="ct1"> Bao che cho học sinh vi phạm hoặc trù dập lớp trực (1đ)</label>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="fw-bold text-secondary mb-2">Góp ý ẩn danh (Không bắt buộc):</label>
+                            <textarea class="form-control rounded-3" id="evalComment" rows="3" placeholder="Nhập nhận xét chi tiết để Bí thư Đoàn trường xem xét..."></textarea>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer bg-white border-0 p-3">
+                    <button type="button" class="btn btn-light rounded-pill px-4 fw-bold" data-bs-dismiss="modal">Hủy</button>
+                    <button type="button" class="btn btn-primary rounded-pill px-4 fw-bold shadow-sm" id="btnSubmitEval" onclick="submitEvaluation()">
+                        <i class="fa-solid fa-paper-plane me-2"></i> Gửi Đánh Giá
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+	<!-- MODAL CHI TIẾT BẢNG XẾP HẠNG -->
+    <div class="modal fade" id="leaderboardDetailModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content border-0 shadow-lg" style="border-radius: 16px;">
+                <div class="modal-header text-white" style="background: var(--primary);">
+                    <h5 class="modal-title fw-bold"><i class="fa-solid fa-chart-pie me-2"></i>Soi Chi Tiết: <span id="lbDetailBranch"></span></h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body p-4">
+                    <div class="d-flex justify-content-between border-bottom pb-3 mb-3">
+                        <span class="text-muted fw-bold"><i class="fa-solid fa-star text-warning me-2"></i>Tổng con điểm Tốt:</span>
+                        <span class="text-primary fw-bold fs-5" id="lbDetailTot">0</span>
+                    </div>
+                    <div class="d-flex justify-content-between border-bottom pb-3 mb-3">
+                        <span class="text-muted fw-bold"><i class="fa-solid fa-plus text-success me-2"></i>Điểm cộng khác:</span>
+                        <span class="text-success fw-bold fs-5" id="lbDetailCong">+0</span>
+                    </div>
+                    <div class="d-flex justify-content-between border-bottom pb-3 mb-3">
+                        <span class="text-muted fw-bold"><i class="fa-solid fa-minus text-danger me-2"></i>Điểm trừ khác:</span>
+                        <span class="text-danger fw-bold fs-5" id="lbDetailTru">-0</span>
+                    </div>
+                    <div>
+                        <span class="text-muted fw-bold d-block mb-2"><i class="fa-solid fa-book-skull text-secondary me-2"></i>Ghi chú vi phạm (Sổ đen):</span>
+                        <div class="p-3 rounded-3 border text-danger fw-bold shadow-sm" id="lbDetailNote" style="background-color: #fef2f2; line-height: 1.6;">
+                            Không có vi phạm
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+	<!-- MODAL CẬP NHẬT THÔNG TIN LỚP -->
+    <div class="modal fade" id="editBranchModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content border-0 shadow-lg" style="border-radius: 16px;">
+                <div class="modal-header text-white" style="background: var(--primary);">
+                    <h5 class="modal-title fw-bold"><i class="fa-solid fa-user-pen me-2"></i>Cập nhật thông tin: Lớp {{ selected_branch.name }}</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body p-4">
+                    <input type="hidden" id="editBranchId" value="{{ selected_branch.id }}">
+                    
+                    <h6 class="fw-bold text-secondary mb-3"><i class="fa-solid fa-chalkboard-user me-2"></i>Thông tin Giáo viên chủ nhiệm</h6>
+                    <div class="mb-3">
+                        <label class="form-label fw-bold small text-muted">Họ và Tên GVCN:</label>
+                        <input type="text" class="form-control fw-bold text-primary" id="editGvcnName" value="{{ selected_branch.gvcn or '' }}" placeholder="VD: Nguyễn Văn A">
+                    </div>
+                    <div class="mb-4">
+                        <label class="form-label fw-bold small text-muted">Số điện thoại di động:</label>
+                        <input type="text" class="form-control fw-bold" id="editGvcnPhone" value="{{ selected_branch.phone_gvcn or '' }}" placeholder="VD: 0987654321">
+                    </div>
+
+                    <h6 class="fw-bold text-secondary mb-3 border-top pt-3"><i class="fa-solid fa-user-graduate me-2"></i>Thông tin Lớp trưởng</h6>
+                    <div class="mb-3">
+                        <label class="form-label fw-bold small text-muted">Họ và Tên Lớp trưởng:</label>
+                        <input type="text" class="form-control fw-bold text-primary" id="editMonitorName" value="{{ selected_branch.class_monitor or '' }}" placeholder="VD: Trần Thị B">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-bold small text-muted">Số điện thoại liên hệ:</label>
+                        <input type="text" class="form-control fw-bold" id="editMonitorPhone" value="{{ selected_branch.phone_monitor or '' }}" placeholder="Phục vụ liên lạc công tác Đoàn">
+                    </div>
+                </div>
+                <div class="modal-footer border-0 px-4 pb-4 pt-0">
+                    <button type="button" class="btn-modern btn-light fw-bold flex-grow-1" data-bs-dismiss="modal">Hủy</button>
+                    <button type="button" class="btn-modern btn-modern-primary fw-bold flex-grow-1" id="btnSaveBranch" onclick="saveBranchInfo()">
+                        <i class="fa-solid fa-floppy-disk me-1"></i> Lưu Thay Đổi
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // Mở Popup đánh giá
+        function openEvalModal(starId, starName, weekName) {
+            document.getElementById('evalStarId').value = starId;
+            document.getElementById('evalStarName').innerText = starName;
+            document.getElementById('evalWeek').value = weekName;
+            document.getElementById('evalWeekName').innerText = weekName;
+            
+            document.getElementById('evalForm').reset();
+            
+            var myModal = new bootstrap.Modal(document.getElementById('evalModal'));
+            myModal.show();
+        }
+
+        async function submitEvaluation() {
+            const btn = document.getElementById('btnSubmitEval');
+            if (!btn) return;
+            
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin me-2"></i> Đang gửi...';
+
+            const gioGiac = document.querySelector('input[name="score_gio_giac"]:checked');
+            const tacPhong = document.querySelector('input[name="score_tac_phong"]:checked');
+            const thaiDo = document.querySelector('input[name="score_thai_do"]:checked');
+            const congTam = document.querySelector('input[name="score_cong_tam"]:checked');
+
+            const payload = {
+                evaluatee_id: document.getElementById('evalStarId').value,
+                week_name: document.getElementById('evalWeek').value,
+                score_gio_giac: gioGiac ? gioGiac.value : 5,
+                score_tac_phong: tacPhong ? tacPhong.value : 5,
+                score_thai_do: thaiDo ? thaiDo.value : 5,
+                score_cong_tam: congTam ? congTam.value : 5,
+                comment: document.getElementById('evalComment').value
+            };
+
+            try {
+                const response = await fetch('/api/submit_evaluation', {
+                    method: 'POST',
+                    headers: { 
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json'
+                    },
+                    body: JSON.stringify(payload)
+                });
+                
+                const textResponse = await response.text();
+                let result;
+                try {
+                    result = JSON.parse(textResponse);
+                } catch (e) {
+                    throw new Error("Phản hồi từ Server không phải định dạng JSON hợp lệ: " + textResponse.substring(0, 100));
+                }
+
+                if (result.success) {
+                    alert("✅ " + result.message);
+                    const modalEl = document.getElementById('evalModal');
+                    if (modalEl) {
+                        const modalInstance = bootstrap.Modal.getInstance(modalEl);
+                        if (modalInstance) modalInstance.hide();
+                    }
+                    location.reload();
+                } else {
+                    alert("❌ Lỗi từ máy chủ: " + result.error);
+                }
+            } catch (error) {
+                console.error("Lỗi chi tiết:", error);
+                alert("❌ Lỗi kết nối máy chủ!\nChi tiết: " + error.message);
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = '<i class="fa-solid fa-paper-plane me-2"></i> Gửi Đánh Giá';
+            }
+        }
+
+        function openAppealModal(scoreId, weekName) {
+            document.getElementById('appealScoreId').value = scoreId;
+            document.getElementById('appealWeekName').value = weekName;
+            var myModal = new bootstrap.Modal(document.getElementById('appealModal'));
+            myModal.show();
+        }
+        
+        function openResolveModal(scoreId, branchName, weekName) {
+            document.getElementById('resolveScoreId').value = scoreId;
+            document.getElementById('resolveBranch').value = branchName + " (" + weekName + ")";
+            var myModal = new bootstrap.Modal(document.getElementById('resolveModal'));
+            myModal.show();
+        }
+
+        // ĐIỀU KHIỂN CẬP NHẬT MỐC THỜI GIAN BXH (TUẦN / THÁNG / HỌC KỲ)
+        async function updateBxhTimeOptions() {
+            const periodType = document.getElementById('bxhPeriodType').value;
+            const timeSelect = document.getElementById('bxhWeekSelector');
+            if (!timeSelect) return;
+            
+            timeSelect.innerHTML = '';
+
+            if (periodType === 'Tuan') {
+                for (let i = 1; i <= 37; i++) {
+                    let opt = document.createElement('option');
+                    opt.value = `Tuần ${i}`;
+                    opt.textContent = `Tuần ${i}`;
+                    timeSelect.appendChild(opt);
+                }
+                loadSchoolLeaderboard();
+            } else if (periodType === 'Thang') {
+                // Gọi API lấy danh sách tháng đồng bộ từ Điểm thi đua tháng
+                timeSelect.innerHTML = '<option value="">Đang tải tháng...</option>';
+                try {
+                    const response = await fetch('/api/gvcn/get_months');
+                    const result = await response.json();
+                    timeSelect.innerHTML = '';
+                    
+                    if (result.success && result.months && result.months.length > 0) {
+                        result.months.forEach(m => {
+                            let opt = document.createElement('option');
+                            opt.value = m;
+                            opt.textContent = m;
+                            timeSelect.appendChild(opt);
+                        });
+                    } else {
+                        let opt = document.createElement('option');
+                        opt.value = "";
+                        opt.textContent = "Chưa có dữ liệu tháng";
+                        timeSelect.appendChild(opt);
+                    }
+                } catch (e) {
+                    console.error("Lỗi tải danh sách tháng:", e);
+                    let opt = document.createElement('option');
+                    opt.value = "Tháng 1";
+                    opt.textContent = "Tháng 1";
+                    timeSelect.appendChild(opt);
+                }
+                loadSchoolLeaderboard();
+            } else if (periodType === 'HocKy') {
+                ['Học kỳ 1', 'Học kỳ 2', 'Cả năm học'].forEach(val => {
+                    let opt = document.createElement('option');
+                    opt.value = val;
+                    opt.textContent = val;
+                    timeSelect.appendChild(opt);
+                });
+                loadSchoolLeaderboard();
+            }
+        }
+
+        document.addEventListener("DOMContentLoaded", function() {
+            const timeSelect = document.getElementById('bxhWeekSelector');
+            if (timeSelect && timeSelect.options.length === 0) {
+                updateBxhTimeOptions();
+            }
+        });
+
+        // HÀM TẢI BẢNG XẾP HẠNG TOÀN TRƯỜNG CHO APP GVCN
+        async function loadSchoolLeaderboard() {
+            const selector = document.getElementById('bxhWeekSelector');
+            const body1 = document.getElementById('leaderboardGroup1Body');
+            const body2 = document.getElementById('leaderboardGroup2Body');
+            const weekName = selector ? selector.value : "Tuần 1";
+
+            if (!body1 || !body2) return;
+
+            const loadingHtml = `<tr><td colspan="4" class="text-center py-4 text-muted">
+                <i class="fa-solid fa-spinner fa-spin me-2"></i> Đang tải dữ liệu ${weekName}...
+            </td></tr>`;
+            body1.innerHTML = loadingHtml;
+            body2.innerHTML = loadingHtml;
+
+            try {
+                const url = `/api/gvcn/leaderboard/${encodeURIComponent(weekName)}`;
+                const response = await fetch(url, {
+                    method: 'GET',
+                    credentials: 'same-origin',
+                    headers: { 'Accept': 'application/json' },
+                    cache: 'no-store'
+                });
+
+                const contentType = response.headers.get('content-type') || '';
+                const rawText = await response.text();
+
+                if (!contentType.toLowerCase().includes('application/json')) {
+                    throw new Error(
+                        response.status === 401 || response.status === 403
+                            ? "Phiên đăng nhập không còn hợp lệ. Vui lòng đăng nhập lại."
+                            : `Máy chủ trả về HTTP ${response.status} thay vì JSON.`
+                    );
+                }
+
+                let result;
+                try {
+                    result = JSON.parse(rawText);
+                } catch (e) {
+                    throw new Error("Dữ liệu JSON từ máy chủ không hợp lệ.");
+                }
+
+                if (!response.ok || !result.success) {
+                    throw new Error(result.error || `Máy chủ trả về HTTP ${response.status}.`);
+                }
+
+                renderLeaderboardTable('leaderboardGroup1Body', result.group_1 || []);
+                renderLeaderboardTable('leaderboardGroup2Body', result.group_2 || []);
+
+            } catch (err) {
+                console.error("Lỗi tải BXH toàn trường:", err);
+                const message = err && err.message ? err.message : "Không thể kết nối đến máy chủ.";
+
+                const errorHtml = `<tr><td colspan="4" class="text-center py-4 text-danger">
+                    <i class="fa-solid fa-circle-exclamation me-2"></i>${message}
+                    <div class="small text-muted mt-2">Hãy thử tải lại trang nếu lỗi vẫn còn.</div>
+                </td></tr>`;
+                body1.innerHTML = errorHtml;
+                body2.innerHTML = errorHtml;
+            }
+        }
+
+		function renderLeaderboardTable(tbodyId, listData) {
+            let tbody = document.getElementById(tbodyId);
+            if (!tbody) return;
+            tbody.innerHTML = '';
+            
+            if (!listData || listData.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="4" class="text-center py-4 text-muted">Chưa có dữ liệu xếp hạng</td></tr>`;
+                return;
+            }
+
+            listData.forEach((item, index) => {
+                let badgeRank = '';
+                if(index === 0) badgeRank = '<span class="badge-soft bg-warning text-dark fw-bold">Top 1 🥇</span>';
+                else if(index === 1) badgeRank = '<span class="badge-soft bg-secondary text-white fw-bold">Top 2 🥈</span>';
+                else if(index === 2) badgeRank = '<span class="badge-soft bg-danger text-white fw-bold">Top 3 🥉</span>';
+                else badgeRank = `#${index + 1}`;
+
+                let ratingBadgeClass = 'badge-secondary';
+                if (item.week_rating && item.week_rating.includes('Tốt')) ratingBadgeClass = 'badge-success';
+                else if (item.week_rating && item.week_rating.includes('Khá')) ratingBadgeClass = 'badge-primary';
+
+                let tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td data-label="Hạng" class="fw-bold">${badgeRank}</td>
+                    <td data-label="Chi đoàn" class="text-md-start">
+                        <button class="btn btn-link text-decoration-none fw-bold p-0 d-flex align-items-center gap-1 class-detail-btn" type="button">
+                            <span class="text-primary">${item.branch_name}</span>
+                            <i class="fa-solid fa-circle-info text-muted ms-1" style="font-size: 12px;"></i>
+                        </button>
+                    </td>
+                    <td data-label="Xếp loại"><span class="badge-soft ${ratingBadgeClass}">${item.week_rating}</span></td>
+                    <td data-label="Tổng điểm" class="text-md-end pe-md-4 fw-bold text-danger fs-6">${item.total_score} đ</td>
+                `;
+
+                // Gắn sự kiện click bằng thuần JavaScript (An toàn tuyệt đối với mọi loại ký tự đặc biệt trong ghi chú)
+                const btn = tr.querySelector('.class-detail-btn');
+                btn.addEventListener('click', function() {
+                    showLeaderboardDetail(
+                        item.branch_name, 
+                        item.diem_tot, 
+                        item.cong, 
+                        item.tru, 
+                        item.note || 'Không có vi phạm'
+                    );
+                });
+
+                tbody.appendChild(tr);
+            });
+        }
+
+        function showLeaderboardDetail(branchName, diemTot, cong, tru, note) {
+            document.getElementById('lbDetailBranch').innerText = branchName;
+            document.getElementById('lbDetailTot').innerText = diemTot;
+            document.getElementById('lbDetailCong').innerText = "+" + cong;
+            document.getElementById('lbDetailTru').innerText = "-" + tru;
+            
+            let noteEl = document.getElementById('lbDetailNote');
+            if (!note || note.trim() === '' || note.trim() === 'Không có vi phạm') {
+                noteEl.innerHTML = '<span class="text-success"><i class="fa-solid fa-shield-check"></i> Không ghi nhận vi phạm.</span>';
+                noteEl.style.backgroundColor = '#f0fdf4';
+                noteEl.style.borderColor = '#bbf7d0';
+            } else {
+                noteEl.innerText = note;
+                noteEl.style.backgroundColor = '#fef2f2';
+                noteEl.style.borderColor = '#fecaca';
+            }
+            
+            var myModal = new bootstrap.Modal(document.getElementById('leaderboardDetailModal'));
+            myModal.show();
+        }
+
+        document.addEventListener('click', function(event) {
+            const sidebar = document.getElementById('desktopSidebar');
+            const toggleBtn = document.querySelector('.mobile-header .btn-menu');
+            if (window.innerWidth <= 1200 && sidebar && sidebar.classList.contains('show')) {
+                if (!sidebar.contains(event.target) && !toggleBtn.contains(event.target)) {
+                    sidebar.classList.remove('show');
+                }
+            }
+        });
+    </script>
+    
+    <script>
+    document.addEventListener("DOMContentLoaded", function() {
+        const colors = ['#0d6efd', '#198754', '#d63384', '#fd7e14', '#6f42c1', '#0dcaf0'];
+
+        document.querySelectorAll('.auto-color-note').forEach(function(el) {
+            let text = el.innerText || el.textContent;
+            if (!text || text.trim() === '' || text.trim() === 'Không có') return;
+
+            let sessions = text.split(';');
+            let newHtml = '';
+
+            sessions.forEach(function(sessionText, index) {
+                let cleanSession = sessionText.trim();
+                if (!cleanSession) return;
+
+                let color = colors[index % colors.length];
+                let errors = cleanSession.split(',');
+                errors.forEach(function(err) {
+                    let cleanErr = err.trim();
+                    if (!cleanErr) return;
+                    
+                    newHtml += `<span style="color: ${color}; font-weight: 600; display: block; margin-bottom: 4px; border-bottom: 1px dashed #eee; padding-bottom: 2px;">
+                                    <i class="fa-solid fa-check" style="font-size: 11px; margin-right: 4px;"></i> ${cleanErr}
+                                </span>`;
+                });
+            });
+
+            el.innerHTML = newHtml;
+        });
+    });
+
+        function openEditBranchModal() {
+            var myModal = new bootstrap.Modal(document.getElementById('editBranchModal'));
+            myModal.show();
+        }
+
+        async function saveBranchInfo() {
+            const btn = document.getElementById('btnSaveBranch');
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin me-2"></i> Đang lưu...';
+
+            const payload = {
+                branch_id: document.getElementById('editBranchId').value,
+                gvcn: document.getElementById('editGvcnName').value,
+                phone_gvcn: document.getElementById('editGvcnPhone').value,
+                class_monitor: document.getElementById('editMonitorName').value,
+                phone_monitor: document.getElementById('editMonitorPhone').value
+            };
+
+			try {
+                const response = await fetch('/update_gvcn_info', { 
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                const result = await response.json();
+                
+                if (result.success) {
+                    alert("✅ " + result.message);
+                    location.reload();
+                } else {
+                    alert("❌ Lỗi: " + result.error);
+                }
+            } catch (error) {
+                console.error("Lỗi cập nhật:", error);
+                alert("❌ Không thể kết nối tới máy chủ!");
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = '<i class="fa-solid fa-floppy-disk me-1"></i> Lưu Thay Đổi';
+            }
+        }
+    </script>
+</body>
+</html>
