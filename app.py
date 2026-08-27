@@ -2323,7 +2323,26 @@ def weekly():
                 flash(f"Đã lưu và cập nhật chính xác bảng điểm {week_name}!", "success")
                 return redirect(url_for('weekly', week=week_name))
 
-            current_week = request.args.get('week', 'Tuần 1'); branches_data = []; cat_list = []
+            # --- [BẢN VÁ LỖI]: TỰ ĐỘNG HIỂN THỊ TUẦN MỚI NHẤT THAY VÌ TUẦN 1 ---
+            week_param = request.args.get('week')
+            if week_param:
+                current_week = week_param
+            else:
+                # Ưu tiên 1: Tự động tìm tuần mới nhất đã có dữ liệu điểm trong CSDL
+                latest_score = db_session.query(WeeklyScore).join(Branch).filter(
+                    Branch.school_year_id == active_year.id if active_year else True
+                ).order_by(WeeklyScore.id.desc()).first()
+                
+                if latest_score:
+                    current_week = latest_score.week
+                else:
+                    # Ưu tiên 2: Nếu chưa có điểm, lấy tuần mới nhất vừa được phân công lịch trực
+                    latest_assign = db_session.query(Assignment).order_by(Assignment.week_number.desc()).first()
+                    current_week = f"Tuần {latest_assign.week_number}" if latest_assign else "Tuần 1"
+
+            branches_data = []
+            cat_list = []
+            # -------------------------------------------------------------------
             categories = db_session.query(ViolationCategory).filter_by(school_year_id=active_year.id).all() if active_year else []
             for c in categories: cat_list.append({"name": c.name, "points": float(c.penalty_points), "type": getattr(c, 'point_type', 'Điểm trừ')})
             categories_json = json.dumps(cat_list)
@@ -3258,7 +3277,7 @@ def class_dashboard():
                 selected_branch = db_session.query(Branch).filter_by(id=selected_branch_id).first()
                 if selected_branch:
                     group_val = selected_branch.group or "Nhóm 1"
-                    weekly_scores_db = db_session.query(WeeklyScore).filter_by(branch_id=selected_branch.id).order_by(WeeklyScore.id).all()
+                    weekly_scores_db = db_session.query(WeeklyScore).filter_by(branch_id=selected_branch.id).order_by(WeeklyScore.id.desc()).all()
                     
                     # ==========================================================
                     # [THUẬT TOÁN ĐẾM LỖI TỐI ƯU]: Quét học sinh vi phạm >= 3 lỗi 
@@ -6563,8 +6582,9 @@ def api_gvcn_get_months():
 # =====================================================================
 # API: XEM BẢNG XẾP HẠNG TOÀN TRƯỜNG (HỖ TRỢ TUẦN, THÁNG, HỌC KỲ KÈM CHI TIẾT)
 # =====================================================================
+@app.route('/api/gvcn/leaderboard', methods=['GET'])  # Bổ sung route không cần tham số
 @app.route('/api/gvcn/leaderboard/<path:week_name>', methods=['GET'])
-def api_gvcn_leaderboard(week_name):
+def api_gvcn_leaderboard(week_name=None):  # Gán giá trị mặc định là None
     if not session.get('role'):
         return {
             "success": False,
@@ -6573,11 +6593,6 @@ def api_gvcn_leaderboard(week_name):
 
     try:
         week_name = (week_name or '').strip()
-        if not week_name:
-            return {
-                "success": False,
-                "error": "Thiếu thông tin mốc thời gian."
-            }, 400
 
         with session_scope() as db_session:
             active_year = db_session.query(SchoolYear).filter_by(is_active=True).first()
@@ -6592,6 +6607,14 @@ def api_gvcn_leaderboard(week_name):
                     "success": False,
                     "error": "Chưa có năm học nào trong hệ thống."
                 }, 200
+
+            # --- [BẢN VÁ LỖI]: TỰ ĐỘNG TÌM TUẦN MỚI NHẤT NẾU KHÔNG CÓ THAM SỐ ---
+            if not week_name or week_name in ['undefined', 'null', 'latest']:
+                latest_score = db_session.query(WeeklyScore).join(Branch).filter(
+                    Branch.school_year_id == school_year_id
+                ).order_by(WeeklyScore.id.desc()).first()
+                week_name = latest_score.week if latest_score else "Tuần 1"
+            # -------------------------------------------------------------------
 
             branches = db_session.query(Branch).filter_by(school_year_id=school_year_id).all()
             group_1_data = []
@@ -6769,17 +6792,27 @@ def update_branch_info():
         import traceback
         traceback.print_exc()
         return {"success": False, "error": f"Lỗi hệ thống: {str(e)}"}, 500
+    
 @app.route('/bgh/dashboard', methods=['GET'])
 def bgh_dashboard():
     if session.get('role') not in ['Quản trị viên', 'Admin', 'Ban Giám hiệu', 'Bí thư Đoàn trường', 'Bí thư']:
         flash("Bạn không có quyền truy cập khu vực điều hành của Ban Giám hiệu!", "error")
         return redirect(url_for('dashboard'))
 
-    selected_week = request.args.get('week', 'Tuần 1')
+    # Chỉ lấy tham số week từ URL, bỏ giá trị gán cứng 'Tuần 1'
+    selected_week = request.args.get('week')
 
     with session_scope() as db_session:
         active_year = db_session.query(SchoolYear).filter_by(is_active=True).first()
         school_year_id = active_year.id if active_year else None
+
+        # --- [BẢN VÁ LỖI]: TỰ ĐỘNG TÌM TUẦN MỚI NHẤT CHO BGH NẾU KHÔNG TRUYỀN THAM SỐ ---
+        if not selected_week:
+            latest_score = db_session.query(WeeklyScore).join(Branch).filter(
+                Branch.school_year_id == school_year_id if school_year_id else True
+            ).order_by(WeeklyScore.id.desc()).first()
+            selected_week = latest_score.week if latest_score else "Tuần 1"
+        # ---------------------------------------------------------------------------------
 
         if not school_year_id:
             return render_template('bgh_dashboard.html', groups_data={}, ai_summary="Chưa kích hoạt năm học.", weeks=[f"Tuần {i}" for i in range(1, 38)])
