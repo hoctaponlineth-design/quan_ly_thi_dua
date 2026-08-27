@@ -236,9 +236,9 @@ def parse_sodaubai():
             return {"error": "Hệ thống không nhận diện được biểu mẫu Sổ Đầu Bài này!"}, 400
             
         c10 = c9 = c8 = 0
+        
         subject_scores = {}  # Phân loại điểm tốt (8, 9, 10) theo Tên Môn Học
-        diem_kem_list = []   # Danh sách điểm kém (1, 2) theo định dạng tên học sinh
-        diem_khong_list = [] # Danh sách học sinh bị điểm 0 (Không học bài)
+        bad_marks_list = []  # Lưu tạm toàn bộ lỗi điểm kém/không học bài để xén trần
         
         # Bắt đầu quét từ start_row + 3 (bỏ qua dòng tiêu đề và hàng số thứ tự 1-10)
         for i in range(start_row + 3, len(df)):
@@ -296,12 +296,13 @@ def parse_sodaubai():
                         c8 += 1
                         if mon not in subject_scores: subject_scores[mon] = {'c10': 0, 'c9': 0, 'c8': 0}
                         subject_scores[mon]['c8'] += 1
+                        
                     elif score_val == 0:
-                        if name_part: diem_khong_list.append(f"{name_part} ({tiet_str} môn {mon})")
-                        else: diem_khong_list.append(f"{tiet_str} môn {mon}")
+                        key = f"{name_part} (Môn {mon})" if name_part else f"Môn {mon}"
+                        bad_marks_list.append({'type': 'Không học bài', 'key': key, 'mon': mon})
                     elif score_val in [1, 2]:
-                        if name_part: diem_kem_list.append(f"{name_part} - {score_val} điểm ({tiet_str} môn {mon})")
-                        else: diem_kem_list.append(f"{tiet_str} môn {mon} ({score_val} điểm)")
+                        key = f"{name_part} (Môn {mon})" if name_part else f"Môn {mon}"
+                        bad_marks_list.append({'type': 'Bị điểm kém', 'key': key, 'mon': mon})
             
             # THUẬT TOÁN DỰ PHÒNG: Nếu không tách được theo tên, quét toàn bộ số nguyên hợp lệ trong ô
             if not parsed_any:
@@ -323,10 +324,11 @@ def parse_sodaubai():
                         c8 += 1
                         if mon not in subject_scores: subject_scores[mon] = {'c10': 0, 'c9': 0, 'c8': 0}
                         subject_scores[mon]['c8'] += 1
+                        
                     elif num == 0:
-                        diem_khong_list.append(f"{tiet_str} môn {mon}")
+                        bad_marks_list.append({'type': 'Không học bài', 'key': f"Môn {mon}", 'mon': mon})
                     elif num in [1, 2]:
-                        diem_kem_list.append(f"{tiet_str} môn {mon} ({num} điểm)")
+                        bad_marks_list.append({'type': 'Bị điểm kém', 'key': f"Môn {mon}", 'mon': mon})
 
         # THUẬT TOÁN XẾP LOẠI TUẦN THEO QUY CHẾ CỦA TRƯỜNG
         xep_loai = "Bình thường"
@@ -351,14 +353,49 @@ def parse_sodaubai():
                 elif so_yeu == 0 and so_tb == 0 and so_kha > 0:
                     xep_loai = "Tuần Khá"
 
+        # --- THUẬT TOÁN XÉN TRẦN LỖI ĐIỂM KÉM / KHÔNG HỌC BÀI THEO BAREM ---
+        max_tot = 14
+        max_mon = 4
+        try:
+            with session_scope() as db_session:
+                active_year = db_session.query(SchoolYear).filter_by(is_active=True).first()
+                if active_year:
+                    settings = db_session.query(ScoreSettings).filter_by(school_year_id=active_year.id).first()
+                    if settings:
+                        max_tot = int(getattr(settings, 'max_diem_tot', 14))
+                        max_mon = int(getattr(settings, 'max_diem_mon', 4))
+        except Exception:
+            pass
+
+        # 1. Gom nhóm lỗi theo từng môn học
+        bad_by_subj = {}
+        for bm in bad_marks_list:
+            m = bm['mon']
+            if m not in bad_by_subj:
+                bad_by_subj[m] = []
+            bad_by_subj[m].append(bm)
+
+        # 2. Xén bớt số lượng lỗi mỗi môn (Không vượt quá max_mon)
+        surviving_bad_marks = []
+        for m, marks in bad_by_subj.items():
+            surviving_bad_marks.extend(marks[:max_mon])
+
+        # 3. Xén bớt tổng số lỗi toàn tuần (Không vượt quá max_tot)
+        surviving_bad_marks = surviving_bad_marks[:max_tot]
+
+        # 4. Tái tạo lại từ điển đếm số lượng sau khi đã xén trần
+        final_bad_counts = {}
+        for bm in surviving_bad_marks:
+            err_type = bm['type']
+            key = bm['key']
+            dict_key = (err_type, key)
+            final_bad_counts[dict_key] = final_bad_counts.get(dict_key, 0) + 1
+
         # ĐÓNG GÓI LỖI VÀO Ô GHI CHÚ (SỔ ĐEN)
         note_fragments = []
-        if diem_khong_list:
-            for item in set(diem_khong_list):
-                note_fragments.append(f"Không học bài x1 [{item}]")
-        if diem_kem_list:
-            for item in set(diem_kem_list):
-                note_fragments.append(f"Bị điểm kém x1 [{item}]")
+        for (err_type, key), count in final_bad_counts.items():
+            note_fragments.append(f"{err_type} x{count} [{key}]")
+        # ------------------------------------------------------------------
 
         # ĐÓNG GÓI MẢNG ĐIỂM MÔN HỌC CHI TIẾT
         raw_list = []
@@ -2263,6 +2300,17 @@ def weekly():
                     
                     note = request.form.get(f'note_{b_id}', '').strip()
                     
+                    # --- [BẢN VÁ LỖI BAREM]: XÉN ĐIỂM TỐT KHI NHẬP TAY TRÊN WEB ---
+                    max_tot_web = int(getattr(settings, 'max_diem_tot', 14)) if settings else 14
+                    tong_sl_diem = c_8 + c_9 + c_10
+                    if tong_sl_diem > max_tot_web:
+                        lech = tong_sl_diem - max_tot_web
+                        # Ưu tiên xén mất điểm 8 trước, rồi mới tới 9, 10
+                        x8 = min(c_8, lech); c_8 -= x8; lech -= x8
+                        x9 = min(c_9, lech); c_9 -= x9; lech -= x9
+                        c_10 -= lech
+                    # --------------------------------------------------------------
+                    
                     diem_quy_uoc = 0.0
                     if "1" in b_group: diem_quy_uoc = (c_9 * DIEM_9) + (c_10 * DIEM_10)
                     elif "2" in b_group: diem_quy_uoc = (c_8 * DIEM_8) + (c_9 * DIEM_9) + (c_10 * DIEM_10)
@@ -2277,22 +2325,84 @@ def weekly():
                     if note:
                         parts = re.split(r'[,;+\n](?![^\[]*\])(?![^\(]*\))', note)
                         sorted_cats = sorted(all_categories, key=lambda x: len(x.name), reverse=True)
+                        
+                        # --- BẢN VÁ: THUẬT TOÁN XÉN TRẦN LỖI HỌC TẬP TỪ GHI CHÚ ---
+                        max_tot_bad = int(getattr(settings, 'max_diem_tot', 14)) if settings else 14
+                        max_mon_bad = int(getattr(settings, 'max_diem_mon', 4)) if settings else 4
+                        bad_marks_expanded = []
+                        other_parts = []
+                        
                         for part in parts:
                             part_clean = part.strip()
                             if not part_clean: continue
-                            part_lower = part_clean.lower()
+                            
+                            matched = False
                             for cat in sorted_cats:
-                                if cat.name.lower() in part_lower:
-                                    match_qty = re.search(r'(?:x|:|-)\s*(\d+)', part_lower)
+                                if cat.name.lower() in part_clean.lower():
+                                    match_qty = re.search(r'(?:x|:|-)\s*(\d+)', part_clean.lower())
                                     qty = int(match_qty.group(1)) if match_qty else 1 
-                                    if getattr(cat, 'point_type', 'Điểm trừ') != 'Điểm cộng': diem_tru_auto += float(cat.penalty_points * qty)
+                                    
                                     match_name = re.search(r'\[(.*?)\]|\((.*?)\)', part_clean)
-                                    student_name = None
-                                    if match_name:
-                                        student_name = match_name.group(1) if match_name.group(1) is not None else match_name.group(2)
-                                        student_name = student_name.strip()
-                                    new_violations.append({'violation_id': cat.id, 'quantity': qty, 'student_name': student_name})
+                                    student_name = match_name.group(1) if match_name and match_name.group(1) is not None else (match_name.group(2) if match_name else "")
+                                    student_name = student_name.strip() if student_name else ""
+                                    
+                                    # Phân loại lỗi thuộc nhóm Nề nếp hay Học tập
+                                    is_bad_mark = "không học bài" in cat.name.lower() or "điểm kém" in cat.name.lower()
+                                    
+                                    if is_bad_mark:
+                                        mon_match = re.search(r'\(Môn (.*?)\)', student_name, re.IGNORECASE)
+                                        mon = mon_match.group(1).strip() if mon_match else "Khác"
+                                        for _ in range(qty):
+                                            bad_marks_expanded.append({'cat': cat, 'stu': student_name, 'mon': mon})
+                                    else:
+                                        other_parts.append({'cat': cat, 'qty': qty, 'stu': student_name, 'original_part': part_clean})
+                                    matched = True
                                     break
+                                    
+                            if not matched:
+                                other_parts.append({'cat': None, 'qty': 1, 'stu': part_clean, 'original_part': part_clean})
+
+                        # Xử lý xén trần (Max 4/môn, 14/tuần)
+                        bad_by_subj = {}
+                        for bm in bad_marks_expanded:
+                            m = bm['mon']
+                            if m not in bad_by_subj: bad_by_subj[m] = []
+                            bad_by_subj[m].append(bm)
+                            
+                        surviving_bad_marks = []
+                        for m, marks in bad_by_subj.items():
+                            surviving_bad_marks.extend(marks[:max_mon_bad])
+                        surviving_bad_marks = surviving_bad_marks[:max_tot_bad]
+                        
+                        bad_counts = {}
+                        for bm in surviving_bad_marks:
+                            key = (bm['cat'].id, bm['stu'])
+                            if key not in bad_counts:
+                                bad_counts[key] = {'cat': bm['cat'], 'stu': bm['stu'], 'qty': 0}
+                            bad_counts[key]['qty'] += 1
+                            
+                        final_note_parts = []
+                        
+                        # 1. Trừ điểm nhóm Học tập đã qua xén trần
+                        for data in bad_counts.values():
+                            cat = data['cat']; qty = data['qty']; stu = data['stu']
+                            if getattr(cat, 'point_type', 'Điểm trừ') != 'Điểm cộng': 
+                                diem_tru_auto += float(cat.penalty_points * qty)
+                            new_violations.append({'violation_id': cat.id, 'quantity': qty, 'student_name': stu})
+                            final_note_parts.append(f"{cat.name} x{qty} [{stu}]" if stu else f"{cat.name} x{qty}")
+                            
+                        # 2. Trừ điểm nhóm Nề nếp (Giữ nguyên không xén)
+                        for data in other_parts:
+                            cat = data['cat']
+                            if cat:
+                                if getattr(cat, 'point_type', 'Điểm trừ') != 'Điểm cộng': 
+                                    diem_tru_auto += float(cat.penalty_points * data['qty'])
+                                new_violations.append({'violation_id': cat.id, 'quantity': data['qty'], 'student_name': data['stu']})
+                            final_note_parts.append(data['original_part'])
+
+                        # Cập nhật lại Ghi chú an toàn
+                        note = " ; ".join(final_note_parts)
+                        # --------------------------------------------------------------
 
                     # [VÁ LỖI TRỪ ĐIỂM KÉP]: Điểm trừ tổng ĐƯỢC QUÉT LẠI HOÀN TOÀN từ Ghi chú
                     tong_diem_tru = diem_tru_auto
@@ -2375,6 +2485,7 @@ def weekly():
     except Exception as e:
         flash(f"Lỗi nhập điểm tuần: {e}", "error")
         return redirect(url_for('dashboard'))
+    
 # ==========================================
 # API: LƯU CẤU HÌNH BAREM ĐIỂM
 # ==========================================
@@ -3029,7 +3140,7 @@ def reports():
                     b_name = s.branch.name
                     b_group = branches_data[b_name]["group"]
                     
-                    raw_scores = db_session.query(RawScore).filter_by(week=s.week, branch_name=b_name).all()
+                    raw_scores = db_session.query(RawScore).filter_by(week=f"{s.week}_Y{selected_year_id}", branch_name=b_name).all()
                     if raw_scores:
                         f10, f9, f8 = calculate_trimmed_details(raw_scores, b_group, max_mon, max_tot)
                     else:
@@ -3299,7 +3410,10 @@ def class_dashboard():
                             if current_warnings:
                                 warning_students = sorted(current_warnings, key=lambda x: x['count'], reverse=True)
                                 break
-                    # ==========================================================
+                    # =========================================================
+                    
+                    from datetime import datetime
+                    today_str = datetime.now().strftime("%d/%m/%Y")
                     
                     for sc in weekly_scores_db:
                         all_in_week = db_session.query(WeeklyScore).join(Branch).filter(
@@ -3318,10 +3432,16 @@ def class_dashboard():
                         so_luong_diem_tot = int(sc.count_9 or 0) + int(sc.count_10 or 0)
                         if "2" in str(group_val): so_luong_diem_tot += int(sc.count_8 or 0)
                             
+                        # --- [THUẬT TOÁN MỚI]: QUÉT XEM HÔM NAY ĐÃ GỬI CHƯA ---
+                        has_appealed_today = False
+                        if sc.appeal_reason and f"[{today_str}]" in sc.appeal_reason:
+                            has_appealed_today = True
+                            
                         weekly_scores.append({
                             'score_id': sc.id,             
                             'is_locked': getattr(sc, 'is_locked', False),     
                             'is_appealed': getattr(sc, 'is_appealed', False), 
+                            'has_appealed_today': has_appealed_today, # <--- CỜ ĐIỀU KHIỂN GIAO DIỆN
                             'appeal_reason': getattr(sc, 'appeal_reason', ''),
                             'appeal_response': getattr(sc, 'appeal_response', ''),
                             'week': sc.week,
@@ -3621,7 +3741,11 @@ def handle_raw_scores(week_name, branch_id):
             branch = db_session.query(Branch).filter_by(id=branch_id).first()
             if not branch: 
                 return {"error": "Lớp không tồn tại"}, 404
-
+            
+            active_year = db_session.query(SchoolYear).filter_by(is_active=True).first()
+            year_id = active_year.id if active_year else 0
+            safe_week_key = f"{week_name}_Y{year_id}"
+            
             if request.method == 'GET':
                 records = db_session.query(RawScore).filter_by(week=week_name, branch_name=branch.name).all()
                 data = [{"subj": r.subject, "c10": r.c10, "c9": r.c9, "c8": r.c8} for r in records]
@@ -4536,7 +4660,12 @@ def export_yearly_excel():
 def calculate_trimmed_good_points_web(session, week_name, branch_name, branch_group, max_mon, max_tot):
     """Tính lại số điểm tốt dựa trên dữ liệu thô từ CSDL và barem động hiện hành"""
     try:
-        records = session.query(RawScore).filter_by(week=week_name, branch_name=branch_name).all()
+        from database.models import SchoolYear
+        active_year = session.query(SchoolYear).filter_by(is_active=True).first()
+        year_id = active_year.id if active_year else 0
+        safe_week_key = f"{week_name}_Y{year_id}"
+        
+        records = session.query(RawScore).filter_by(week=safe_week_key, branch_name=branch_name).all()
         raw_scores = [{"c10": r.c10, "c9": r.c9, "c8": r.c8} for r in records]
     except Exception:
         raw_scores = []
@@ -5322,27 +5451,39 @@ def submit_appeal():
                 flash("Không tìm thấy dữ liệu điểm!", "error")
                 return redirect(url_for('class_dashboard'))
             
-            # 1. Kiểm tra xem tuần đã bị chốt cứng (khóa hoàn toàn) chưa
             if score.is_locked:
                 flash("⛔ Tuần này đã chốt cứng, không thể gửi yêu cầu phúc khảo!", "error")
                 return redirect(url_for('class_dashboard'))
             
-            # 2. [NÂNG CẤP LÕI]: Kiểm tra giới hạn "Thời gian vàng" 3 ngày
             if score.is_appeal_expired:
                 flash("⛔ Đã quá thời hạn 3 ngày. Hệ thống đã tự động khóa quyền khiếu nại đối với tuần này!", "error")
                 return redirect(url_for('class_dashboard'))
 
-            # 3. Nếu vượt qua mọi chốt chặn, tiến hành ghi nhận phúc khảo
-            score.is_appealed = True
-            score.appeal_reason = reason
+            # --- [THUẬT TOÁN MỚI]: KIỂM TRA SỐ LẦN GỬI TRONG NGÀY ---
+            from datetime import datetime
+            today_str = datetime.now().strftime("%d/%m/%Y")
+            new_entry = f"[{today_str}] {reason}"
             
-            # Ghi log hệ thống rõ ràng
+            if score.appeal_reason:
+                # Nếu chuỗi ngày hôm nay đã tồn tại trong lý do -> Khóa không cho gửi tiếp
+                if f"[{today_str}]" in score.appeal_reason:
+                    flash("⛔ Hôm nay thầy/cô đã gửi phúc khảo cho tuần này rồi! Vui lòng chờ phản hồi hoặc quay lại vào ngày mai.", "error")
+                    return redirect(url_for('class_dashboard'))
+                
+                # Nếu là ngày khác, cộng dồn lý do mới vào lý do cũ
+                score.appeal_reason = score.appeal_reason + " | " + new_entry
+            else:
+                score.appeal_reason = new_entry
+            
+            score.is_appealed = True
+            score.appeal_response = None # Xóa phản hồi cũ để báo cáo nổi lại trên màn hình của BGH
+            
             log_system_action("PHÚC KHẢO", f"GVCN Lớp {score.branch.name} gửi khiếu nại Tuần {score.week}: {reason[:30]}...")
             flash("✅ Đã gửi Báo cáo sai sót / Phúc khảo đến Đoàn trường thành công!", "success")
             
     except Exception as e: 
         flash(f"Lỗi xử lý phúc khảo: {e}", "error")
-        import traceback; traceback.print_exc() # Hỗ trợ debug nếu có lỗi ngầm
+        import traceback; traceback.print_exc() 
         
     return redirect(url_for('class_dashboard'))
 # ==========================================
@@ -5579,219 +5720,6 @@ def mobile_sao_do():
         return f"Lỗi hệ thống Mobile: {e}"
 
 
-@app.route('/submit_mobile_sao_do', methods=['POST'])
-def submit_mobile_sao_do():
-    if session.get('role') != 'Sao đỏ': return redirect(url_for('login'))
-    try:
-        with session_scope() as db_session:
-            active_year = db_session.query(SchoolYear).filter_by(is_active=True).first()
-            current_week = request.form.get('week_name')
-            
-            raw_branch_id = request.form.get('branch_id')
-            if not active_year or not raw_branch_id: return redirect(url_for('mobile_sao_do'))
-            branch_id = int(raw_branch_id)
-            
-            branch = db_session.query(Branch).filter_by(id=branch_id).first()
-            if not branch: return redirect(url_for('mobile_sao_do'))
-            
-            b_group = str(branch.group) if branch.group else "1"
-            score = db_session.query(WeeklyScore).filter_by(branch_id=branch.id, week=current_week).first()
-            old_note = score.note if score and score.note else ""
-            
-            max_mon, max_tot = 4, 14
-            DIEM_8, DIEM_9, DIEM_10, TUAN_KHA, TUAN_TOT = 1.0, 3.0, 5.0, 20.0, 30.0
-            settings = db_session.query(ScoreSettings).filter_by(school_year_id=active_year.id).first()
-            if settings:
-                DIEM_8, DIEM_9, DIEM_10 = float(settings.diem_8), float(settings.diem_9), float(settings.diem_10)
-                TUAN_KHA, TUAN_TOT = float(settings.diem_tuan_kha), float(settings.diem_tuan_tot)
-                max_tot = int(getattr(settings, 'max_diem_tot', 14))
-                max_mon = int(getattr(settings, 'max_diem_mon', 4))
-            
-            form_rating = request.form.get('rating')
-            rating = form_rating if form_rating and form_rating != 'Bình thường' else (score.week_rating if score else 'Bình thường')
-            
-            # 1. XỬ LÝ BAREM ĐIỂM TỐT (MÔN HỌC) TỪ APP GỬI XUỐNG
-            raw_scores_json = request.form.get('raw_scores_json', '').strip()
-            f10, f9, f8 = 0, 0, 0
-            has_new_raw_scores = False
-            
-            if raw_scores_json and raw_scores_json != '[]':
-                try:
-                    import json
-                    raw_list = json.loads(raw_scores_json)
-                    if raw_list:
-                        has_new_raw_scores = True
-                        db_session.query(RawScore).filter_by(week=current_week, branch_name=branch.name).delete()
-                        for item in raw_list:
-                            subj = str(item.get("subj", "")).strip()
-                            if not subj: continue
-                            i10 = int(item.get("c10", 0) or 0); i9 = int(item.get("c9", 0) or 0); i8 = int(item.get("c8", 0) or 0)
-                            if "1" in b_group: i8 = 0
-                            db_session.add(RawScore(week=current_week, branch_name=branch.name, subject=subj, c10=i10, c9=i9, c8=i8))
-
-                        remaining = max_tot
-                        for item in raw_list:
-                            subj = str(item.get("subj", "")).strip()
-                            if not subj: continue
-                            i10 = int(item.get("c10", 0) or 0); i9 = int(item.get("c9", 0) or 0); i8 = int(item.get("c8", 0) or 0)
-                            if "1" in b_group: i8 = 0
-                            
-                            k10 = min(i10, max_mon); k9 = min(i9, max_mon - k10); k8 = min(i8, max_mon - k10 - k9)
-                            a10 = min(k10, remaining); remaining -= a10
-                            a9 = min(k9, remaining); remaining -= a9
-                            a8 = min(k8, remaining); remaining -= a8
-                            f10 += a10; f9 += a9; f8 += a8
-                        db_session.flush()
-                except Exception as ex: 
-                    print("Lỗi xử lý JSON Barem Mobile:", ex)
-            
-            if not has_new_raw_scores:
-                f10 = score.count_10 if score else 0
-                f9 = score.count_9 if score else 0
-                f8 = score.count_8 if score else 0
-                if "1" in b_group: f8 = 0
-
-            manual_note = request.form.get('manual_note', '').strip()
-            
-            # 2. THU THẬP VÀ ĐỒNG BỘ TOÀN BỘ CÁC LỖI VI PHẠM (WEEKLY VIOLATIONS)
-            all_categories = db_session.query(ViolationCategory).filter_by(school_year_id=active_year.id).all()
-            new_violations = []
-            diem_tru_auto = 0.0
-            
-            # Mảng gom ghi chú để hiển thị ra bảng điểm Web
-            note_fragments = []
-            if manual_note:
-                note_fragments.append(manual_note)
-
-            for cat in all_categories:
-                qty_raw = request.form.get(f'viol_{cat.id}', '0')
-                try: qty = int(qty_raw)
-                except: qty = 0
-                
-                if qty > 0:
-                    stu_name = request.form.get(f'student_{cat.id}', '').strip()
-                    if getattr(cat, 'point_type', 'Điểm trừ') != 'Điểm cộng':
-                        diem_tru_auto += float(cat.penalty_points * qty)
-                    
-                    new_violations.append({
-                        'violation_id': cat.id, 
-                        'quantity': qty, 
-                        'student_name': stu_name if stu_name else None
-                    })
-                    
-                    # Tạo đoạn ghi chú chuẩn hóa dạng "Tên lỗi xSL [Tên học sinh]"
-                    if stu_name:
-                        note_fragments.append(f"{cat.name} x{qty} [{stu_name}]")
-                    else:
-                        note_fragments.append(f"{cat.name} x{qty}")
-
-            # Kết hợp ghi chú cũ và ghi chú mới từ App
-            combined_note_raw = " ; ".join([f for f in [old_note, " ; ".join(note_fragments)] if f])
-
-            # 3. THUẬT TOÁN GỘP NHÓM THÔNG MINH (TRÁNH TRÙNG LẶP LỖI TRONG TUẦN)
-            import re
-            sorted_cats = sorted(all_categories, key=lambda x: len(x.name), reverse=True)
-            parsed_errors = {}
-            
-            parts = re.split(r'[,;+\n](?![^\[]*\])(?![^\(]*\))', combined_note_raw)
-            for part in parts:
-                part_clean = part.strip()
-                if not part_clean: continue
-                
-                stu_name_raw = ""
-                match_stu = re.search(r'\[(.*?)\]', part_clean)
-                if match_stu: stu_name_raw = match_stu.group(1).strip()
-                
-                stu_name_normalized = " ".join(stu_name_raw.split()).title() if stu_name_raw else ""
-                stu_name_key = stu_name_normalized.lower()
-                
-                matched = False
-                for cat in sorted_cats:
-                    if cat.name.lower() in part_clean.lower():
-                        match_qty = re.search(r'(?:x|:|-)\s*(\d+)', part_clean.lower())
-                        qty = int(match_qty.group(1)) if match_qty else 1
-                        
-                        key = (cat.name, stu_name_key, stu_name_normalized)
-                        if key not in parsed_errors:
-                            parsed_errors[key] = 0
-                        parsed_errors[key] += qty
-                        matched = True
-                        break
-                
-                if not matched:
-                    parsed_errors[("MANUAL", part_clean.lower(), part_clean)] = 1
-                    
-            final_parts = []
-            diem_tru_final = 0.0
-            
-            for (cat_name, stu_key, stu_display), qty in parsed_errors.items():
-                if cat_name == "MANUAL":
-                    final_parts.append(stu_display)
-                else:
-                    if stu_display: 
-                        final_parts.append(f"{cat_name} x{qty} [{stu_display}]")
-                    else: 
-                        final_parts.append(f"{cat_name} x{qty}")
-                    
-                    for cat in sorted_cats:
-                        if cat.name == cat_name and getattr(cat, 'point_type', 'Điểm trừ') != 'Điểm cộng':
-                            diem_tru_final += float(cat.penalty_points * qty)
-                            break
-                            
-            final_note = " ; ".join(final_parts)
-
-            # 4. TÍNH TOÁN ĐIỂM SỐ HOÀN CHỈNH
-            if "1" in b_group: diem_quy_uoc = (f9 * DIEM_9) + (f10 * DIEM_10)
-            elif "2" in b_group: diem_quy_uoc = (f8 * DIEM_8) + (f9 * DIEM_9) + (f10 * DIEM_10)
-            else: diem_quy_uoc = (f9 * DIEM_9) + (f10 * DIEM_10)
-
-            diem_xep_loai = 0.0
-            if rating == "Tuần Tốt": diem_xep_loai = TUAN_TOT
-            elif rating == "Tuần Khá": diem_xep_loai = TUAN_KHA
-
-            truc = float(score.score_truc) if score and score.score_truc else 100.0
-            cong = float(score.score_cong) if score and score.score_cong else 0.0
-            
-            # Công thức tổng điểm chuẩn
-            total_val = truc + diem_xep_loai + diem_quy_uoc + cong - diem_tru_final
-
-            # 5. LƯU VÀO CƠ SỞ DỮ LIỆU
-            if score:
-                score.week_rating = rating
-                score.count_8 = f8; score.count_9 = f9; score.count_10 = f10
-                score.note = final_note
-                score.score_tru = diem_tru_final
-                score.total_score = total_val
-            else:
-                score = WeeklyScore(
-                    branch_id=branch.id, week=current_week, week_rating=rating,
-                    count_8=f8, count_9=f9, count_10=f10,
-                    score_truc=truc, score_cong=cong, score_tru=diem_tru_final,
-                    note=final_note, total_score=total_val
-                )
-                db_session.add(score)
-                db_session.flush()
-
-            # Xóa các lỗi cũ thuộc tuần của lớp này để ghi đè danh sách lỗi chi tiết mới nhất
-            db_session.query(WeeklyViolation).filter_by(weekly_score_id=score.id).delete()
-            for v in new_violations:
-                # Tìm lại ID của category từ tên hoặc lưu trực tiếp
-                db_session.add(WeeklyViolation(
-                    weekly_score_id=score.id, 
-                    violation_id=v['violation_id'], 
-                    quantity=v['quantity'], 
-                    student_name=v['student_name']
-                ))
-
-            log_system_action("MOBILE SAO ĐỎ", f"SD{session.get('username')} đã chấm điểm và cập nhật lớp {branch.name}.")
-            flash(f"Đã nộp điểm và đồng bộ vào hệ thống cho lớp {branch.name} thành công!", "success")
-            return redirect(url_for('mobile_sao_do'))
-            
-    except Exception as e:
-        import traceback; traceback.print_exc()
-        flash(f"Lỗi: {e}", "error")
-        return redirect(url_for('mobile_sao_do'))
-    
 # ==========================================
 # MODULE: TRỢ LÝ AI PHÂN TÍCH VÀ VIẾT BÁO CÁO TUẦN
 # ==========================================
@@ -5974,7 +5902,6 @@ def sao_do_quick_submit_form():
         with session_scope() as db_session:
             active_year = db_session.query(SchoolYear).filter_by(is_active=True).first()
             week_name = request.form.get('week_name')
-            
             raw_branch_id = request.form.get('branch_id')
             raw_viol_id = request.form.get('violation_id')
             student_name = request.form.get('student_name', '').strip()
@@ -5983,117 +5910,344 @@ def sao_do_quick_submit_form():
                 flash("Lỗi: Vui lòng chọn đầy đủ Lớp và Lỗi vi phạm!", "error")
                 return redirect(url_for('mobile_sao_do'))
                 
-            branch_id = int(raw_branch_id)
-            violation_id = int(raw_viol_id)
-                
-            branch = db_session.query(Branch).filter_by(id=branch_id).first()
-            violation = db_session.query(ViolationCategory).filter_by(id=violation_id).first()
+            branch = db_session.query(Branch).filter_by(id=int(raw_branch_id)).first()
+            violation = db_session.query(ViolationCategory).filter_by(id=int(raw_viol_id)).first()
             if not branch or not violation:
-                flash("Lỗi: Dữ liệu Lớp hoặc Lỗi không hợp lệ!", "error")
                 return redirect(url_for('mobile_sao_do'))
                 
             score = db_session.query(WeeklyScore).filter_by(branch_id=branch.id, week=week_name).first()
             if not score:
-                score = WeeklyScore(
-                    branch_id=branch.id, week=week_name, week_rating='Bình thường', 
-                    count_8=0, count_9=0, count_10=0, score_truc=100.0, 
-                    score_cong=0.0, score_tru=0.0, note='', total_score=100.0
-                )
+                score = WeeklyScore(branch_id=branch.id, week=week_name, week_rating='Bình thường', count_8=0, count_9=0, count_10=0, score_truc=100.0, score_cong=0.0, score_tru=0.0, note='', total_score=100.0)
                 db_session.add(score)
                 db_session.flush() 
                 
             old_note = score.note if score and score.note else ""
-            
-            # Thêm lỗi mới vào chuỗi
-            if student_name:
-                # Chuẩn hóa tên hiển thị ngay khi nhập
-                std_clean = " ".join(student_name.split()).title()
-                note_add = f"{violation.name} x1 [{std_clean}]"
-            else:
-                note_add = f"{violation.name} x1"
-                
+            note_add = f"{violation.name} x1 [{ ' '.join(student_name.split()).title() }]" if student_name else f"{violation.name} x1"
             raw_combined_note = f"{old_note} ; {note_add}" if old_note else note_add
             
-            # Gộp nhóm thông minh ngay lập tức
-            import re
             all_categories = db_session.query(ViolationCategory).filter_by(school_year_id=active_year.id).all()
             sorted_cats = sorted(all_categories, key=lambda x: len(x.name), reverse=True)
             parsed_errors = {}
             
-            parts = re.split(r'[,;+\n](?![^\[]*\])(?![^\(]*\))', raw_combined_note)
-            for part in parts:
+            for part in re.split(r'[,;+\n](?![^\[]*\])(?![^\(]*\))', raw_combined_note):
                 part_clean = part.strip()
                 if not part_clean: continue
-                
-                stu_name_raw = ""
                 match_stu = re.search(r'\[(.*?)\]', part_clean)
-                if match_stu: stu_name_raw = match_stu.group(1).strip()
-                
-                stu_name_normalized = " ".join(stu_name_raw.split()).title() if stu_name_raw else ""
-                stu_name_key = stu_name_normalized.lower()
-                
+                stu_name_raw = match_stu.group(1).strip() if match_stu else ""
+                stu_name_normalized = " ".join(stu_name_raw.split()).title()
                 matched = False
                 for cat in sorted_cats:
                     if cat.name.lower() in part_clean.lower():
                         match_qty = re.search(r'(?:x|:|-)\s*(\d+)', part_clean.lower())
                         qty = int(match_qty.group(1)) if match_qty else 1
-                        
-                        key = (cat.name, stu_name_key, stu_name_normalized)
-                        if key not in parsed_errors:
-                            parsed_errors[key] = 0
-                        parsed_errors[key] += qty
+                        key = (cat.name, stu_name_normalized.lower(), stu_name_normalized)
+                        parsed_errors[key] = parsed_errors.get(key, 0) + qty
                         matched = True
                         break
-                
                 if not matched:
                     parsed_errors[("MANUAL", part_clean.lower(), part_clean)] = 1
                     
-            final_parts = []
-            diem_tru_auto = 0.0
-            
+            # --- XÉN TRẦN LỖI HỌC TẬP (Cả ở Nhập Nhanh) ---
+            max_tot_bad = 14; max_mon_bad = 4
+            settings = db_session.query(ScoreSettings).filter_by(school_year_id=active_year.id).first()
+            if settings:
+                max_tot_bad = int(getattr(settings, 'max_diem_tot', 14))
+                max_mon_bad = int(getattr(settings, 'max_diem_mon', 4))
+                
+            bad_marks_expanded = []; other_errors = []
             for (cat_name, stu_key, stu_display), qty in parsed_errors.items():
                 if cat_name == "MANUAL":
-                    final_parts.append(stu_display)
+                    other_errors.append((cat_name, stu_display, qty))
                 else:
-                    if stu_display: 
-                        final_parts.append(f"{cat_name} x{qty} [{stu_display}]")
-                    else: 
-                        final_parts.append(f"{cat_name} x{qty}")
-                        
+                    is_bad_mark = "không học bài" in cat_name.lower() or "điểm kém" in cat_name.lower()
+                    if is_bad_mark:
+                        mon_match = re.search(r'\(Môn (.*?)\)', stu_display, re.IGNORECASE) if stu_display else None
+                        mon = mon_match.group(1).strip() if mon_match else "Khác"
+                        for _ in range(qty): bad_marks_expanded.append({'cat_name': cat_name, 'stu_display': stu_display, 'mon': mon})
+                    else:
+                        other_errors.append((cat_name, stu_display, qty))
+
+            bad_by_subj = {}
+            for bm in bad_marks_expanded:
+                bad_by_subj.setdefault(bm['mon'], []).append(bm)
+                
+            surviving_bad_marks = []
+            for marks in bad_by_subj.values(): surviving_bad_marks.extend(marks[:max_mon_bad])
+            surviving_bad_marks = surviving_bad_marks[:max_tot_bad]
+            
+            capped_bad_counts = {}
+            for bm in surviving_bad_marks:
+                k = (bm['cat_name'], bm['stu_display'])
+                capped_bad_counts[k] = capped_bad_counts.get(k, 0) + 1
+                
+            final_parts = []; diem_tru_auto = 0.0
+            for (cat_name, stu_display), qty in capped_bad_counts.items():
+                final_parts.append(f"{cat_name} x{qty} [{stu_display}]" if stu_display else f"{cat_name} x{qty}")
+                for cat in sorted_cats:
+                    if cat.name == cat_name and getattr(cat, 'point_type', 'Điểm trừ') != 'Điểm cộng':
+                        diem_tru_auto += float(cat.penalty_points * qty); break
+            for cat_name, stu_display, qty in other_errors:
+                if cat_name == "MANUAL": final_parts.append(stu_display)
+                else:
+                    final_parts.append(f"{cat_name} x{qty} [{stu_display}]" if stu_display else f"{cat_name} x{qty}")
                     for cat in sorted_cats:
                         if cat.name == cat_name and getattr(cat, 'point_type', 'Điểm trừ') != 'Điểm cộng':
-                            diem_tru_auto += float(cat.penalty_points * qty)
-                            break
+                            diem_tru_auto += float(cat.penalty_points * qty); break
                             
             score.note = " ; ".join(final_parts)
             score.score_tru = diem_tru_auto
             
-            truc = float(score.score_truc) if score.score_truc else 100.0
-            cong = float(score.score_cong) if score.score_cong else 0.0
             b_group = str(branch.group) if branch.group else "1"
-            DIEM_8, DIEM_9, DIEM_10, TUAN_KHA, TUAN_TOT = 1.0, 3.0, 5.0, 20.0, 30.0
-            settings = db_session.query(ScoreSettings).filter_by(school_year_id=active_year.id).first()
+            D8, D9, D10, TK, TT = 1.0, 3.0, 5.0, 20.0, 30.0
             if settings:
-                DIEM_8, DIEM_9, DIEM_10 = float(settings.diem_8), float(settings.diem_9), float(settings.diem_10)
-                TUAN_KHA, TUAN_TOT = float(settings.diem_tuan_kha), float(settings.diem_tuan_tot)
+                D8, D9, D10 = float(settings.diem_8), float(settings.diem_9), float(settings.diem_10)
+                TK, TT = float(settings.diem_tuan_kha), float(settings.diem_tuan_tot)
             
-            if "1" in b_group: diem_quy_uoc = (int(score.count_9 or 0) * DIEM_9) + (int(score.count_10 or 0) * DIEM_10)
-            elif "2" in b_group: diem_quy_uoc = (int(score.count_8 or 0) * DIEM_8) + (int(score.count_9 or 0) * DIEM_9) + (int(score.count_10 or 0) * DIEM_10)
-            else: diem_quy_uoc = (int(score.count_9 or 0) * DIEM_9) + (int(score.count_10 or 0) * DIEM_10)
+            diem_quy_uoc = (int(score.count_9 or 0)*D9) + (int(score.count_10 or 0)*D10)
+            if "2" in b_group: diem_quy_uoc += (int(score.count_8 or 0)*D8)
+            diem_xep_loai = TT if score.week_rating == "Tuần Tốt" else (TK if score.week_rating == "Tuần Khá" else 0.0)
+            score.total_score = float(score.score_truc or 100.0) + diem_xep_loai + diem_quy_uoc + float(score.score_cong or 0.0) - diem_tru_auto
 
-            diem_xep_loai = 0.0
-            if score.week_rating == "Tuần Tốt": diem_xep_loai = TUAN_TOT
-            elif score.week_rating == "Tuần Khá": diem_xep_loai = TUAN_KHA
-            
-            score.total_score = truc + diem_xep_loai + diem_quy_uoc + cong - diem_tru_auto
+            db_session.query(WeeklyViolation).filter_by(weekly_score_id=score.id).delete()
+            for (cat_name, stu_display), qty in capped_bad_counts.items():
+                cat_id = next((c.id for c in sorted_cats if c.name == cat_name), None)
+                if cat_id: db_session.add(WeeklyViolation(weekly_score_id=score.id, violation_id=cat_id, quantity=qty, student_name=stu_display if stu_display else None))
+            for cat_name, stu_display, qty in other_errors:
+                if cat_name != "MANUAL":
+                    cat_id = next((c.id for c in sorted_cats if c.name == cat_name), None)
+                    if cat_id: db_session.add(WeeklyViolation(weekly_score_id=score.id, violation_id=cat_id, quantity=qty, student_name=stu_display if stu_display else None))
 
-            log_system_action("MOBILE TRỰC CỔNG", f"SD{session.get('username')} ghi nhận nhanh {branch.name}: {violation.name} - {student_name}")
+            log_system_action("MOBILE TRỰC CỔNG", f"SD{session.get('username')} ghi nhận nhanh {branch.name}: {violation.name}")
             flash(f"⚡ Đã ghi nhận lỗi của {branch.name} vào Sổ đen thành công!", "success")
             return redirect(url_for('mobile_sao_do'))
     except Exception as e:
         import traceback; traceback.print_exc()
         flash(f"Lỗi hệ thống: {e}", "error")
         return redirect(url_for('mobile_sao_do'))
+
+@app.route('/submit_mobile_sao_do', methods=['POST'])
+def submit_mobile_sao_do():
+    if session.get('role') != 'Sao đỏ': return redirect(url_for('login'))
+    try:
+        with session_scope() as db_session:
+            active_year = db_session.query(SchoolYear).filter_by(is_active=True).first()
+            current_week = request.form.get('week_name')
+            branch_id = int(request.form.get('branch_id'))
+            branch = db_session.query(Branch).filter_by(id=branch_id).first()
+            score = db_session.query(WeeklyScore).filter_by(branch_id=branch.id, week=current_week).first()
+            
+            settings = db_session.query(ScoreSettings).filter_by(school_year_id=active_year.id).first()
+            max_mon = int(getattr(settings, 'max_diem_mon', 4)) if settings else 4
+            max_tot = int(getattr(settings, 'max_diem_tot', 14)) if settings else 14
+            
+            rating = request.form.get('rating', score.week_rating if score else 'Bình thường')
+            if rating == 'Bình thường' and score: rating = score.week_rating
+            
+            # 1. XỬ LÝ ĐIỂM HỌC TẬP (SỔ ĐẦU BÀI)
+            raw_scores_json = request.form.get('raw_scores_json', '').strip()
+            f10, f9, f8 = 0, 0, 0
+            b_group = str(branch.group) if branch.group else "1"
+            has_new_raw_scores = False
+            
+            if raw_scores_json and raw_scores_json != '[]':
+                try:
+                    raw_list = json.loads(raw_scores_json)
+                    if raw_list:
+                        has_new_raw_scores = True
+                        safe_week_key = f"{current_week}_Y{active_year.id}"
+                        db_session.query(RawScore).filter_by(week=safe_week_key, branch_name=branch.name).delete()
+                        remaining = max_tot
+                        for item in raw_list:
+                            subj = str(item.get("subj", "")).strip()
+                            if not subj: continue
+                            i10 = int(item.get("c10", 0) or 0); i9 = int(item.get("c9", 0) or 0); i8 = int(item.get("c8", 0) or 0)
+                            if "1" in b_group: i8 = 0
+                            db_session.add(RawScore(week=safe_week_key, branch_name=branch.name, subject=subj, c10=i10, c9=i9, c8=i8))
+                            k10 = min(i10, max_mon); k9 = min(i9, max_mon - k10); k8 = min(i8, max_mon - k10 - k9)
+                            a10 = min(k10, remaining); remaining -= a10
+                            a9 = min(k9, remaining); remaining -= a9
+                            a8 = min(k8, remaining); remaining -= a8
+                            f10 += a10; f9 += a9; f8 += a8
+                except Exception: pass
+            
+            if not has_new_raw_scores:
+                f10 = score.count_10 if score else 0
+                f9 = score.count_9 if score else 0
+                f8 = score.count_8 if score else 0
+                if "1" in b_group: f8 = 0
+
+            # 2. HỢP NHẤT LỖI CŨ (TỪ DB) VÀ LỖI MỚI (TỪ APP)
+            all_categories = db_session.query(ViolationCategory).filter_by(school_year_id=active_year.id).all()
+            sorted_cats = sorted(all_categories, key=lambda x: len(x.name), reverse=True)
+            
+            # Từ điển gom lỗi: Key = (cat_id, student_name), Value = {cat_obj, qty, stu_name}
+            merged_violations = {}
+
+            # 2.1. Nạp toàn bộ lỗi cũ từ CSDL
+            if score:
+                old_vios = db_session.query(WeeklyViolation, ViolationCategory).join(
+                    ViolationCategory, WeeklyViolation.violation_id == ViolationCategory.id
+                ).filter(WeeklyViolation.weekly_score_id == score.id).all()
+                
+                for v_db, cat_db in old_vios:
+                    s_name = v_db.student_name or ""
+                    key = (cat_db.id, s_name.lower())
+                    merged_violations[key] = {
+                        'cat': cat_db,
+                        'qty': v_db.quantity,
+                        'stu': s_name
+                    }
+
+            # 2.2. Nạp thêm lỗi mới từ App (Checkbox)
+            for cat in all_categories:
+                qty_new = int(request.form.get(f'viol_{cat.id}', '0'))
+                if qty_new > 0:
+                    stu_new = request.form.get(f'student_{cat.id}', '').strip()
+                    stu_norm = " ".join(stu_new.split()).title() if stu_new else ""
+                    key = (cat.id, stu_norm.lower())
+                    
+                    if key in merged_violations:
+                        merged_violations[key]['qty'] += qty_new # Cộng dồn số lượng
+                    else:
+                        merged_violations[key] = {'cat': cat, 'qty': qty_new, 'stu': stu_norm}
+
+            # 2.3. Bóc tách lỗi từ ô ghi chú tay (nếu Sao đỏ có gõ thêm)
+            raw_app_note = request.form.get('manual_note', '').strip()
+            old_server_note = score.note if score and score.note else ""
+            
+            manual_typed_parts = []
+            if raw_app_note:
+                # Lọc bỏ phần chữ cũ để chỉ lấy chữ mới gõ
+                diff_note = raw_app_note
+                if old_server_note and raw_app_note.startswith(old_server_note):
+                    diff_note = raw_app_note.replace(old_server_note, "", 1).strip().lstrip(" ;,")
+                
+                if diff_note:
+                    for part in re.split(r'[,;+\n](?![^\[]*\])(?![^\(]*\))', diff_note):
+                        part_clean = part.strip()
+                        if not part_clean: continue
+                        match_stu = re.search(r'\[(.*?)\]', part_clean)
+                        stu_raw = match_stu.group(1).strip() if match_stu else ""
+                        stu_norm = " ".join(stu_raw.split()).title() if stu_raw else ""
+                        
+                        matched = False
+                        for cat in sorted_cats:
+                            if cat.name.lower() in part_clean.lower():
+                                match_qty = re.search(r'(?:x|:|-)\s*(\d+)', part_clean.lower())
+                                q = int(match_qty.group(1)) if match_qty else 1
+                                key = (cat.id, stu_norm.lower())
+                                if key in merged_violations:
+                                    merged_violations[key]['qty'] += q
+                                else:
+                                    merged_violations[key] = {'cat': cat, 'qty': q, 'stu': stu_norm}
+                                matched = True
+                                break
+                        if not matched:
+                            manual_typed_parts.append(part_clean)
+
+            # 3. CHẠY THUẬT TOÁN XÉN TRẦN BAREM TRÊN TỔNG DỮ LIỆU ĐÃ HỢP NHẤT
+            bad_marks_expanded = []
+            other_errors = []
+
+            for key, data in merged_violations.items():
+                cat = data['cat']; qty = data['qty']; stu = data['stu']
+                is_bad_mark = "không học bài" in cat.name.lower() or "điểm kém" in cat.name.lower()
+                if is_bad_mark:
+                    mon_match = re.search(r'\(Môn (.*?)\)', stu, re.IGNORECASE) if stu else None
+                    mon = mon_match.group(1).strip() if mon_match else "Khác"
+                    for _ in range(qty):
+                        bad_marks_expanded.append({'cat': cat, 'stu': stu, 'mon': mon})
+                else:
+                    other_errors.append({'cat': cat, 'stu': stu, 'qty': qty})
+
+            bad_by_subj = {}
+            for bm in bad_marks_expanded:
+                bad_by_subj.setdefault(bm['mon'], []).append(bm)
+                
+            surviving_bad_marks = []
+            for marks in bad_by_subj.values(): surviving_bad_marks.extend(marks[:max_mon])
+            surviving_bad_marks = surviving_bad_marks[:max_tot]
+
+            capped_bad_counts = {}
+            for bm in surviving_bad_marks:
+                k = (bm['cat'], bm['stu'])
+                capped_bad_counts[k] = capped_bad_counts.get(k, 0) + 1
+
+            # 4. TÍNH TỔNG ĐIỂM TRỪ VÀ TẠO CHUỖI GHI CHÚ MỚI
+            diem_tru_final = 0.0
+            final_note_parts = []
+
+            # Thêm các lỗi học tập đã xén trần
+            for (cat, stu), qty in capped_bad_counts.items():
+                final_note_parts.append(f"{cat.name} x{qty} [{stu}]" if stu else f"{cat.name} x{qty}")
+                if getattr(cat, 'point_type', 'Điểm trừ') != 'Điểm cộng':
+                    diem_tru_final += float(cat.penalty_points * qty)
+
+            # Thêm các lỗi nề nếp khác
+            for item in other_errors:
+                cat = item['cat']; stu = item['stu']; qty = item['qty']
+                final_note_parts.append(f"{cat.name} x{qty} [{stu}]" if stu else f"{cat.name} x{qty}")
+                if getattr(cat, 'point_type', 'Điểm trừ') != 'Điểm cộng':
+                    diem_tru_final += float(cat.penalty_points * qty)
+
+            # Thêm ghi chú thủ công
+            for m_note in manual_typed_parts:
+                final_note_parts.append(m_note)
+
+            final_note = " ; ".join(final_note_parts)
+
+            # 5. TÍNH TỔNG ĐIỂM DỰ KIẾN (CÔNG THỨC CHUẨN BẢNG TUẦN)
+            truc = float(score.score_truc) if score and score.score_truc is not None else 100.0
+            cong = float(score.score_cong) if score and score.score_cong is not None else 0.0
+            
+            D8, D9, D10, TK, TT = 1.0, 3.0, 5.0, 20.0, 30.0
+            if settings:
+                D8, D9, D10 = float(settings.diem_8), float(settings.diem_9), float(settings.diem_10)
+                TK, TT = float(settings.diem_tuan_kha), float(settings.diem_tuan_tot)
+            
+            diem_quy_uoc = (f9 * D9) + (f10 * D10)
+            if "2" in b_group: diem_quy_uoc += (f8 * D8)
+
+            diem_xep_loai = 0.0
+            if rating == "Tuần Tốt": diem_xep_loai = TT
+            elif rating == "Tuần Khá": diem_xep_loai = TK
+            
+            total_val = truc + diem_xep_loai + diem_quy_uoc + cong - diem_tru_final
+
+            # 6. GHI VÀO DATABASE
+            if score:
+                score.week_rating = rating
+                score.count_8 = f8; score.count_9 = f9; score.count_10 = f10
+                score.note = final_note
+                score.score_tru = diem_tru_final
+                score.total_score = total_val
+            else:
+                score = WeeklyScore(
+                    branch_id=branch.id, week=current_week, week_rating=rating,
+                    count_8=f8, count_9=f9, count_10=f10,
+                    score_truc=truc, score_cong=cong, score_tru=diem_tru_final,
+                    note=final_note, total_score=total_val
+                )
+                db_session.add(score)
+                db_session.flush()
+
+            # Xoá bảng lỗi cũ, ghi đè bảng lỗi chuẩn xác đã hợp nhất
+            db_session.query(WeeklyViolation).filter_by(weekly_score_id=score.id).delete()
+            
+            for (cat, stu), qty in capped_bad_counts.items():
+                db_session.add(WeeklyViolation(weekly_score_id=score.id, violation_id=cat.id, quantity=qty, student_name=stu if stu else None))
+            for item in other_errors:
+                db_session.add(WeeklyViolation(weekly_score_id=score.id, violation_id=item['cat'].id, quantity=item['qty'], student_name=item['stu'] if item['stu'] else None))
+
+            log_system_action("MOBILE SAO ĐỎ", f"SD{session.get('username')} đã chấm điểm và cập nhật lớp {branch.name}.")
+            flash(f"Đã nộp điểm và đồng bộ vào hệ thống cho lớp {branch.name} thành công!", "success")
+            return redirect(url_for('mobile_sao_do'))
+            
+    except Exception as e:
+        import traceback; traceback.print_exc()
+        flash(f"Lỗi: {e}", "error")
+        return redirect(url_for('mobile_sao_do'))
+    
 # =====================================================================
 # MODULE: PHIẾU PHÂN TÍCH CHUYÊN SÂU LỚP HỌC (DÀNH CHO HỌP GVCN)
 # =====================================================================
@@ -6226,6 +6380,7 @@ def class_monthly_analysis():
         import traceback; traceback.print_exc()
         flash(f"Lỗi tải trang phân tích: {e}", "error")
         return redirect(url_for('dashboard'))
+    
 # =====================================================================
 # MODULE: XUẤT PDF PHIẾU PHÂN TÍCH TOÀN BỘ CÁC LỚP
 # =====================================================================
