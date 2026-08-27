@@ -1004,6 +1004,52 @@
                 totalSpan.className = "fw-bold fs-5 text-warning";
             }
         });
+		
+        // HÀM TỰ ĐỘNG QUÉT NGẦM DỮ LIỆU ĐIỂM TUẦN MỖI 10 GIÂY (ĐÃ CHUẨN HÓA ID)
+        function startAutoPollingForWeekly() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const currentWeek = urlParams.get('week') || "{{ current_week }}";
+
+            setInterval(async () => {
+                if (document.activeElement && (document.activeElement.tagName === 'INPUT' || document.activeElement.tagName === 'TEXTAREA')) {
+                    return;
+                }
+
+                try {
+                    let response = await fetch(`/api/weekly_scores_json/${encodeURIComponent(currentWeek)}`);
+                    let result = await response.json();
+
+                    if (result.success && result.data) {
+                        result.data.forEach(item => {
+                            let scoreCell = document.getElementById(`total_${item.branch_id}`);
+                            let noteInput = document.querySelector(`input[name="note_${item.branch_id}"]`);
+
+                            if (scoreCell) {
+                                let oldVal = parseFloat(scoreCell.innerText) || 0;
+                                if (oldVal !== item.total_score) {
+                                    scoreCell.innerText = item.total_score.toFixed(1);
+                                    scoreCell.style.transition = "color 0.5s";
+                                    scoreCell.style.color = "#198754"; 
+                                    setTimeout(() => { scoreCell.style.color = ""; }, 2000);
+                                }
+                            }
+
+                            if (noteInput && document.activeElement !== noteInput) {
+                                if (noteInput.value !== item.note) {
+                                    noteInput.value = item.note;
+                                }
+                            }
+                        });
+                    }
+                } catch (err) {
+                    console.error("Lỗi đồng bộ ngầm điểm tuần:", err);
+                }
+            }, 10000); 
+        }
+
+        document.addEventListener("DOMContentLoaded", () => {
+            startAutoPollingForWeekly();
+        });	
     </script>
 </body>
 </html>
