@@ -396,19 +396,23 @@
                                         <span class="badge-soft badge-danger fs-6 shadow-sm">{{ sc.total_score }}</span>
                                     </td>
                                     
-                                    <td data-label="Ghi Chú Lỗi" class="col-details">
+									<td data-label="Ghi Chú Lỗi" class="col-details">
                                         <div class="text-main fw-bold mb-2 auto-color-note" style="line-height: 1.5;">{{ sc.note }}</div>
                                         
-                                        {% if sc.is_appealed %}
-                                            <div class="p-3 bg-warning bg-opacity-10 border border-warning border-opacity-25 rounded-3 mt-2">
-                                                <div class="widget-label text-dark mb-1"><i class="fa-solid fa-scale-balanced text-warning"></i> Lý do phúc khảo:</div>
-                                                <div class="fst-italic text-secondary mb-3" style="font-size: 13.5px;">"{{ sc.appeal_reason }}"</div>
+                                        <!-- HIỂN THỊ LỊCH SỬ PHÚC KHẢO -->
+                                        {% if sc.appeal_reason %}
+                                            <div class="p-3 bg-warning bg-opacity-10 border border-warning border-opacity-25 rounded-3 mt-2 mb-2">
+                                                <div class="widget-label text-dark mb-1"><i class="fa-solid fa-scale-balanced text-warning"></i> Lịch sử khiếu nại:</div>
+                                                <!-- Sử dụng bộ lọc replace để ngắt dòng các lần khiếu nại của nhiều ngày khác nhau -->
+                                                <div class="fst-italic text-secondary mb-3" style="font-size: 13.5px; line-height: 1.6;">
+                                                    {{ sc.appeal_reason | replace(' | ', '<br>') | safe }}
+                                                </div>
                                                 
                                                 {% if sc.appeal_response %}
                                                     <div class="widget-label text-success mb-1"><i class="fa-solid fa-check-double text-success"></i> BCH phản hồi:</div>
                                                     <div class="fw-bold" style="color: #166534; font-size: 14px;">"{{ sc.appeal_response }}"</div>
                                                 {% else %}
-                                                    <div class="badge-soft badge-secondary">Đang chờ giải quyết...</div>
+                                                    <div class="badge-soft badge-secondary w-100 justify-content-center mb-2">Đang chờ giải quyết...</div>
                                                     {% if not is_gvcn %}
                                                         <button class="btn-modern btn-modern-primary mt-2 w-100 p-2" onclick="openResolveModal({{ sc.score_id }}, '{{ selected_branch.name }}', '{{ sc.week }}')">
                                                             <i class="fa-solid fa-reply"></i> Bấm trả lời ngay
@@ -416,17 +420,22 @@
                                                     {% endif %}
                                                 {% endif %}
                                             </div>
-                                        {% else %}
-                                            {% if is_gvcn and not sc.is_locked %}
-                                                {% if sc.is_appeal_expired %}
-                                                    <div class="badge-soft mt-2 w-100 justify-content-center py-2" style="background: #f1f5f9; color: #94a3b8; border: 1px dashed #cbd5e1; cursor: not-allowed;" title="Đã quá 3 ngày kể từ khi công bố điểm">
-                                                        <i class="fa-solid fa-clock-rotate-left me-1"></i> Quá hạn phúc khảo (3 ngày)
-                                                    </div>
-                                                {% else %}
-                                                    <button class="btn-modern btn-modern-warning mt-2 py-2 px-3 w-100" style="background: transparent; color: #d97706; border: 1px dashed #f59e0b;" onclick="openAppealModal({{ sc.score_id }}, '{{ sc.week }}')">
-                                                        <i class="fa-solid fa-hand-paper"></i> Xin phúc khảo
-                                                    </button>
-                                                {% endif %}
+                                        {% endif %}
+
+                                        <!-- ĐIỀU KHIỂN NÚT BẤM DÀNH CHO GVCN -->
+                                        {% if is_gvcn and not sc.is_locked %}
+                                            {% if sc.is_appeal_expired %}
+                                                <div class="badge-soft mt-2 w-100 justify-content-center py-2" style="background: #f1f5f9; color: #94a3b8; border: 1px dashed #cbd5e1; cursor: not-allowed;" title="Đã quá 3 ngày kể từ khi công bố điểm">
+                                                    <i class="fa-solid fa-clock-rotate-left me-1"></i> Quá hạn phúc khảo (3 ngày)
+                                                </div>
+                                            {% elif sc.has_appealed_today %}
+                                                <div class="badge-soft mt-2 w-100 justify-content-center py-2 text-warning fw-bold" style="background: #fffbeb; border: 1px dashed #fcd34d; cursor: not-allowed;">
+                                                    <i class="fa-solid fa-lock me-1"></i> Hôm nay đã gửi. Xin đợi ngày mai!
+                                                </div>
+                                            {% else %}
+                                                <button class="btn-modern btn-modern-warning mt-2 py-2 px-3 w-100" style="background: transparent; color: #d97706; border: 1px dashed #f59e0b;" onclick="openAppealModal({{ sc.score_id }}, '{{ sc.week }}')">
+                                                    <i class="fa-solid fa-hand-paper"></i> {% if sc.appeal_reason %}Gửi bổ sung phúc khảo{% else %}Xin phúc khảo{% endif %}
+                                                </button>
                                             {% endif %}
                                         {% endif %}
                                     

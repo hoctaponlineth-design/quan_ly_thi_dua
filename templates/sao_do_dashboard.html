@@ -177,7 +177,13 @@
                             <input type="hidden" name="c9" id="hidden_c9_{{ b.id }}" value="0">
                             <input type="hidden" name="c8" id="hidden_c8_{{ b.id }}" value="0">
 
-                            <input type="hidden" id="old_penalty_{{ b.id }}" value="{{ sc.score_tru if sc else 0 }}">
+                            <!-- CƠ CHẾ MỚI: Lấy chính xác Tổng điểm cũ làm mốc để cộng/trừ biến động -->
+                            <input type="hidden" id="old_total_score_{{ b.id }}" value="{{ sc.total_score if (sc and sc.total_score is not none) else 100.0 }}">
+                            <input type="hidden" id="old_c10_{{ b.id }}" value="{{ sc.count_10 if sc else 0 }}">
+                            <input type="hidden" id="old_c9_{{ b.id }}" value="{{ sc.count_9 if sc else 0 }}">
+                            <input type="hidden" id="old_c8_{{ b.id }}" value="{{ sc.count_8 if sc else 0 }}">
+                            <input type="hidden" id="old_rating_{{ b.id }}" value="{{ sc.week_rating if sc else 'Bình thường' }}">
+                            <input type="hidden" id="old_note_{{ b.id }}" value="{{ sc.note if sc else '' }}">
                             <div id="autoPenaltyPreview_{{ b.id }}" class="d-none" data-penalty="0"></div>
 
                             <div id="hidden_viols_{{ b.id }}">
@@ -241,10 +247,10 @@
                                     <i class="fa-solid fa-circle-info text-primary"></i> Gõ lỗi cần THÊM MỚI hoặc bấm thẻ nhanh. Để ghi tên học sinh vào Sổ đen, hãy đặt trong ngoặc vuông, ví dụ: <code class="text-danger">Đi học muộn [Nguyễn Văn A]</code>
                                 </div>
                                 <div style="position: relative;">
-                                    <textarea class="form-control border-2 border-danger border-opacity-50 fw-bold text-danger mb-2" id="detailNote_{{ b.id }}" rows="3" placeholder="Gõ thêm lỗi mới kèm tên học sinh (nếu có)..." oninput="handleNoteInput('{{ b.id }}', '{{ b.group }}')">{{ sc.note if sc else '' }}</textarea>
+                                    <textarea class="form-control border-2 border-danger border-opacity-50 fw-bold text-danger mb-2" id="detailNote_{{ b.id }}" rows="3" placeholder="Gõ thêm lỗi mới kèm tên học sinh (nếu có)..." oninput="handleNoteInput('{{ b.id }}', '{{ b.group }}')"></textarea>
                                     <div id="suggestionBox_{{ b.id }}" class="list-group" style="position: absolute; top: 100%; left: 0; z-index: 1000; width: 100%; display: none; max-height: 150px; overflow-y: auto; box-shadow: 0 4px 10px rgba(0,0,0,0.15);"></div>
                                 </div>
-                                
+                             
                                 <div class="d-flex flex-wrap mt-1">
                                     <span class="badge bg-secondary text-white mb-1 w-100 text-start" style="font-size: 10px;">Thẻ chọn nhanh:</span>
                                     {% for cat in violations_bank %}
@@ -508,9 +514,10 @@
         const BAREM = { d10: 5, d9: 3, d8: 1, kha: 20, tot: 30, maxMon: 4, maxTot: 14, base: 100 };
         const DEFAULT_SUBJECTS = ["Toán", "Ngữ Văn", "Ngoại Ngữ", "Vật Lý", "Hóa Học", "Sinh Học", "Lịch Sử", "Địa Lí", "GDCD", "Tin Học", "Công Nghệ", "GDQP", "Thể Dục"];
         
+        // VÁ LỖI XUNG ĐỘT NGOẶC KÉP TRONG JINJA
         const violationBank = [
             {% for cat in violations_bank %}
-            { id: {{ cat.id }}, name: "{{ cat.name }}", points: {{ cat.penalty_points }}, type: "{{ cat.point_type }}" },
+            { id: {{ cat.id }}, name: `{{ cat.name | replace('`', '\\`') }}`, points: {{ cat.penalty_points }}, type: `{{ cat.point_type }}` },
             {% endfor %}
         ];
 
@@ -568,10 +575,86 @@
             tbody.appendChild(tr);
         }
 
+        // HÀM CHỌN NHANH LỖI (ĐÃ ĐƯỢC PHỤC HỒI)
+        function appendQuickTag(branchId, branchGroup, catName) {
+            triggerHaptic(20);
+            let input = document.getElementById(`detailNote_${branchId}`);
+            if(!input) return;
+            let val = input.value.trim();
+            let appendText = `${catName} x1`;
+            input.value = val ? `${val}, ${appendText}` : appendText;
+            handleNoteInput(branchId, branchGroup);
+        }
+
+        function handleNoteInput(branchId, branchGroup) {
+            let noteInput = document.getElementById(`detailNote_${branchId}`);
+            let oldNoteEl = document.getElementById(`old_note_${branchId}`); 
+            if(!noteInput) return;
+            
+            let currentText = noteInput.value;
+            let oldServerNote = oldNoteEl ? oldNoteEl.value.trim() : "";
+            
+            // Loại bỏ hoàn toàn chữ cũ để tính toán tiền phạt chỉ cho các LỖI MỚI gõ thêm
+            let newAddedText = currentText;
+            if (oldServerNote && currentText.includes(oldServerNote)) {
+                newAddedText = currentText.replace(oldServerNote, "").trim();
+                if (newAddedText.startsWith(";") || newAddedText.startsWith(",")) {
+                    newAddedText = newAddedText.substring(1).trim();
+                }
+            }
+            if (currentText.trim() === oldServerNote) newAddedText = "";
+
+            let penalty = 0;
+            const suggestionBox = document.getElementById(`suggestionBox_${branchId}`);
+            
+            const parts = currentText.split(',');
+            const searchTerm = parts[parts.length - 1].trim().toLowerCase();
+            
+            if (searchTerm && suggestionBox) {
+                const matches = violationBank.filter(cat => cat.name.toLowerCase().includes(searchTerm) && cat.type !== 'Điểm cộng');
+                if (matches.length > 0) {
+                    suggestionBox.innerHTML = '';
+                    suggestionBox.style.display = 'block';
+                    matches.forEach(match => {
+                        let btn = document.createElement('a');
+                        btn.className = 'list-group-item list-group-item-action py-2 text-danger fw-bold';
+                        btn.innerHTML = `<i class="fa-solid fa-triangle-exclamation"></i> ${match.name} <span class="badge bg-danger float-end">-${match.points}đ</span>`;
+                        btn.onclick = () => { appendQuickTag(branchId, branchGroup, match.name); suggestionBox.style.display = 'none'; };
+                        suggestionBox.appendChild(btn);
+                    });
+                } else { suggestionBox.style.display = 'none'; }
+            } else if(suggestionBox) { suggestionBox.style.display = 'none'; }
+
+            // Chỉ tính điểm trừ tạm tính (Live Preview) trên MẢNG CHỮ MỚI
+            if (newAddedText) {
+                let newParts = newAddedText.split(/[,;]/);
+                newParts.forEach(part => {
+                    let p = part.toLowerCase();
+                    violationBank.forEach(cat => {
+                        let catName = cat.name.toLowerCase();
+                        if (p.includes(catName) && cat.type !== 'Điểm cộng') {
+                            let regex = new RegExp(catName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + "\\s*(?::|-|x|,)?\\s*(\\d+)", "i");
+                            let match = p.match(regex);
+                            let qty = match ? parseInt(match[1]) : 1;
+                            penalty += (cat.points * qty);
+                        }
+                    });
+                });
+            }
+            
+            let previewLabel = document.getElementById(`autoPenaltyPreview_${branchId}`);
+            if(previewLabel) {
+                previewLabel.setAttribute('data-penalty', penalty);
+            }
+            
+            calculateFinalScore(branchId, branchGroup);
+        }
+
         function calculateFinalScore(branchId, branchGroup) {
             const tbody = document.getElementById(`subjectsBody_${branchId}`);
             if(!tbody) return;
 
+            // 1. TÍNH ĐIỂM HỌC TẬP & XẾP LOẠI HIỆN TẠI TRÊN MÀN HÌNH (CURRENT)
             let total10 = 0, total9 = 0, total8 = 0;
             tbody.querySelectorAll('tr').forEach(row => {
                 let c10Input = row.querySelector('.sub-c10');
@@ -610,84 +693,60 @@
                 }
             }
 
-            let diemHocTap = (total10 * BAREM.d10) + (total9 * BAREM.d9) + (total8 * BAREM.d8);
+            let currentHocTap = (total10 * BAREM.d10) + (total9 * BAREM.d9) + (total8 * BAREM.d8);
 
             let ratingSelect = document.querySelector(`#form_submit_${branchId} select[name="rating"]`);
-            let diemRating = 0;
+            let currentRatingScore = 0;
             if (ratingSelect) {
-                if (ratingSelect.value === "Tuần Tốt") diemRating = BAREM.tot;
-                else if (ratingSelect.value === "Tuần Khá") diemRating = BAREM.kha;
+                if (ratingSelect.value === "Tuần Tốt") currentRatingScore = BAREM.tot;
+                else if (ratingSelect.value === "Tuần Khá") currentRatingScore = BAREM.kha;
             }
 
+            // 2. TÍNH ĐIỂM HỌC TẬP & XẾP LOẠI CŨ (OLD) TỪ CSDL ĐỂ TÌM ĐỘ CHÊNH LỆCH (DELTA)
+            let oldC10 = parseInt(document.getElementById(`old_c10_${branchId}`).value) || 0;
+            let oldC9 = parseInt(document.getElementById(`old_c9_${branchId}`).value) || 0;
+            let oldC8 = parseInt(document.getElementById(`old_c8_${branchId}`).value) || 0;
+            if (branchGroup.includes("1")) oldC8 = 0;
+
+            let ok10 = Math.min(oldC10, BAREM.maxMon);
+            let ok9 = Math.min(oldC9, BAREM.maxMon - ok10);
+            let ok8 = Math.min(oldC8, BAREM.maxMon - ok10 - ok9);
+            
+            let oldSum = ok10 + ok9 + ok8;
+            if (oldSum > BAREM.maxTot) {
+                let excess = oldSum - BAREM.maxTot;
+                let cut8 = Math.min(ok8, excess); ok8 -= cut8; excess -= cut8;
+                if (excess > 0) { let cut9 = Math.min(ok9, excess); ok9 -= cut9; excess -= cut9; }
+                if (excess > 0) { ok10 -= excess; }
+            }
+            let oldHocTap = (ok10 * BAREM.d10) + (ok9 * BAREM.d9) + (ok8 * BAREM.d8);
+
+            let oldRatingVal = document.getElementById(`old_rating_${branchId}`).value;
+            let oldRatingScore = 0;
+            if (oldRatingVal === "Tuần Tốt") oldRatingScore = BAREM.tot;
+            else if (oldRatingVal === "Tuần Khá") oldRatingScore = BAREM.kha;
+
+            // 3. TÍNH TOÁN BIẾN ĐỘNG (DELTA)
+            let deltaHocTap = currentHocTap - oldHocTap;
+            let deltaRating = currentRatingScore - oldRatingScore;
+
+            // Điểm trừ của MỘT MÌNH lỗi mới vừa gõ/tích chọn hôm nay
             let previewLabel = document.getElementById(`autoPenaltyPreview_${branchId}`);
             let penaltyAttr = previewLabel ? previewLabel.getAttribute('data-penalty') : '0';
-            let diemTruHienTai = parseFloat(penaltyAttr) || 0; 
+            let newPenalty = parseFloat(penaltyAttr) || 0.0; 
 
-            let diemNenGoc = 100.0;
-            let finalScore = diemNenGoc + diemHocTap + diemRating - diemTruHienTai;
+            // 4. LẤY TỔNG ĐIỂM CŨ LÀM MỐC VÀ CỘNG BIẾN ĐỘNG (Đồng bộ tuyệt đối với Bảng tuần)
+            let oldTotalScoreEl = document.getElementById(`old_total_score_${branchId}`);
+            let baseTotalScore = oldTotalScoreEl ? parseFloat(oldTotalScoreEl.value) || 100.0 : 100.0;
+
+            // CÔNG THỨC CHUẨN: Tổng Cũ + Biến động Học tập + Biến động Xếp loại - Lỗi Mới
+            let finalScore = baseTotalScore + deltaHocTap + deltaRating - newPenalty;
             
             let scoreDisplay = document.getElementById(`live_total_score_${branchId}`);
             if(scoreDisplay) {
                 scoreDisplay.innerText = finalScore.toFixed(1) + " đ";
             }
-        }
-
-        function handleNoteInput(branchId, branchGroup) {
-            let noteInput = document.getElementById(`detailNote_${branchId}`);
-            if(!noteInput) return;
-            
-            let noteText = noteInput.value;
-            let penalty = 0;
-            
-            const suggestionBox = document.getElementById(`suggestionBox_${branchId}`);
-            const parts = noteText.split(',');
-            const searchTerm = parts[parts.length - 1].trim().toLowerCase();
-            
-            if (searchTerm && suggestionBox) {
-                const matches = violationBank.filter(cat => cat.name.toLowerCase().includes(searchTerm) && cat.type !== 'Điểm cộng');
-                if (matches.length > 0) {
-                    suggestionBox.innerHTML = '';
-                    suggestionBox.style.display = 'block';
-                    matches.forEach(match => {
-                        let btn = document.createElement('a');
-                        btn.className = 'list-group-item list-group-item-action py-2 text-danger fw-bold';
-                        btn.innerHTML = `<i class="fa-solid fa-triangle-exclamation"></i> ${match.name} <span class="badge bg-danger float-end">-${match.points}đ</span>`;
-                        btn.onclick = () => { appendQuickTag(branchId, branchGroup, match.name); suggestionBox.style.display = 'none'; };
-                        suggestionBox.appendChild(btn);
-                    });
-                } else { suggestionBox.style.display = 'none'; }
-            } else if(suggestionBox) { suggestionBox.style.display = 'none'; }
-
-            parts.forEach(part => {
-                let p = part.toLowerCase();
-                violationBank.forEach(cat => {
-                    let catName = cat.name.toLowerCase();
-                    if (p.includes(catName) && cat.type !== 'Điểm cộng') {
-                        let regex = new RegExp(catName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + "\\s*(?::|-|x|,)?\\s*(\\d+)", "i");
-                        let match = p.match(regex);
-                        let qty = match ? parseInt(match[1]) : 1;
-                        penalty += (cat.points * qty);
-                    }
-                });
-            });
-            
-            let previewLabel = document.getElementById(`autoPenaltyPreview_${branchId}`);
-            if(previewLabel) {
-                previewLabel.setAttribute('data-penalty', penalty);
-            }
-            
-            calculateFinalScore(branchId, branchGroup);
-        }
-
-        function appendQuickTag(branchId, branchGroup, catName) {
-            triggerHaptic(20);
-            let input = document.getElementById(`detailNote_${branchId}`);
-            if(!input) return;
-            let val = input.value.trim();
-            let appendText = `${catName} x1`;
-            input.value = val ? `${val}, ${appendText}` : appendText;
-            handleNoteInput(branchId, branchGroup);
-        }
+        } // ĐÃ SỬA LỖI NGOẶC DƯ Ở ĐÂY
 
         function submitFormSafe(btnElement, branchId, branchName, branchGroup) {
             triggerHaptic(50);
@@ -732,30 +791,46 @@
                 document.getElementById(`hidden_c9_${branchId}`).value = rawTotal9;
                 document.getElementById(`hidden_c8_${branchId}`).value = rawTotal8;
 
-                let noteText = document.getElementById(`detailNote_${branchId}`).value;
-                let parts = noteText.split(',');
+                let manualInputEl = document.getElementById(`detailNote_${branchId}`);
+                let oldNoteEl = document.getElementById(`old_note_${branchId}`);
+                
+                let currentText = manualInputEl ? manualInputEl.value.trim() : "";
+                let oldServerNote = oldNoteEl ? oldNoteEl.value.trim() : "";
+                
+                let newAddedText = currentText;
+                if (oldServerNote && currentText.includes(oldServerNote)) {
+                    newAddedText = currentText.replace(oldServerNote, "").trim();
+                    if (newAddedText.startsWith(";") || newAddedText.startsWith(",")) {
+                        newAddedText = newAddedText.substring(1).trim();
+                    }
+                }
+                if (currentText.trim() === oldServerNote) newAddedText = "";
+
                 let violCounts = {}; let studentNames = {}; let manualNotes = [];
+                
+                if (newAddedText) {
+                    let parts = newAddedText.split(/[,;]/);
+                    parts.forEach(part => {
+                        let p = part.trim();
+                        if (!p) return;
+                        let matched = false;
+                        violationBank.forEach(cat => {
+                            let catName = cat.name.toLowerCase();
+                            if (p.toLowerCase().includes(catName) && cat.type !== 'Điểm cộng') {
+                                matched = true;
+                                let qtyMatch = p.match(/(?::|-|x|\s)\s*(\d+)/i);
+                                let qty = qtyMatch ? parseInt(qtyMatch[1]) : 1;
+                                let nameMatch = p.match(/\[(.*?)\]|\((.*?)\)/);
+                                let sName = nameMatch ? (nameMatch[1] || nameMatch[2]).trim() : '';
 
-                parts.forEach(part => {
-                    let p = part.trim();
-                    if (!p) return;
-                    let matched = false;
-                    violationBank.forEach(cat => {
-                        let catName = cat.name.toLowerCase();
-                        if (p.toLowerCase().includes(catName) && cat.type !== 'Điểm cộng') {
-                            matched = true;
-                            let qtyMatch = p.match(/(?::|-|x|\s)\s*(\d+)/i);
-                            let qty = qtyMatch ? parseInt(qtyMatch[1]) : 1;
-                            let nameMatch = p.match(/\[(.*?)\]|\((.*?)\)/);
-                            let sName = nameMatch ? (nameMatch[1] || nameMatch[2]).trim() : '';
-
-                            if (!violCounts[cat.id]) { violCounts[cat.id] = 0; studentNames[cat.id] = []; }
-                            violCounts[cat.id] += qty;
-                            if (sName) studentNames[cat.id].push(sName);
-                        }
+                                if (!violCounts[cat.id]) { violCounts[cat.id] = 0; studentNames[cat.id] = []; }
+                                violCounts[cat.id] += qty;
+                                if (sName) studentNames[cat.id].push(sName);
+                            }
+                        });
+                        if (!matched) manualNotes.push(p);
                     });
-                    if (!matched) manualNotes.push(p);
-                });
+                }
 
                 violationBank.forEach(cat => {
                     let qtyInput = document.getElementById(`viol_${branchId}_${cat.id}`);
@@ -860,7 +935,6 @@
             window.addEventListener('load', () => { navigator.serviceWorker.register('/sw.js').catch(err => console.log('Lỗi PWA:', err)); }); 
         }
 
-        // --- HÀM XỬ LÝ ĐỔI MẬT KHẨU ---
         function openChangePasswordModal() {
             triggerHaptic(20);
             document.getElementById('changePwdForm').reset();
@@ -891,7 +965,6 @@
             return true;
         }
 
-        // --- CÁC HÀM NÂNG CẤP TRỰC CỔNG THÔNG MINH ---
         function filterQuickClasses() {
             let input = document.getElementById('searchClassInput').value.toUpperCase();
             let buttons = document.querySelectorAll('.class-quick-btn');
@@ -918,10 +991,9 @@
         function checkQuickFormValidity() {
             let branchId = document.getElementById('quickSelectedBranchId').value;
             let violId = document.getElementById('hiddenQuickViolationId').value;
-            let stuName = document.getElementById('quickName').value.trim();
             let btnSubmit = document.getElementById('btnSubmitQuickLog');
 
-            if (branchId && violId && stuName) {
+            if (branchId && violId) {
                 btnSubmit.disabled = false;
                 btnSubmit.classList.remove('btn-secondary');
                 btnSubmit.classList.add('btn-danger');
@@ -930,7 +1002,7 @@
                 btnSubmit.disabled = true;
                 btnSubmit.classList.remove('btn-danger');
                 btnSubmit.classList.add('btn-secondary');
-                btnSubmit.innerHTML = '<i class="fa-solid fa-lock me-1"></i> VUI LÒNG ĐIỀN ĐỦ THÔNG TIN';
+                btnSubmit.innerHTML = '<i class="fa-solid fa-lock me-1"></i> VUI LÒNG CHỌN ĐỦ LỚP VÀ LỖI';
             }
         }
 
