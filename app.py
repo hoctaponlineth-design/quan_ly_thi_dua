@@ -7068,6 +7068,32 @@ def bgh_dashboard():
             ai_summary=ai_summary,
             weeks=[f"Tuần {i}" for i in range(1, 38)]
         )
+@app.route('/api/weekly_scores_json/<week_name>')
+def api_weekly_scores_json(week_name):
+    if session.get('role') not in ['Quản trị viên', 'Admin', 'Bí thư Đoàn trường', 'Bí thư']:
+        return {"success": False, "error": "Unauthorized"}, 401
+    try:
+        with session_scope() as db_session:
+            active_year = db_session.query(SchoolYear).filter_by(is_active=True).first()
+            if not active_year: return {"success": True, "data": []}
+            
+            scores = db_session.query(WeeklyScore).join(Branch).filter(
+                WeeklyScore.week == week_name,
+                Branch.school_year_id == active_year.id
+            ).all()
+            
+            data = []
+            for sc in scores:
+                data.append({
+                    "branch_id": sc.branch_id,
+                    "total_score": float(sc.total_score) if sc.total_score is not None else 0.0,
+                    "score_tru": float(sc.score_tru) if sc.score_tru is not None else 0.0,
+                    "note": sc.note or ""
+                })
+            return {"success": True, "data": data}
+    except Exception as e:
+        return {"success": False, "error": str(e)}, 500
+    
 if __name__ == "__main__":
     auto_init_accounts()
     init_db()
