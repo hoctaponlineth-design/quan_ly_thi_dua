@@ -3381,6 +3381,16 @@ def class_dashboard():
             monitoring_assignments = []
             warning_students = []
             
+            # =========================================================================
+            # [NÂNG CẤP]: LẤY DỮ LIỆU NGÂN HÀNG LỖI ĐỂ GVCN TRA CỨU (KHÔNG LÀM ẢNH HƯỞNG LUỒNG CŨ)
+            # =========================================================================
+            violation_bank = []
+            if active_year:
+                violation_bank = db_session.query(ViolationCategory).filter_by(
+                    school_year_id=active_year.id
+                ).order_by(ViolationCategory.point_type.desc(), ViolationCategory.name).all()
+            # =========================================================================
+            
             if selected_branch_id:
                 if is_gvcn and branches and selected_branch_id != branches[0].id:
                     selected_branch_id = branches[0].id
@@ -3390,11 +3400,7 @@ def class_dashboard():
                     group_val = selected_branch.group or "Nhóm 1"
                     weekly_scores_db = db_session.query(WeeklyScore).filter_by(branch_id=selected_branch.id).order_by(WeeklyScore.id.desc()).all()
                     
-                    # ==========================================================
-                    # [THUẬT TOÁN ĐẾM LỖI TỐI ƯU]: Quét học sinh vi phạm >= 3 lỗi 
-                    # ==========================================================
                     if weekly_scores_db:
-                        # VÁ LỖI: Duyệt ngược từ tuần mới nhất trở về trước
                         for score in reversed(weekly_scores_db):
                             student_viol_counts = {}
                             for viol in score.violations:
@@ -3410,9 +3416,8 @@ def class_dashboard():
                             if current_warnings:
                                 warning_students = sorted(current_warnings, key=lambda x: x['count'], reverse=True)
                                 break
-                    # =========================================================
                     
-                    from datetime import datetime
+                    from datetime import datetime, timedelta
                     today_str = datetime.now().strftime("%d/%m/%Y")
                     
                     for sc in weekly_scores_db:
@@ -3432,7 +3437,6 @@ def class_dashboard():
                         so_luong_diem_tot = int(sc.count_9 or 0) + int(sc.count_10 or 0)
                         if "2" in str(group_val): so_luong_diem_tot += int(sc.count_8 or 0)
                             
-                        # --- [THUẬT TOÁN MỚI]: QUÉT XEM HÔM NAY ĐÃ GỬI CHƯA ---
                         has_appealed_today = False
                         if sc.appeal_reason and f"[{today_str}]" in sc.appeal_reason:
                             has_appealed_today = True
@@ -3441,7 +3445,7 @@ def class_dashboard():
                             'score_id': sc.id,             
                             'is_locked': getattr(sc, 'is_locked', False),     
                             'is_appealed': getattr(sc, 'is_appealed', False), 
-                            'has_appealed_today': has_appealed_today, # <--- CỜ ĐIỀU KHIỂN GIAO DIỆN
+                            'has_appealed_today': has_appealed_today,
                             'appeal_reason': getattr(sc, 'appeal_reason', ''),
                             'appeal_response': getattr(sc, 'appeal_response', ''),
                             'week': sc.week,
@@ -3457,19 +3461,86 @@ def class_dashboard():
                         })
                     
                     red_star_ids = [rs.id for rs in selected_branch.red_stars] if hasattr(selected_branch, 'red_stars') else []
-                    if not red_star_ids: red_star_ids = [rs.id for rs in db_session.query(RedStar).filter_by(branch_id=selected_branch.id).all()]
-                    if red_star_ids: assignments = db_session.query(Assignment).filter(Assignment.red_star_id.in_(red_star_ids)).order_by(Assignment.week_number.desc(), Assignment.shift).all()
-
+                    if not red_star_ids: 
+                        red_star_ids = [rs.id for rs in db_session.query(RedStar).filter_by(branch_id=selected_branch.id).all()]
+                    
                     import json, os
                     base_dir = os.path.dirname(os.path.abspath(__file__))
                     zones_map = {}
-                    if os.path.exists(os.path.join(base_dir, "config", "class_zones.json")):
-                        with open(os.path.join(base_dir, "config", "class_zones.json"), "r", encoding="utf-8") as f:
+                    config_path = os.path.join(base_dir, "config", "class_zones.json")
+                    if os.path.exists(config_path):
+                        with open(config_path, "r", encoding="utf-8") as f:
                             try: zones_map = json.load(f)
                             except: pass
+
+                    # =========================================================================
+                    # [BẢN VÁ TỐI ƯU]: XỬ LÝ LỊCH PHÂN CÔNG ĐI TRỰC CHO TAB 3
+                    # =========================================================================
+                    if red_star_ids:
+                        raw_assignments = db_session.query(Assignment).filter(Assignment.red_star_id.in_(red_star_ids)).order_by(Assignment.week_number.desc(), Assignment.shift).all()
+                        
+                        import os, json
+                        from datetime import datetime, timedelta
+                        base_dir = os.path.dirname(os.path.abspath(__file__))
+                        zones_map = {}
+                        config_path = os.path.join(base_dir, "config", "class_zones.json")
+                        if os.path.exists(config_path):
+                            with open(config_path, "r", encoding="utf-8") as f:
+                                try: zones_map = json.load(f)
+                                except: pass
+
+                        for assign in raw_assignments:
+                            # 1. XỬ LÝ LỖI NGÀY THÁNG SQLITE (Bắt chuẩn chuỗi String và Date)
+                            date_range_str = ""
+                            raw_date = getattr(assign, 'date', None)
+                            if raw_date:
+                                try:
+                                    if isinstance(raw_date, str):
+                                        date_str_clean = raw_date.split()[0]
+                                        py_date = datetime.strptime(date_str_clean, '%Y-%m-%d').date()
+                                    else:
+                                        py_date = raw_date
+                                        
+                                    start_d = py_date.strftime("%d/%m/%Y")
+                                    day_of_week = py_date.weekday()
+                                    days_to_add = 5 - day_of_week if day_of_week <= 5 else 6
+                                    end_date = py_date + timedelta(days=days_to_add)
+                                    end_d = end_date.strftime("%d/%m/%Y")
+                                    date_range_str = f"({start_d} đến {end_d})"
+                                except Exception as e:
+                                    pass
+
+                            # 2. XỬ LÝ LỖI HOA/THƯỜNG KHI DỊCH TÊN LỚP (Quét không phân biệt hoa thường)
+                            area_name = assign.duty_area.name if assign.duty_area else ""
+                            classes_in_zone = []
+                            for k, v in zones_map.items():
+                                if str(k).strip().lower() == str(area_name).strip().lower():
+                                    classes_in_zone = v
+                                    break
+                            task_display = ", ".join(classes_in_zone) if classes_in_zone else area_name
+
+                            # 3. ĐÓNG GÓI CHUẨN XÁC TÊN BIẾN CHO GIAO DIỆN HTML
+                            assignments.append({
+                                'week_number': assign.week_number,
+                                'red_star_name': assign.red_star.full_name if assign.red_star else "Khuyết",
+                                'shift': assign.shift,
+                                'date_range_str': date_range_str,
+                                'task_display': task_display
+                            })
+                    # =========================================================================
+                    # =========================================================================
                     
                     target_zone_names = [zone for zone, classes in zones_map.items() if isinstance(classes, list) and str(selected_branch.name or '').strip().upper() in [str(c).strip().upper() for c in classes]]
-                    if target_zone_names: monitoring_assignments = db_session.query(Assignment).join(DutyArea).join(RedStar).join(Branch).filter(DutyArea.name.in_(target_zone_names), Branch.school_year_id == active_year.id).order_by(Assignment.week_number.desc(), Assignment.shift).all()
+                    if target_zone_names: 
+                        raw_monitoring_assignments = db_session.query(Assignment).join(DutyArea).join(RedStar).join(Branch).filter(DutyArea.name.in_(target_zone_names), Branch.school_year_id == active_year.id).order_by(Assignment.week_number.desc(), Assignment.shift).all()
+                        
+                        score_lookup = {sc.week: float(sc.total_score or 100.0) for sc in weekly_scores_db}
+                        for mon_asm in raw_monitoring_assignments:
+                            wk = f"Tuần {mon_asm.week_number}"
+                            monitoring_assignments.append({
+                                'assignment': mon_asm,
+                                'week_score': score_lookup.get(wk, 100.0)
+                            })
 
             return render_template('class_dashboard.html', 
                                    active_year=active_year, 
@@ -3479,6 +3550,7 @@ def class_dashboard():
                                    assignments=assignments, 
                                    monitoring_assignments=monitoring_assignments,
                                    warning_students=warning_students,
+                                   violation_bank=violation_bank,
                                    is_gvcn=is_gvcn 
             )
     except Exception as e:
@@ -5922,7 +5994,13 @@ def sao_do_quick_submit_form():
                 db_session.flush() 
                 
             old_note = score.note if score and score.note else ""
-            note_add = f"{violation.name} x1 [{ ' '.join(student_name.split()).title() }]" if student_name else f"{violation.name} x1"
+            
+            # --- [NÂNG CẤP]: TỰ ĐỘNG LẤY THỨ HIỆN TẠI VÀ GẮN TIỀN TỐ ---
+            from datetime import datetime
+            days_vn = {0: '[T2]', 1: '[T3]', 2: '[T4]', 3: '[T5]', 4: '[T6]', 5: '[T7]', 6: '[CN]'}
+            today_pfx = days_vn[datetime.now().weekday()]
+            
+            note_add = f"{today_pfx} {violation.name} x1 [{ ' '.join(student_name.split()).title() }]" if student_name else f"{today_pfx} {violation.name} x1"
             raw_combined_note = f"{old_note} ; {note_add}" if old_note else note_add
             
             all_categories = db_session.query(ViolationCategory).filter_by(school_year_id=active_year.id).all()
@@ -5932,22 +6010,29 @@ def sao_do_quick_submit_form():
             for part in re.split(r'[,;+\n](?![^\[]*\])(?![^\(]*\))', raw_combined_note):
                 part_clean = part.strip()
                 if not part_clean: continue
-                match_stu = re.search(r'\[(.*?)\]', part_clean)
+                
+                # --- [NÂNG CẤP]: BÓC TÁCH TAG NGÀY ĐỂ TRÁNH GỘP LỖI KHÁC NGÀY ---
+                match_day = re.search(r'\[(T[2-7]|CN)\]', part_clean)
+                day_pfx = match_day.group(0) if match_day else ""
+                text_to_parse = part_clean.replace(day_pfx, "").strip() if day_pfx else part_clean
+                
+                match_stu = re.search(r'\[(.*?)\]', text_to_parse)
                 stu_name_raw = match_stu.group(1).strip() if match_stu else ""
                 stu_name_normalized = " ".join(stu_name_raw.split()).title()
+                
                 matched = False
                 for cat in sorted_cats:
-                    if cat.name.lower() in part_clean.lower():
-                        match_qty = re.search(r'(?:x|:|-)\s*(\d+)', part_clean.lower())
+                    if cat.name.lower() in text_to_parse.lower():
+                        match_qty = re.search(r'(?:x|:|-)\s*(\d+)', text_to_parse.lower())
                         qty = int(match_qty.group(1)) if match_qty else 1
-                        key = (cat.name, stu_name_normalized.lower(), stu_name_normalized)
+                        key = (cat.name, stu_name_normalized.lower(), stu_name_normalized, day_pfx) # Thêm day_pfx vào Key
                         parsed_errors[key] = parsed_errors.get(key, 0) + qty
                         matched = True
                         break
                 if not matched:
-                    parsed_errors[("MANUAL", part_clean.lower(), part_clean)] = 1
+                    parsed_errors[("MANUAL", text_to_parse.lower(), text_to_parse, day_pfx)] = 1
                     
-            # --- XÉN TRẦN LỖI HỌC TẬP (Cả ở Nhập Nhanh) ---
+            # --- XÉN TRẦN LỖI HỌC TẬP ---
             max_tot_bad = 14; max_mon_bad = 4
             settings = db_session.query(ScoreSettings).filter_by(school_year_id=active_year.id).first()
             if settings:
@@ -5955,17 +6040,17 @@ def sao_do_quick_submit_form():
                 max_mon_bad = int(getattr(settings, 'max_diem_mon', 4))
                 
             bad_marks_expanded = []; other_errors = []
-            for (cat_name, stu_key, stu_display), qty in parsed_errors.items():
+            for (cat_name, stu_key, stu_display, day_pfx), qty in parsed_errors.items():
                 if cat_name == "MANUAL":
-                    other_errors.append((cat_name, stu_display, qty))
+                    other_errors.append((cat_name, stu_display, qty, day_pfx))
                 else:
                     is_bad_mark = "không học bài" in cat_name.lower() or "điểm kém" in cat_name.lower()
                     if is_bad_mark:
                         mon_match = re.search(r'\(Môn (.*?)\)', stu_display, re.IGNORECASE) if stu_display else None
                         mon = mon_match.group(1).strip() if mon_match else "Khác"
-                        for _ in range(qty): bad_marks_expanded.append({'cat_name': cat_name, 'stu_display': stu_display, 'mon': mon})
+                        for _ in range(qty): bad_marks_expanded.append({'cat_name': cat_name, 'stu_display': stu_display, 'mon': mon, 'day_pfx': day_pfx})
                     else:
-                        other_errors.append((cat_name, stu_display, qty))
+                        other_errors.append((cat_name, stu_display, qty, day_pfx))
 
             bad_by_subj = {}
             for bm in bad_marks_expanded:
@@ -5977,19 +6062,23 @@ def sao_do_quick_submit_form():
             
             capped_bad_counts = {}
             for bm in surviving_bad_marks:
-                k = (bm['cat_name'], bm['stu_display'])
+                k = (bm['cat_name'], bm['stu_display'], bm['day_pfx'])
                 capped_bad_counts[k] = capped_bad_counts.get(k, 0) + 1
                 
             final_parts = []; diem_tru_auto = 0.0
-            for (cat_name, stu_display), qty in capped_bad_counts.items():
-                final_parts.append(f"{cat_name} x{qty} [{stu_display}]" if stu_display else f"{cat_name} x{qty}")
+            for (cat_name, stu_display, day_pfx), qty in capped_bad_counts.items():
+                base_str = f"{cat_name} x{qty} [{stu_display}]" if stu_display else f"{cat_name} x{qty}"
+                final_parts.append(f"{day_pfx} {base_str}".strip())
                 for cat in sorted_cats:
                     if cat.name == cat_name and getattr(cat, 'point_type', 'Điểm trừ') != 'Điểm cộng':
                         diem_tru_auto += float(cat.penalty_points * qty); break
-            for cat_name, stu_display, qty in other_errors:
-                if cat_name == "MANUAL": final_parts.append(stu_display)
+                        
+            for cat_name, stu_display, qty, day_pfx in other_errors:
+                if cat_name == "MANUAL": 
+                    final_parts.append(f"{day_pfx} {stu_display}".strip() if day_pfx else stu_display)
                 else:
-                    final_parts.append(f"{cat_name} x{qty} [{stu_display}]" if stu_display else f"{cat_name} x{qty}")
+                    base_str = f"{cat_name} x{qty} [{stu_display}]" if stu_display else f"{cat_name} x{qty}"
+                    final_parts.append(f"{day_pfx} {base_str}".strip())
                     for cat in sorted_cats:
                         if cat.name == cat_name and getattr(cat, 'point_type', 'Điểm trừ') != 'Điểm cộng':
                             diem_tru_auto += float(cat.penalty_points * qty); break
@@ -6009,10 +6098,10 @@ def sao_do_quick_submit_form():
             score.total_score = float(score.score_truc or 100.0) + diem_xep_loai + diem_quy_uoc + float(score.score_cong or 0.0) - diem_tru_auto
 
             db_session.query(WeeklyViolation).filter_by(weekly_score_id=score.id).delete()
-            for (cat_name, stu_display), qty in capped_bad_counts.items():
+            for (cat_name, stu_display, day_pfx), qty in capped_bad_counts.items():
                 cat_id = next((c.id for c in sorted_cats if c.name == cat_name), None)
                 if cat_id: db_session.add(WeeklyViolation(weekly_score_id=score.id, violation_id=cat_id, quantity=qty, student_name=stu_display if stu_display else None))
-            for cat_name, stu_display, qty in other_errors:
+            for cat_name, stu_display, qty, day_pfx in other_errors:
                 if cat_name != "MANUAL":
                     cat_id = next((c.id for c in sorted_cats if c.name == cat_name), None)
                     if cat_id: db_session.add(WeeklyViolation(weekly_score_id=score.id, violation_id=cat_id, quantity=qty, student_name=stu_display if stu_display else None))
@@ -6043,7 +6132,6 @@ def submit_mobile_sao_do():
             rating = request.form.get('rating', score.week_rating if score else 'Bình thường')
             if rating == 'Bình thường' and score: rating = score.week_rating
             
-            # 1. XỬ LÝ ĐIỂM HỌC TẬP (SỔ ĐẦU BÀI)
             raw_scores_json = request.form.get('raw_scores_json', '').strip()
             f10, f9, f8 = 0, 0, 0
             b_group = str(branch.group) if branch.group else "1"
@@ -6080,85 +6168,87 @@ def submit_mobile_sao_do():
             all_categories = db_session.query(ViolationCategory).filter_by(school_year_id=active_year.id).all()
             sorted_cats = sorted(all_categories, key=lambda x: len(x.name), reverse=True)
             
-            # Từ điển gom lỗi: Key = (cat_id, student_name), Value = {cat_obj, qty, stu_name}
-            merged_violations = {}
-
-            # 2.1. Nạp toàn bộ lỗi cũ từ CSDL
-            if score:
-                old_vios = db_session.query(WeeklyViolation, ViolationCategory).join(
-                    ViolationCategory, WeeklyViolation.violation_id == ViolationCategory.id
-                ).filter(WeeklyViolation.weekly_score_id == score.id).all()
-                
-                for v_db, cat_db in old_vios:
-                    s_name = v_db.student_name or ""
-                    key = (cat_db.id, s_name.lower())
-                    merged_violations[key] = {
-                        'cat': cat_db,
-                        'qty': v_db.quantity,
-                        'stu': s_name
-                    }
-
-            # 2.2. Nạp thêm lỗi mới từ App (Checkbox)
+            from datetime import datetime
+            days_vn = {0: '[T2]', 1: '[T3]', 2: '[T4]', 3: '[T5]', 4: '[T6]', 5: '[T7]', 6: '[CN]'}
+            today_pfx = days_vn[datetime.now().weekday()]
+            
+            old_note = score.note if score and score.note else ""
+            
+            new_checkbox_notes = []
             for cat in all_categories:
                 qty_new = int(request.form.get(f'viol_{cat.id}', '0'))
                 if qty_new > 0:
                     stu_new = request.form.get(f'student_{cat.id}', '').strip()
                     stu_norm = " ".join(stu_new.split()).title() if stu_new else ""
-                    key = (cat.id, stu_norm.lower())
-                    
-                    if key in merged_violations:
-                        merged_violations[key]['qty'] += qty_new # Cộng dồn số lượng
+                    if stu_norm:
+                        new_checkbox_notes.append(f"{today_pfx} {cat.name} x{qty_new} [{stu_norm}]")
                     else:
-                        merged_violations[key] = {'cat': cat, 'qty': qty_new, 'stu': stu_norm}
-
-            # 2.3. Bóc tách lỗi từ ô ghi chú tay (nếu Sao đỏ có gõ thêm)
+                        new_checkbox_notes.append(f"{today_pfx} {cat.name} x{qty_new}")
+                        
             raw_app_note = request.form.get('manual_note', '').strip()
-            old_server_note = score.note if score and score.note else ""
-            
-            manual_typed_parts = []
+            manual_parts = []
             if raw_app_note:
-                # Lọc bỏ phần chữ cũ để chỉ lấy chữ mới gõ
                 diff_note = raw_app_note
-                if old_server_note and raw_app_note.startswith(old_server_note):
-                    diff_note = raw_app_note.replace(old_server_note, "", 1).strip().lstrip(" ;,")
-                
+                if old_note and raw_app_note.startswith(old_note):
+                    diff_note = raw_app_note.replace(old_note, "", 1).strip().lstrip(" ;,")
                 if diff_note:
                     for part in re.split(r'[,;+\n](?![^\[]*\])(?![^\(]*\))', diff_note):
-                        part_clean = part.strip()
-                        if not part_clean: continue
-                        match_stu = re.search(r'\[(.*?)\]', part_clean)
-                        stu_raw = match_stu.group(1).strip() if match_stu else ""
-                        stu_norm = " ".join(stu_raw.split()).title() if stu_raw else ""
-                        
-                        matched = False
-                        for cat in sorted_cats:
-                            if cat.name.lower() in part_clean.lower():
-                                match_qty = re.search(r'(?:x|:|-)\s*(\d+)', part_clean.lower())
-                                q = int(match_qty.group(1)) if match_qty else 1
-                                key = (cat.id, stu_norm.lower())
-                                if key in merged_violations:
-                                    merged_violations[key]['qty'] += q
-                                else:
-                                    merged_violations[key] = {'cat': cat, 'qty': q, 'stu': stu_norm}
-                                matched = True
-                                break
-                        if not matched:
-                            manual_typed_parts.append(part_clean)
+                        p_clean = part.strip()
+                        if p_clean:
+                            # Nếu trong ô gõ tay người dùng đã tự gõ tag ngày thì giữ nguyên, ngược lại thêm tag hôm nay
+                            if not re.search(r'\[(T[2-7]|CN)\]', p_clean):
+                                manual_parts.append(f"{today_pfx} {p_clean}")
+                            else:
+                                manual_parts.append(p_clean)
+
+            combined_parts = []
+            if old_note: combined_parts.append(old_note)
+            if new_checkbox_notes: combined_parts.extend(new_checkbox_notes)
+            if manual_parts: combined_parts.extend(manual_parts)
+            
+            raw_combined_note = " ; ".join(combined_parts)
+
+            parsed_errors = {}
+            for part in re.split(r'[,;+\n](?![^\[]*\])(?![^\(]*\))', raw_combined_note):
+                part_clean = part.strip()
+                if not part_clean: continue
+                
+                match_day = re.search(r'\[(T[2-7]|CN)\]', part_clean)
+                day_pfx = match_day.group(0) if match_day else ""
+                text_to_parse = part_clean.replace(day_pfx, "").strip() if day_pfx else part_clean
+                
+                match_stu = re.search(r'\[(.*?)\]', text_to_parse)
+                stu_name_raw = match_stu.group(1).strip() if match_stu else ""
+                stu_name_normalized = " ".join(stu_name_raw.split()).title()
+                
+                matched = False
+                for cat in sorted_cats:
+                    if cat.name.lower() in text_to_parse.lower():
+                        match_qty = re.search(r'(?:x|:|-)\s*(\d+)', text_to_parse.lower())
+                        qty = int(match_qty.group(1)) if match_qty else 1
+                        key = (cat.name, stu_name_normalized.lower(), stu_name_normalized, day_pfx)
+                        parsed_errors[key] = parsed_errors.get(key, 0) + qty
+                        matched = True
+                        break
+                if not matched:
+                    parsed_errors[("MANUAL", text_to_parse.lower(), text_to_parse, day_pfx)] = 1
 
             # 3. CHẠY THUẬT TOÁN XÉN TRẦN BAREM TRÊN TỔNG DỮ LIỆU ĐÃ HỢP NHẤT
             bad_marks_expanded = []
             other_errors = []
 
-            for key, data in merged_violations.items():
-                cat = data['cat']; qty = data['qty']; stu = data['stu']
-                is_bad_mark = "không học bài" in cat.name.lower() or "điểm kém" in cat.name.lower()
-                if is_bad_mark:
-                    mon_match = re.search(r'\(Môn (.*?)\)', stu, re.IGNORECASE) if stu else None
-                    mon = mon_match.group(1).strip() if mon_match else "Khác"
-                    for _ in range(qty):
-                        bad_marks_expanded.append({'cat': cat, 'stu': stu, 'mon': mon})
+            for (cat_name, stu_key, stu_display, day_pfx), qty in parsed_errors.items():
+                if cat_name == "MANUAL":
+                    other_errors.append((cat_name, stu_display, qty, day_pfx))
                 else:
-                    other_errors.append({'cat': cat, 'stu': stu, 'qty': qty})
+                    is_bad_mark = "không học bài" in cat_name.lower() or "điểm kém" in cat_name.lower()
+                    if is_bad_mark:
+                        mon_match = re.search(r'\(Môn (.*?)\)', stu_display, re.IGNORECASE) if stu_display else None
+                        mon = mon_match.group(1).strip() if mon_match else "Khác"
+                        for _ in range(qty):
+                            bad_marks_expanded.append({'cat_name': cat_name, 'stu_display': stu_display, 'mon': mon, 'day_pfx': day_pfx})
+                    else:
+                        other_errors.append((cat_name, stu_display, qty, day_pfx))
 
             bad_by_subj = {}
             for bm in bad_marks_expanded:
@@ -6170,29 +6260,29 @@ def submit_mobile_sao_do():
 
             capped_bad_counts = {}
             for bm in surviving_bad_marks:
-                k = (bm['cat'], bm['stu'])
+                k = (bm['cat_name'], bm['stu_display'], bm['day_pfx'])
                 capped_bad_counts[k] = capped_bad_counts.get(k, 0) + 1
 
             # 4. TÍNH TỔNG ĐIỂM TRỪ VÀ TẠO CHUỖI GHI CHÚ MỚI
             diem_tru_final = 0.0
             final_note_parts = []
 
-            # Thêm các lỗi học tập đã xén trần
-            for (cat, stu), qty in capped_bad_counts.items():
-                final_note_parts.append(f"{cat.name} x{qty} [{stu}]" if stu else f"{cat.name} x{qty}")
-                if getattr(cat, 'point_type', 'Điểm trừ') != 'Điểm cộng':
-                    diem_tru_final += float(cat.penalty_points * qty)
-
-            # Thêm các lỗi nề nếp khác
-            for item in other_errors:
-                cat = item['cat']; stu = item['stu']; qty = item['qty']
-                final_note_parts.append(f"{cat.name} x{qty} [{stu}]" if stu else f"{cat.name} x{qty}")
-                if getattr(cat, 'point_type', 'Điểm trừ') != 'Điểm cộng':
-                    diem_tru_final += float(cat.penalty_points * qty)
-
-            # Thêm ghi chú thủ công
-            for m_note in manual_typed_parts:
-                final_note_parts.append(m_note)
+            for (cat_name, stu_display, day_pfx), qty in capped_bad_counts.items():
+                base_str = f"{cat_name} x{qty} [{stu_display}]" if stu_display else f"{cat_name} x{qty}"
+                final_note_parts.append(f"{day_pfx} {base_str}".strip())
+                for cat in sorted_cats:
+                    if cat.name == cat_name and getattr(cat, 'point_type', 'Điểm trừ') != 'Điểm cộng':
+                        diem_tru_final += float(cat.penalty_points * qty); break
+                        
+            for cat_name, stu_display, qty, day_pfx in other_errors:
+                if cat_name == "MANUAL":
+                    final_note_parts.append(f"{day_pfx} {stu_display}".strip() if day_pfx else stu_display)
+                else:
+                    base_str = f"{cat_name} x{qty} [{stu_display}]" if stu_display else f"{cat_name} x{qty}"
+                    final_note_parts.append(f"{day_pfx} {base_str}".strip())
+                    for cat in sorted_cats:
+                        if cat.name == cat_name and getattr(cat, 'point_type', 'Điểm trừ') != 'Điểm cộng':
+                            diem_tru_final += float(cat.penalty_points * qty); break
 
             final_note = " ; ".join(final_note_parts)
 
@@ -6231,13 +6321,15 @@ def submit_mobile_sao_do():
                 db_session.add(score)
                 db_session.flush()
 
-            # Xoá bảng lỗi cũ, ghi đè bảng lỗi chuẩn xác đã hợp nhất
             db_session.query(WeeklyViolation).filter_by(weekly_score_id=score.id).delete()
             
-            for (cat, stu), qty in capped_bad_counts.items():
-                db_session.add(WeeklyViolation(weekly_score_id=score.id, violation_id=cat.id, quantity=qty, student_name=stu if stu else None))
-            for item in other_errors:
-                db_session.add(WeeklyViolation(weekly_score_id=score.id, violation_id=item['cat'].id, quantity=item['qty'], student_name=item['stu'] if item['stu'] else None))
+            for (cat_name, stu_display, day_pfx), qty in capped_bad_counts.items():
+                cat_id = next((c.id for c in sorted_cats if c.name == cat_name), None)
+                if cat_id: db_session.add(WeeklyViolation(weekly_score_id=score.id, violation_id=cat_id, quantity=qty, student_name=stu_display if stu_display else None))
+            for cat_name, stu_display, qty, day_pfx in other_errors:
+                if cat_name != "MANUAL":
+                    cat_id = next((c.id for c in sorted_cats if c.name == cat_name), None)
+                    if cat_id: db_session.add(WeeklyViolation(weekly_score_id=score.id, violation_id=cat_id, quantity=qty, student_name=stu_display if stu_display else None))
 
             log_system_action("MOBILE SAO ĐỎ", f"SD{session.get('username')} đã chấm điểm và cập nhật lớp {branch.name}.")
             flash(f"Đã nộp điểm và đồng bộ vào hệ thống cho lớp {branch.name} thành công!", "success")
