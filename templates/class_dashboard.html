@@ -324,6 +324,11 @@
                             <i class="fa-solid fa-user-shield"></i> HS Đi Trực
                         </button>
                     </li>
+					<li class="nav-item" role="presentation">
+                        <button class="modern-tab" data-bs-toggle="tab" data-bs-target="#violation-bank-pane" type="button" role="tab">
+                            <i class="fa-solid fa-scale-balanced"></i> Ngân Hàng Lỗi
+                        </button>
+                    </li>
                 </ul>
             </div>
             
@@ -539,18 +544,18 @@
                     </div>
                 </div>
 
-                <!-- TAB 2: SAO ĐỎ CHẤM ĐIỂM -->
+<!-- TAB 2: SAO ĐỎ CHẤM ĐIỂM -->
                 <div class="tab-pane fade" id="monitor-pane" role="tabpanel">
                     <div class="p-4 pb-0">
                         <div class="alert alert-primary bg-opacity-10 border-0 text-primary fw-bold rounded-3 small mb-0 d-flex gap-2">
-                            <i class="fa-solid fa-circle-info mt-1"></i> Danh sách các đội viên Sao đỏ được phân công giám sát lớp {{ selected_branch.name }}.
+                            <i class="fa-solid fa-circle-info mt-1"></i> Danh sách các đội viên Sao đỏ được phân công giám sát lớp {{ selected_branch.name }}, kèm theo tổng điểm thi đua tuần tương ứng.
                         </div>
                     </div>
                     <div class="table-responsive-custom mt-3">
                         <table class="table-modern">
                             <thead>
                                 <tr>
-                                    <th>Tuần</th>
+                                    <th>Tuần & Tổng Điểm</th>
                                     <th>Ca trực</th>
                                     <th>Tên Sao đỏ chấm</th>
                                     <th>Lớp của SĐ</th>
@@ -559,12 +564,31 @@
                                 </tr>
                             </thead>
                             <tbody>
-                                {% for assign in monitoring_assignments %}
+                                {% for item in monitoring_assignments %}
+                                {% set assign = item.assignment %}
                                 <tr>
-                                    <td data-label="Tuần" class="fw-bold">Tuần {{ assign.week_number }}</td>
+                                    <td data-label="Tuần & Điểm" class="fw-bold">
+                                        <div class="d-flex align-items-center justify-content-between w-100">
+                                            <span>Tuần {{ assign.week_number }}</span>
+                                            <span class="badge bg-danger text-white px-2.5 py-1 rounded-pill shadow-sm" style="font-size: 13px;">
+                                                <i class="fa-solid fa-award me-1"></i>{{ item.week_score }} đ
+                                            </span>
+                                        </div>
+                                    </td>
                                     <td data-label="Ca Trực"><span class="badge-soft badge-warning"><i class="fa-regular fa-clock me-1"></i> {{ assign.shift }}</span></td>
-                                    <td data-label="Sao Đỏ" class="fw-bold text-danger">{{ assign.red_star.full_name if assign.red_star else 'Khuyết' }}</td>
-                                    <td data-label="Lớp SĐ"><span class="badge-soft badge-secondary">{{ assign.red_star.branch.name if assign.red_star and assign.red_star.branch else '-' }}</span></td>
+                                    <td data-label="Sao Đỏ">
+                                        <div class="text-md-start text-end">
+                                            <div class="fw-bold text-danger">{{ assign.red_star.full_name if assign.red_star else 'Khuyết' }}</div>
+                                            {% if assign.red_star and assign.red_star.phone %}
+                                            <div class="mt-1">
+                                                <a href="tel:{{ assign.red_star.phone }}" class="text-secondary text-decoration-none" style="font-size: 13px; font-weight: 500;">
+                                                    <i class="fa-solid fa-phone fa-shake fa-sm me-1" style="color: #64748b;"></i>{{ assign.red_star.phone }}
+                                                </a>
+                                            </div>
+                                            {% endif %}
+                                        </div>
+                                    </td>
+                                    <td data-label="SĐ Lớp"><span class="badge-soft badge-secondary">{{ assign.red_star.branch.name if assign.red_star and assign.red_star.branch else '-' }}</span></td>
                                     <td data-label="Khu vực" class="fw-bold text-primary">{{ assign.duty_area.name if assign.duty_area else '-' }}</td>
                                     
                                     <td data-label="Hành động" class="text-center">
@@ -587,7 +611,7 @@
                     </div>
                 </div>
 
-                <!-- TAB 3: LỊCH ĐI TRỰC -->
+				<!-- TAB 3: LỊCH ĐI TRỰC -->
                 <div class="tab-pane fade" id="assignments-pane" role="tabpanel">
                     <div class="p-4 pb-0">
                         <div class="alert alert-info bg-opacity-10 border-0 text-primary fw-bold rounded-3 small mb-0 d-flex gap-2">
@@ -600,19 +624,24 @@
                                 <tr>
                                     <th>Tuần</th>
                                     <th>Họ và tên Học sinh (SĐ)</th>
-                                    <th>Ca trực</th>
-                                    <th>Nhiệm vụ / Vị trí trực</th>
+                                    <th>Ca trực & Thời gian</th>
+                                    <th>Các lớp phụ trách / Nhiệm vụ</th>
                                 </tr>
                             </thead>
                             <tbody>
                                 {% for assign in assignments %}
                                 <tr>
                                     <td data-label="Tuần" class="fw-bold">Tuần {{ assign.week_number }}</td>
-                                    <td data-label="Tên HS" class="fw-bold text-primary"><i class="fa-solid fa-user-shield text-muted me-2"></i> {{ assign.red_star.full_name }}</td>
-                                    <td data-label="Ca Trực"><span class="badge-soft badge-primary"><i class="fa-regular fa-clock me-1"></i> {{ assign.shift }}</span></td>
-                                    <td data-label="Nhiệm vụ" class="fw-bold text-main">{{ assign.duty_area.name if assign.duty_area else 'Chưa rõ' }}</td>
+                                    <td data-label="Tên HS" class="fw-bold text-primary"><i class="fa-solid fa-user-shield text-muted me-2"></i> {{ assign.red_star_name }}</td>
+                                    <td data-label="Ca Trực">
+                                        <span class="badge-soft badge-primary"><i class="fa-regular fa-clock me-1"></i> {{ assign.shift }}</span>
+                                        {% if assign.date_range_str %}
+                                        <div class="small text-muted mt-1 fw-normal"><i class="fa-regular fa-calendar-days me-1"></i>{{ assign.date_range_str }}</div>
+                                        {% endif %}
+                                    </td>
+                                    <td data-label="Nhiệm vụ / Lớp" class="fw-bold text-main">{{ assign.task_display }}</td>
                                 </tr>
-                                {% else %}
+								{% else %}
                                 <tr>
                                     <td colspan="4" class="col-details text-center py-5 text-muted">Lớp này không có HS tham gia Đội Sao đỏ.</td>
                                 </tr>
@@ -621,6 +650,48 @@
                         </table>
                     </div>
                 </div>
+                
+                <!-- CODE BỔ SUNG: KHỐI NỘI DUNG TAB 4 (NGÂN HÀNG LỖI) -->
+                <div class="tab-pane fade" id="violation-bank-pane" role="tabpanel">
+                    <div class="p-4 pb-0">
+                        <div class="alert alert-secondary bg-opacity-10 border-0 text-secondary fw-bold rounded-3 small mb-0 d-flex gap-2">
+                            <i class="fa-solid fa-book-open mt-1"></i> Bảng tra cứu barem điểm thi đua đang được áp dụng cho năm học hiện tại.
+                        </div>
+                    </div>
+                    <div class="table-responsive-custom mt-3">
+                        <table class="table-modern">
+                            <thead>
+                                <tr>
+                                    <th>STT</th>
+                                    <th>Nội dung / Tên quy định</th>
+                                    <th class="text-center">Số điểm</th>
+                                    <th class="text-center">Phân loại</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for cat in violation_bank %}
+                                <tr>
+                                    <td data-label="STT" class="fw-bold text-muted d-none d-md-table-cell">{{ loop.index }}</td>
+                                    <td data-label="Nội dung" class="fw-bold text-main">{{ cat.name }}</td>
+                                    <td data-label="Số điểm" class="text-center fw-bold {% if cat.point_type == 'Điểm cộng' %}text-success{% else %}text-danger{% endif %}">
+                                        {% if cat.point_type == 'Điểm cộng' %}+{% else %}-{% endif %}{{ cat.penalty_points }} đ
+                                    </td>
+                                    <td data-label="Phân loại" class="text-md-center">
+                                        <span class="badge-soft {% if cat.point_type == 'Điểm cộng' %}badge-success{% else %}badge-danger{% endif %}">
+                                            {{ cat.point_type }}
+                                        </span>
+                                    </td>
+                                </tr>
+                                {% else %}
+                                <tr>
+                                    <td colspan="4" class="col-details text-center py-5 text-muted">Chưa có dữ liệu ngân hàng lỗi.</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                <!-- KẾT THÚC CODE BỔ SUNG -->
 
             </div>
         </div>
@@ -1171,24 +1242,41 @@
     
     <script>
     document.addEventListener("DOMContentLoaded", function() {
-        const colors = ['#0d6efd', '#198754', '#d63384', '#fd7e14', '#6f42c1', '#0dcaf0'];
+        const dayColors = {
+            'T2': '#0d6efd',
+            'T3': '#d63384',
+            'T4': '#fd7e14',
+            'T5': '#6f42c1',
+            'T6': '#0dcaf0',
+            'T7': '#198754',
+            'CN': '#dc3545'
+        };
 
         document.querySelectorAll('.auto-color-note').forEach(function(el) {
             let text = el.innerText || el.textContent;
-            if (!text || text.trim() === '' || text.trim() === 'Không có') return;
+            if (!text || text.trim() === '' || text.trim() === 'Không có' || text.trim() === 'Không có vi phạm') return;
 
             let sessions = text.split(';');
             let newHtml = '';
 
-            sessions.forEach(function(sessionText, index) {
+            sessions.forEach(function(sessionText) {
                 let cleanSession = sessionText.trim();
                 if (!cleanSession) return;
 
-                let color = colors[index % colors.length];
                 let errors = cleanSession.split(',');
                 errors.forEach(function(err) {
                     let cleanErr = err.trim();
                     if (!cleanErr) return;
+                    
+                    let matchDay = cleanErr.match(/\[?(T[2-7]|CN)\]?/i);
+                    let color = '#475569'; // Mặc định xám đen
+                    
+                    if (matchDay && matchDay[1]) {
+                        let dayKey = matchDay[1].toUpperCase();
+                        if (dayColors[dayKey]) {
+                            color = dayColors[dayKey];
+                        }
+                    }
                     
                     newHtml += `<span style="color: ${color}; font-weight: 600; display: block; margin-bottom: 4px; border-bottom: 1px dashed #eee; padding-bottom: 2px;">
                                     <i class="fa-solid fa-check" style="font-size: 11px; margin-right: 4px;"></i> ${cleanErr}
