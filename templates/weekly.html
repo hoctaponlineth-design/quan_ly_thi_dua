@@ -4,89 +4,198 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Nhập Điểm Thi Đua Tuần - Quản lý Thi đua</title>
+    
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-	<style>
-        body { font-family: 'Segoe UI', Arial, sans-serif; background-color: #f4f6f9; overflow: hidden; /* Khóa cuộn toàn trang */ }
-        .sidebar { width: 260px; height: 100vh; position: fixed; top: 0; left: 0; background-color: #004080; color: white; padding-top: 20px; z-index: 1000; overflow-y: auto; }
-        
-        /* Cố định vùng chứa chính, chiều cao vừa khít màn hình */
-        .main-content { margin-left: 260px; padding: 20px 25px 90px 25px; height: 100vh; display: flex; flex-direction: column; box-sizing: border-box; } 
-        
-        .header-bar { background-color: white; padding: 12px 25px; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); margin-bottom: 12px; }
-        .custom-card { background-color: white; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); border: none; display: flex; flex-direction: column; flex: 1; overflow: hidden; margin-bottom: 5px;}
-        
+    
+    <style>
+        :root {
+            --primary-blue: #1d4ed8;
+            --primary-bg: #eff6ff;
+            --surface: #ffffff;
+            --background: #f4f7fe;
+            --border-color: #e2e8f0;
+            --text-dark: #1e293b;
+            --text-gray: #64748b;
+            --danger: #ef4444;
+            --success: #10b981;
+        }
 
-		/* Thiết kế bảng cuộn độc lập phủ kín khoảng trống */
+        body { 
+            font-family: 'Inter', sans-serif; 
+            background-color: var(--background); 
+            color: var(--text-dark);
+            overflow: hidden; 
+        }
+        
+        .sidebar { width: 260px; height: 100vh; position: fixed; top: 0; left: 0; background-color: #ffffff; border-right: 1px solid var(--border-color); z-index: 1000; overflow-y: auto; }
+        
+        .main-content { margin-left: 260px; padding: 20px 24px 100px 24px; height: 100vh; display: flex; flex-direction: column; box-sizing: border-box; } 
+        
+        /* CARD CẤU TRÚC (Giống trong hình) */
+        .dashboard-card {
+            background: var(--surface);
+            border-radius: 12px;
+            border: 1px solid var(--border-color);
+            padding: 16px 20px;
+            margin-bottom: 16px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.02);
+        }
+
+        /* KHU VỰC THÔNG TIN (4 Cột) */
+        .info-grid {
+            display: grid;
+            grid-template-columns: 2fr 3fr 2fr 3fr;
+            gap: 16px;
+        }
+        .info-box {
+            display: flex;
+            align-items: center;
+            padding: 10px 16px;
+            border-right: 1px solid var(--border-color);
+        }
+        .info-box:last-child { border-right: none; }
+        
+        /* BẢNG DỮ LIỆU ERP */
         .table-container-scroll {
             flex: 1;
             overflow-y: auto;
-            height: 100%; /* Trải dài toàn bộ không gian linh hoạt giữa tiêu đề và đáy */
-            background: white;
-            border-bottom-left-radius: 12px;
-            border-bottom-right-radius: 12px;
+            background: var(--surface);
+            border-radius: 12px;
+            border: 1px solid var(--border-color);
+            position: relative;
         }
-        .table-hover tbody tr:hover { background-color: #e8f0fe; }
         
-        /* Cố định tiêu đề bảng dính ở trên khi cuộn */
-        .table_head_sticky {
+        .table-erp {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 13.5px;
+        }
+        
+        .table-erp thead th {
             position: sticky; 
             top: 0; 
-            background-color: #e9ecef !important; 
-            font-size: 13.5px; 
+            background-color: #f8fafc; 
+            color: var(--text-dark);
+            font-size: 11px; 
             font-weight: 700;
-            letter-spacing: 0.3px;
-            vertical-align: middle; 
-            text-align: center; 
-            white-space: nowrap; 
-            z-index: 10; 
-            border-bottom: 2px solid #dee2e6;
+            text-transform: uppercase;
+            padding: 12px 8px;
+            text-align: center;
+            border-bottom: 2px solid var(--border-color);
+            border-right: 1px solid var(--border-color);
+            z-index: 10;
         }
-        
-        /* Chuẩn hóa kích thước chữ dữ liệu trong bảng */
-        .table td { 
-            vertical-align: middle; 
-            text-align: center; 
-            font-size: 13.5px; 
+        .table-erp thead th:last-child { border-right: none; }
+
+        /* Tiêu đề gộp (colspan) */
+        .th-group {
+            background-color: #ffffff !important;
+            border-bottom: 1px solid var(--border-color) !important;
+            color: var(--text-gray) !important;
+            letter-spacing: 0.5px;
         }
 
-        /* Làm nổi bật riêng cột Chi đoàn đầu tiên cho dễ nhìn */
-        .table td:first-child {
-            font-size: 14px;
-            font-weight: bold;
+        .table-erp tbody tr { border-bottom: 1px solid #f1f5f9; transition: background 0.2s; }
+        .table-erp tbody tr:hover { background-color: #f8fafc; }
+        
+        .table-erp tbody td {
+            padding: 8px;
+            text-align: center;
+            vertical-align: middle;
+            border-right: 1px solid #f1f5f9;
         }
+        .table-erp tbody td:last-child { border-right: none; }
+
+        /* INPUT STYLES (Không viền, số nổi bật) */
+        .input-erp {
+            width: 100%;
+            border: 1px solid transparent;
+            background: transparent;
+            text-align: center;
+            font-weight: 600;
+            font-size: 14px;
+            padding: 6px;
+            border-radius: 6px;
+            transition: all 0.2s;
+        }
+        .input-erp:hover { border-color: #cbd5e1; background: #f8fafc; }
+        .input-erp:focus { border-color: var(--primary-blue); background: #fff; outline: none; box-shadow: 0 0 0 2px rgba(29, 78, 216, 0.1); }
+        .input-erp[readonly] { color: var(--text-gray); }
+
+        .text-blue { color: #2563eb !important; }
+        .text-green { color: var(--success) !important; }
+        .text-red { color: var(--danger) !important; }
         
         input[type="number"] { -moz-appearance: textfield; }
-        input[type="number"]::-webkit-outer-spin-button,
-        input[type="number"]::-webkit-inner-spin-button {
-            -webkit-appearance: none;
-            margin: 0;
-        }
-        
-        .col-total { background-color: #fff3cd !important; border-left: 2px solid #ffc107 !important; border-right: 2px solid #ffc107 !important; }
-        
-        /* Tăng nhẹ con số tổng điểm để tạo điểm nhấn trực quan */
-        .col-total .fs-5 {
-            font-size: 19px !important;
+        input[type="number"]::-webkit-outer-spin-button, input[type="number"]::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+
+        /* SELECT BỞI XẾP LOẠI */
+        .select-rating {
+            font-size: 13px;
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            padding: 4px 8px;
+            font-weight: 500;
+            color: var(--text-dark);
+            background-color: transparent;
         }
 
-        /* THANH CÔNG CỤ LUÔN NỔI (GHIM ĐÁY) */
+        /* BADGES */
+        .badge-stt { background: #3b82f6; color: white; border-radius: 4px; padding: 4px 8px; font-weight: 600; }
+        .badge-group { background: #f3e8ff; color: #7e22ce; border-radius: 20px; padding: 4px 10px; font-size: 11px; font-weight: 600; }
+        
+        /* CỘT TỔNG ĐIỂM */
+        .col-total { background-color: #f8fafc; font-weight: 800; font-size: 16px; color: var(--primary-blue); }
+        .status-text { font-size: 10px; font-weight: 600; color: var(--success); display: block; margin-top: -2px; }
+
+        /* BOTTOM BAR (Ghép đúng ảnh) */
         .fixed-bottom-bar {
             position: fixed;
-            bottom: 0;
-            left: 260px;
-            right: 0;
-            background-color: rgba(255, 255, 255, 0.95);
-            backdrop-filter: blur(8px);
-            -webkit-backdrop-filter: blur(8px);
-            padding: 12px 30px;
-            box-shadow: 0 -4px 15px rgba(0,0,0,0.08);
-            border-top: 1px solid #dee2e6;
+            bottom: 0; left: 260px; right: 0;
+            background-color: var(--surface);
+            padding: 12px 24px;
+            box-shadow: 0 -4px 10px rgba(0,0,0,0.03);
+            border-top: 1px solid var(--border-color);
             z-index: 99;
             display: flex;
             justify-content: space-between;
             align-items: center;
         }
+
+        .btn-custom {
+            border-radius: 6px;
+            font-weight: 600;
+            font-size: 13px;
+            padding: 8px 16px;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            transition: 0.2s;
+            border: none;
+        }
+        .btn-purple { background: #8b5cf6; color: white; }
+        .btn-pink { background: linear-gradient(90deg, #d946ef, #a855f7); color: white; }
+        .btn-outline-blue { background: transparent; border: 1px solid var(--primary-blue); color: var(--primary-blue); }
+        .btn-outline-green { background: transparent; border: 1px solid var(--success); color: var(--success); }
+        .btn-blue { background: var(--primary-blue); color: white; }
+
+        /* Nút quét SĐB Mini */
+        .btn-scan-mini {
+            font-size: 9px;
+            padding: 2px 6px;
+            border: 1px solid #10b981;
+            color: #10b981;
+            border-radius: 4px;
+            cursor: pointer;
+            margin-top: 4px;
+            display: inline-block;
+        }
+        .btn-scan-mini:hover { background: #dcfce7; }
     </style>
 </head>
 <body>
@@ -94,207 +203,284 @@
     <!-- SIDEBAR -->
     {% include 'sidebar.html' %}
 
-    <!-- MAIN CONTENT -->
     <div class="main-content">
-		<!-- PHẦN CỐ ĐỊNH Ở TRÊN (THANH TIÊU ĐỀ, CHỌN TUẦN, THÔNG BÁO) -->
-        <div>
-            <div class="header-bar d-flex justify-content-between align-items-center flex-wrap gap-3 mb-2">
-                <div class="d-flex align-items-center gap-3">
-                    <h5 class="m-0 fw-bold text-secondary"><i class="fa-solid fa-pen-to-square text-primary"></i> Nhập Điểm Thi Đua Tuần</h5>
-                    <select class="form-select form-select-sm fw-bold text-primary" id="weekSelector" style="width: 150px;" onchange="changeWeek(this.value)">
-                        {% for i in range(1, 41) %}
-                            <option value="Tuần {{ i }}" {% if current_week == 'Tuần ' ~ i %}selected{% endif %}>Tuần {{ i }}</option>
-                        {% endfor %}
-                    </select>
+        <!-- 1. HEADER (Tên trang & Năm học) -->
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <div class="d-flex align-items-center gap-3">
+                <i class="fa-solid fa-trophy fs-3 text-primary"></i>
+                <div>
+                    <h4 class="m-0 fw-bold" style="color: #1e3a8a;">NHẬP ĐIỂM THI ĐUA TUẦN</h4>
+                    <span class="text-muted small">Quản lý và tổng hợp kết quả thi đua các chi đoàn</span>
                 </div>
-                
+            </div>
+            <div class="d-flex align-items-center gap-4">
+                <div class="d-flex align-items-center gap-2 border rounded p-2 bg-white">
+                    <i class="fa-regular fa-calendar text-muted"></i>
+                    <div style="line-height: 1.2;">
+                        <span class="d-block" style="font-size: 10px; color: var(--text-gray);">Năm học</span>
+                        <span class="fw-bold" style="font-size: 13px;">{% if active_year %}{{ active_year.name }}{% endif %}</span>
+                    </div>
+                </div>
                 <div class="d-flex align-items-center gap-2">
-                    <span class="small fw-bold text-muted">Từ:</span>
-                    <input type="date" name="start_date" form="scoreForm" class="form-control form-control-sm" id="dateFrom" style="width: 130px;">
-                    
-                    <span class="small fw-bold text-muted">Đến:</span>
-                    <input type="date" name="end_date" form="scoreForm" class="form-control form-control-sm" id="dateTo" style="width: 130px;">
-                    
-                    <button class="btn btn-info btn-sm text-white fw-bold shadow-sm" data-bs-toggle="modal" data-bs-target="#settingsModal">
-                        <i class="fa-solid fa-gear"></i> Barem
-                    </button>
-                    <button class="btn btn-warning btn-sm fw-bold shadow-sm" id="lockBtn" onclick="toggleLockStatus()">
-                        <i class="fa-solid fa-lock-open"></i> Chưa chốt sổ
-                    </button>
+                    <div class="bg-primary text-white rounded-circle d-flex align-items-center justify-content-center" style="width: 35px; height: 35px;">
+                        <i class="fa-regular fa-user"></i>
+                    </div>
+                    <div style="line-height: 1.2;">
+                        <span class="d-block fw-bold" style="font-size: 13px;">{{ session.get('full_name', 'Giáo viên') }}</span>
+                        <span style="font-size: 11px; color: var(--text-gray);">THPT Thanh Hòa</span>
+                    </div>
                 </div>
             </div>
-
-            {% with messages = get_flashed_messages(with_categories=true) %}
-              {% if messages %}
-                {% for category, message in messages %}
-                  <div class="alert alert-{{ 'success' if category == 'success' else 'danger' }} alert-dismissible fade show mb-2 py-2 shadow-sm">
-                    {{ message }}
-                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-                  </div>
-                {% endfor %}
-              {% endif %}
-            {% endwith %}
-
-            <div class="alert alert-success py-1 mb-2 shadow-sm" style="font-size: 13px;">
-                <i class="fa-solid fa-lightbulb"></i> <strong>Mẹo Siêu Tốc:</strong> Nhấn đúp chuột vào hàng của lớp bất kỳ để mở <strong>Form Nhập Điểm Chi Tiết</strong> (Hỗ trợ quản lý điểm môn học, gọt điểm, và chèn lỗi tự động). Bạn cũng có thể bấm <strong>"Quét SĐB"</strong> để AI tự động trích xuất file Excel.
-            </div>
-
-            <script>
-                document.addEventListener("DOMContentLoaded", function() {
-                    function setDateInput(inputId, dateString) {
-                        if (dateString && dateString.trim() !== "") {
-                            if (dateString.includes('/')) {
-                                const parts = dateString.split('/');
-                                if (parts.length === 3) {
-                                    document.getElementById(inputId).value = `${parts[2]}-${parts[1]}-${parts[0]}`;
-                                }
-                            } else {
-                                document.getElementById(inputId).value = dateString;
-                            }
-                        }
-                    }
-                    setDateInput('dateFrom', '{{ start_date }}');
-                    setDateInput('dateTo', '{{ end_date }}');
-                });
-            </script>
         </div>
 
-        <!-- BẢNG NHẬP ĐIỂM CHÍNH -->
-        <div class="card custom-card">
-            <div class="table-container-scroll">
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+            {% for category, message in messages %}
+                <div class="alert alert-{{ 'success' if category == 'success' else 'danger' }} py-2 px-3 border-0 shadow-sm rounded mb-3" style="font-size: 13px;">
+                <i class="fa-solid fa-circle-info me-1"></i> {{ message }}
+                </div>
+            {% endfor %}
+            {% endif %}
+        {% endwith %}
+
+        <!-- 2. CARD CÀI ĐẶT THỜI GIAN VÀ TRẠNG THÁI (Mô phỏng 100% hình ảnh) -->
+        <div class="dashboard-card p-0 mb-3 overflow-hidden">
+            <div class="info-grid">
+                <!-- Chọn tuần -->
+                <div class="info-box gap-3 p-3">
+                    <i class="fa-solid fa-calendar-week fs-3 text-primary"></i>
+                    <div class="w-100">
+                        <span class="d-block fw-bold text-primary mb-1" style="font-size: 10px;">TUẦN</span>
+                        <select class="form-select border-0 p-0 fw-bold fs-5 text-dark shadow-none" id="weekSelector" onchange="changeWeek(this.value)" style="cursor: pointer;">
+                            {% for i in range(1, 41) %}
+                                <option value="Tuần {{ i }}" {% if current_week == 'Tuần ' ~ i %}selected{% endif %}>{{ i }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                </div>
+
+                <!-- Từ ngày - Đến ngày -->
+                <div class="info-box gap-3 p-3">
+                    <div class="flex-fill">
+                        <span class="d-block fw-bold mb-1" style="font-size: 10px; color: var(--text-gray);">TỪ NGÀY</span>
+                        <input type="date" name="start_date" form="scoreForm" class="form-control border-0 p-0 fw-bold shadow-none" id="dateFrom">
+                    </div>
+                    <div class="flex-fill border-start ps-3">
+                        <span class="d-block fw-bold mb-1" style="font-size: 10px; color: var(--text-gray);">ĐẾN NGÀY</span>
+                        <input type="date" name="end_date" form="scoreForm" class="form-control border-0 p-0 fw-bold shadow-none" id="dateTo">
+                    </div>
+                </div>
+
+				<!-- Trạng thái tuần -->
+                <div class="info-box p-3 flex-column align-items-start justify-content-center">
+                    <span class="d-block fw-bold mb-1" style="font-size: 10px; color: var(--text-gray);">TRẠNG THÁI TUẦN</span>
+                    <button id="lockBtn" onclick="toggleLockStatus()" class="btn btn-sm btn-outline-success rounded-pill fw-bold mb-1" style="font-size: 11px; padding: 4px 12px; border-width: 1.5px;">
+                        <i class="fa-solid fa-lock-open"></i> ĐANG NHẬP DỮ LIỆU
+                    </button>
+                    <span class="text-muted" style="font-size: 11px;" id="lockStatusText">Bấm để chốt/mở sổ</span>
+                </div>
+
+                <!-- Thông báo -->
+                <div class="info-box p-3 bg-primary bg-opacity-10 d-flex gap-3 align-items-start">
+                    <i class="fa-solid fa-circle-info text-primary mt-1"></i>
+                    <div>
+                        <span class="d-block fw-bold text-dark" style="font-size: 12px;">Nhập điểm thi đua cho các chi đoàn theo tuần.</span>
+                        <span class="text-muted mt-1 d-block" style="font-size: 11px;">Dữ liệu sẽ được tổng hợp theo tuần, tháng, học kỳ và năm học. Nhấn đúp vào hàng để xem chi tiết.</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <script>
+            document.addEventListener("DOMContentLoaded", function() {
+                function setDateInput(inputId, dateString) {
+                    if (dateString && dateString.trim() !== "") {
+                        if (dateString.includes('/')) {
+                            const parts = dateString.split('/');
+                            if (parts.length === 3) document.getElementById(inputId).value = `${parts[2]}-${parts[1]}-${parts[0]}`;
+                        } else document.getElementById(inputId).value = dateString;
+                    }
+                }
+                setDateInput('dateFrom', '{{ start_date }}');
+                setDateInput('dateTo', '{{ end_date }}');
+            });
+        </script>
+
+        <!-- 3. THANH TÌM KIẾM VÀ LỌC -->
+        <div class="d-flex justify-content-between align-items-center mb-2">
+            <div class="d-flex gap-2">
+                <div class="input-group" style="width: 200px;">
+                    <span class="input-group-text bg-white border-end-0"><i class="fa-solid fa-search text-muted"></i></span>
+                    <input type="text" class="form-control border-start-0 ps-0" id="searchInput" placeholder="Tìm lớp..." onkeyup="filterTable()">
+                </div>
+                <select class="form-select" id="groupFilter" style="width: 150px;" onchange="filterTable()">
+                    <option value="">Tất cả nhóm</option>
+                    <option value="1">Nhóm 1</option>
+                    <option value="2">Nhóm 2</option>
+                </select>
+            </div>
+            <div class="d-flex gap-2">
+                <button type="button" class="btn-custom btn-outline-blue bg-white" onclick="location.reload()">
+                    <i class="fa-solid fa-rotate-right"></i> Làm mới
+                </button>
+                <button type="button" class="btn-custom bg-white border text-dark" data-bs-toggle="modal" data-bs-target="#settingsModal">
+                    <i class="fa-solid fa-gear"></i> Cài đặt hiển thị
+                </button>
+            </div>
+        </div>
+
+		<!-- 4. BẢNG DỮ LIỆU CHÍNH -->
+        <!-- 4. BẢNG DỮ LIỆU CHÍNH -->
+        <div class="d-flex flex-column" style="flex: 1; min-height: 0; background: #ffffff; border-radius: 12px; border: 1px solid #e2e8f0; overflow: hidden; margin-bottom: 40px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05);">
+            <div class="table-container-scroll" style="flex: 1; overflow-y: auto; border: none; border-radius: 0;">
                 <form id="scoreForm" method="POST" action="/weekly">
-                    <input type="hidden" name="week_name" value="{{ current_week }}">
-                    <table class="table table-hover table-bordered m-0 align-middle">
-                        <colgroup>
-                            <col style="width: 8%;">
-                            <col style="width: 11%;">
-                            <col style="width: 6%;">
-                            <col style="width: 6%;">
-                            <col style="width: 6%;">
-                            <col style="width: 25%;">
-                            <col style="width: 7%;">
-                            <col style="width: 7%;">
-                            <col style="width: 7%;">
-                            <col style="width: 9%;">
-                            <col style="width: 8%;">
-                        </colgroup>
-                        
-                        <thead>
-                            <tr>
-                                <th class="table_head_sticky">Chi đoàn</th>
-                                <th class="table_head_sticky">Xếp loại Tuần</th>
-                                <th class="table_head_sticky">SL Đ.8</th>
-                                <th class="table_head_sticky">SL Đ.9</th>
-                                <th class="table_head_sticky">SL Đ.10</th>
-                                <th class="table_head_sticky">Lỗi Cố định (Ghi chú vi phạm)</th>
-                                <th class="table_head_sticky">Đ.Nền</th>
-                                <th class="table_head_sticky">Cộng Khác</th>
-                                <th class="table_head_sticky">Trừ Khác</th>
-                                <th class="table_head_sticky col-total">Tổng điểm</th>
-                                <th class="table_head_sticky">Thao tác</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {% for item in branches_data %}
-                            {% set b = item.branch %}
-                            {% set sc = item.score %}
-                            <tr ondblclick="openDetailModal('{{ b.id }}', '{{ b.name }}', '{{ b.group }}')" style="cursor: pointer;">
-                                <td class="fw-bold text-primary position-relative">
-                                    {{ b.name }}
-                                    <div class="small text-muted fw-normal mb-1">({{ b.group }})</div>
+			
+                <input type="hidden" name="week_name" value="{{ current_week }}">
+                <table class="table-erp" id="emulationTable">
+                    <thead>
+                        <tr>
+                            <th rowspan="2" style="width: 4%;">STT</th>
+                            <th rowspan="2" style="width: 10%; text-align: left; padding-left: 20px;">CHI ĐOÀN</th>
+                            <th rowspan="2" style="width: 7%;">NHÓM</th>
+                            <th rowspan="2" style="width: 9%;">XẾP LOẠI</th>
+                            <th colspan="3" class="th-group text-primary">ĐIỂM TỐT (TỰ ĐỘNG)</th>
+                            <th colspan="1" class="th-group text-danger">VI PHẠM</th>
+                            <th colspan="2" class="th-group text-success">ĐIỀU CHỈNH</th>
+                            <th rowspan="2" style="width: 6%;">ĐIỂM NỀN<br><span style="font-weight: 400; font-size: 9px;">(TỰ ĐỘNG)</span></th>
+                            <th rowspan="2" style="width: 8%; color: var(--primary-blue);">TỔNG ĐIỂM<br><span style="font-weight: 400; font-size: 9px; color: var(--text-dark);">(TỰ ĐỘNG)</span></th>
+                            <th rowspan="2" style="width: 5%;">THAO TÁC</th>
+                        </tr>
+                        <tr>
+                            <th style="width: 5%; color: #2563eb;">SL Đ.8</th>
+                            <th style="width: 5%; color: #2563eb;">SL Đ.9</th>
+                            <th style="width: 5%; color: #2563eb;">SL Đ.10</th>
+                            <th style="width: 20%; color: #ef4444;">LỖI CỐ ĐỊNH</th>
+                            <th style="width: 6%; color: #10b981;">CỘNG KHÁC</th>
+                            <th style="width: 6%; color: #ef4444;">TRỪ KHÁC</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for item in branches_data %}
+                        {% set b = item.branch %}
+                        {% set sc = item.score %}
+                        <tr class="branch-row" data-group="{{ b.group }}" ondblclick="openDetailModal('{{ b.id }}', '{{ b.name }}', '{{ b.group }}')" style="cursor: pointer;">
+                            <td><span class="badge-stt">{{ loop.index }}</span></td>
+							<td style="text-align: left; padding-left: 20px;">
+                                <div class="d-flex flex-column align-items-start">
+                                    <span class="fw-bold branch-name" style="color: #1e3a8a;"><i class="fa-solid fa-users me-2 text-muted"></i>{{ b.name }}</span>
                                     
-                                    <!-- NÚT QUÉT EXCEL SỔ ĐẦU BÀI -->
-                                    <div class="d-flex flex-column align-items-center mt-1" onclick="event.stopPropagation();">
-                                        <label class="btn btn-outline-success btn-sm m-0 px-2 py-0 fw-bold" style="cursor: pointer; font-size: 11px;" title="Tải file Excel Sổ Đầu Bài">
+                                    <!-- CỤM NÚT SĐB ĐÃ ĐƯỢC PHỤC HỒI ĐẦY ĐỦ CHỨC NĂNG VÀ CHẶN CLICK -->
+                                    <div onclick="event.stopPropagation();" class="mt-1">
+                                        <label class="btn-scan-mini m-0" title="Tải file Excel Sổ Đầu Bài">
                                             <i class="fa-solid fa-file-excel"></i> Quét SĐB
                                             <input type="file" class="d-none" accept=".xlsx, .xls" onchange="uploadSDB(this, '{{ b.id }}')">
                                         </label>
-                                        <div class="text-muted mt-1 fw-normal" id="status_sdb_{{ b.id }}" style="font-size: 9px; line-height: 1;">(Tự động điền)</div>
+                                        <!-- Thẻ in trạng thái bắt buộc phải có để JS hoạt động -->
+                                        <div class="text-muted fw-bold" id="status_sdb_{{ b.id }}" style="font-size: 9px; margin-top: 2px;"></div>
                                     </div>
-                                </td>
-                                <td>
-                                    <select class="form-select form-select-sm fw-bold text-secondary" name="rating_{{ b.id }}">
-                                        <option value="Bình thường" {% if sc and sc.week_rating == 'Bình thường' %}selected{% endif %}>Bình thường</option>
-                                        <option value="Tuần Khá" {% if sc and sc.week_rating == 'Tuần Khá' %}selected{% endif %}>Tuần Khá</option>
-                                        <option value="Tuần Tốt" {% if sc and sc.week_rating == 'Tuần Tốt' %}selected{% endif %}>Tuần Tốt</option>
-                                    </select>
-                                </td>
-                                
-                                <td>
-                                    <input type="number" 
-                                           class="form-control form-control-sm text-center fw-bold" 
-                                           name="c8_{{ b.id }}" 
-                                           value="{{ sc.count_8 if sc else 0 }}"
-                                           {% if '1' in b.group|string %}
-                                           readonly 
-                                           style="background-color: #e9ecef; cursor: not-allowed;" 
-                                           title="Các Chi đoàn Nhóm 1 không xét Điểm 8"
-                                           {% endif %}>
-                                </td>
-                                
-                                <td><input type="number" class="form-control form-control-sm text-center fw-bold text-primary" name="c9_{{ b.id }}" value="{{ sc.count_9 if sc else 0 }}"></td>
-                                <td><input type="number" class="form-control form-control-sm text-center fw-bold text-danger" name="c10_{{ b.id }}" value="{{ sc.count_10 if sc else 0 }}"></td>
-                                <td><input type="text" class="form-control form-control-sm text-start px-2" name="note_{{ b.id }}" value="{{ sc.note if sc else '' }}" placeholder="Nhập lỗi ở đây..."></td>
-                                <td><input type="number" step="0.5" class="form-control form-control-sm text-center" name="truc_{{ b.id }}" value="{{ sc.score_truc if sc else 100 }}" readonly style="background-color: #e9ecef;"></td>
-                                <td><input type="number" step="0.5" class="form-control form-control-sm text-center text-success fw-bold" name="cong_{{ b.id }}" value="{{ sc.score_cong if sc else 0 }}"></td>
-                                <td><input type="number" step="0.5" class="form-control form-control-sm text-center text-danger fw-bold" name="tru_{{ b.id }}" value="{{ sc.score_tru if sc else 0 }}"></td>
-                                
-                                <td class="col-total">
-                                    <span class="fw-bold fs-5 text-danger" id="total_{{ b.id }}">{{ sc.total_score if sc else 100 }}</span>
-                                </td>
-                                
-                                <td>
-                                    <button type="button" class="btn btn-sm btn-outline-primary py-0 px-2" onclick="openDetailModal('{{ b.id }}', '{{ b.name }}', '{{ b.group }}')">
-                                        <i class="fa-solid fa-expand"></i> Chi tiết
-                                    </button>
-                                </td>
-                            </tr>
-                            {% endfor %}
-                        </tbody>
-                    </table>
-                </form>
+                                    
+                                </div>
+                            </td>
+                            <td><span class="badge-group">{{ b.group }}</span></td>
+                            
+                            <td>
+                                <select class="select-rating" name="rating_{{ b.id }}" onchange="updateRowStyle(this)">
+                                    <option value="Bình thường" {% if sc and sc.week_rating == 'Bình thường' %}selected{% endif %}>Bình thường</option>
+                                    <option value="Tuần Khá" {% if sc and sc.week_rating == 'Tuần Khá' %}selected{% endif %}>Khá</option>
+                                    <option value="Tuần Tốt" {% if sc and sc.week_rating == 'Tuần Tốt' %}selected{% endif %}>Tốt</option>
+                                </select>
+                            </td>
+                            
+                            <td>
+                                <input type="number" class="input-erp text-blue" name="c8_{{ b.id }}" value="{{ sc.count_8 if sc else 0 }}" {% if '1' in b.group|string %}readonly title="Nhóm 1 không xét"{% endif %}>
+                            </td>
+                            <td><input type="number" class="input-erp text-blue" name="c9_{{ b.id }}" value="{{ sc.count_9 if sc else 0 }}"></td>
+                            <td><input type="number" class="input-erp text-blue" name="c10_{{ b.id }}" value="{{ sc.count_10 if sc else 0 }}"></td>
+                            
+                            <td><input type="text" class="input-erp text-red" style="text-align: left;" name="note_{{ b.id }}" value="{{ sc.note if sc else '' }}" placeholder="Nhập lỗi ở đây..."></td>
+                            
+                            <td><input type="number" step="0.5" class="input-erp text-green" name="cong_{{ b.id }}" value="{{ sc.score_cong if sc else 0 }}"></td>
+                            <td><input type="number" step="0.5" class="input-erp text-red" name="tru_{{ b.id }}" value="{{ sc.score_tru if sc else 0 }}"></td>
+                            
+                            <td><input type="number" class="input-erp" name="truc_{{ b.id }}" value="{{ sc.score_truc if sc else 100 }}" readonly></td>
+                            
+                            <td class="col-total">
+                                <span id="total_{{ b.id }}">{{ sc.total_score if sc else 100.0 }}</span>
+                                <span class="status-text" id="status_{{ b.id }}"></span>
+                            </td>
+                            
+                            <td>
+                                <button type="button" class="btn btn-sm btn-light text-muted border-0" onclick="openDetailModal('{{ b.id }}', '{{ b.name }}', '{{ b.group }}')">
+                                    <i class="fa-regular fa-file-lines"></i> <i class="fa-solid fa-ellipsis-vertical ms-1"></i>
+                                </button>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </form>
+			</div>
+            
+			<!-- CHÚ GIẢI (Legend) LUÔN HIỂN THỊ CỐ ĐỊNH Ở ĐÁY BẢNG -->
+            <div class="d-flex flex-wrap gap-4 px-4 py-3 bg-white border-top align-items-center" style="position: sticky; bottom: 0; z-index: 10; font-size: 12px; font-weight: 500; color: #475569; box-shadow: 0 -4px 10px rgba(0,0,0,0.03);">
+                <div><i class="fa-solid fa-circle" style="color: #2563eb; font-size: 10px; margin-right: 4px;"></i><span style="color: #2563eb; font-weight: 700;">Đ.8:</span> Điểm 8</div>
+                <div><i class="fa-solid fa-circle" style="color: #2563eb; font-size: 10px; margin-right: 4px;"></i><span style="color: #2563eb; font-weight: 700;">Đ.9:</span> Điểm 9</div>
+                <div><i class="fa-solid fa-circle" style="color: #10b981; font-size: 10px; margin-right: 4px;"></i><span style="color: #10b981; font-weight: 700;">Đ.10:</span> Điểm 10</div>
+                <div><i class="fa-solid fa-circle" style="color: #ef4444; font-size: 10px; margin-right: 4px;"></i><span style="color: #ef4444; font-weight: 700;">Lỗi cố định:</span> Các lỗi vi phạm theo quy định</div>
+                <div><i class="fa-solid fa-circle" style="color: #10b981; font-size: 10px; margin-right: 4px;"></i><span style="color: #10b981; font-weight: 700;">Cộng khác:</span> Điểm cộng thêm</div>
+                <div><i class="fa-solid fa-circle" style="color: #ef4444; font-size: 10px; margin-right: 4px;"></i><span style="color: #ef4444; font-weight: 700;">Trừ khác:</span> Điểm trừ thêm</div>
             </div>
         </div>
 
-		<!-- THANH CÔNG CỤ DƯỚI CÙNG GHIM ĐÁY (NỔI) -->
+		<!-- 5. THANH CÔNG CỤ DƯỚI ĐÁY -->
         <div class="fixed-bottom-bar">
             <div class="d-flex gap-2">
-				<button type="button" class="btn btn-dark btn-sm fw-bold text-white shadow-sm" onclick="previewBlacklist()">
-					<i class="fa-solid fa-book-skull"></i> Xem trước Sổ Đen
-				</button>
-                <button type="button" class="btn btn-purple btn-sm fw-bold text-white shadow-sm" style="background-color: #6f42c1;" onclick="openAiReportModal('{{ current_week }}')">
-                    <i class="fa-solid fa-robot"></i> AI Phân tích Tuần
+                <!-- Nút này trên ảnh, nhưng thực tế chức năng đang ở từng dòng. Ta hiển thị alert hướng dẫn -->
+				<label class="btn-custom btn-purple m-0" style="cursor: pointer;" title="Tải lên hàng loạt nhiều Sổ Đầu Bài cùng lúc">
+                    <i class="fa-solid fa-upload"></i> Nhập SĐB Hàng Loạt
+                    <input type="file" class="d-none" accept=".xlsx, .xls" multiple onchange="uploadMultipleSDB(this)">
+                </label>
+                <button type="button" class="btn-custom btn-pink" onclick="openAiReportModal('{{ current_week }}')">
+                    <i class="fa-solid fa-wand-magic-sparkles"></i> AI Phân tích tuần
                 </button>
             </div>
             <div class="d-flex gap-2">
-                <button type="submit" form="scoreForm" class="btn btn-primary btn-sm fw-bold px-4 shadow-sm"><i class="fa-solid fa-floppy-disk"></i> Lưu toàn bộ (Ctrl+S)</button>
-                <button class="btn btn-success btn-sm fw-bold px-4 shadow-sm" onclick="previewAndExport()"><i class="fa-solid fa-file-excel"></i> Xem trước & Xuất Excel</button>
+                <button class="btn-custom btn-outline-blue fw-bold bg-white" onclick="previewBlacklist()">
+                    <i class="fa-regular fa-eye"></i> Danh sách sổ đen
+                </button>
+                <button class="btn-custom btn-outline-green fw-bold bg-white" onclick="previewAndExport()">
+                    <i class="fa-solid fa-file-excel"></i> Xuất Excel
+                </button>
+                <button type="submit" form="scoreForm" class="btn-custom btn-blue shadow-sm">
+                    <i class="fa-solid fa-floppy-disk"></i> Lưu dữ liệu (Ctrl + S)
+                </button>
             </div>
         </div>
     </div>
 
+    <!-- CÁC MODAL GIỮ NGUYÊN HOÀN TOÀN CẤU TRÚC VÀ ID CỦA ĐỒNG CHÍ -->
     <!-- MODAL HIỂN THỊ BÁO CÁO TỪ TRỢ LÝ AI -->
     <div class="modal fade" id="aiReportModal" tabindex="-1" aria-hidden="true">
         <div class="modal-dialog modal-lg">
-            <div class="modal-content">
-                <div class="modal-header bg-dark text-white">
+            <div class="modal-content border-0 shadow-lg" style="border-radius: 16px;">
+                <div class="modal-header bg-dark text-white border-0" style="border-radius: 16px 16px 0 0; padding: 20px 24px;">
                     <h5 class="modal-title fw-bold"><i class="fa-solid fa-robot text-warning me-2"></i> Báo cáo Sơ kết Tuần tự động bằng AI</h5>
                     <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
                 </div>
-                <div class="modal-body bg-light">
+                <div class="modal-body bg-light p-4">
                     <div id="aiLoading" class="text-center py-5">
                         <div class="spinner-border text-primary mb-3" role="status"></div>
                         <div class="fw-bold text-secondary">Trợ lý AI đang đọc dữ liệu thi đua, tổng hợp lỗi và viết báo cáo chuẩn mực... Vui lòng đợi trong giây lát!</div>
                     </div>
                     <div id="aiContentContainer" style="display: none;">
-                        <div class="card border-0 shadow-sm p-4 bg-white">
-                            <pre id="aiReportText" style="white-space: pre-wrap; font-family: 'Segoe UI', Tahoma, sans-serif; font-size: 14px; line-height: 1.6; color: #333; background: transparent; border: none; margin: 0;"></pre>
+                        <div class="card border-0 shadow-sm p-4 bg-white rounded-4">
+                            <pre id="aiReportText" style="white-space: pre-wrap; font-family: 'Inter', sans-serif; font-size: 14.5px; line-height: 1.7; color: #334155; background: transparent; border: none; margin: 0;"></pre>
                         </div>
                     </div>
                 </div>
-                <div class="modal-footer bg-white">
-                    <button type="button" class="btn btn-secondary fw-bold" data-bs-dismiss="modal">Đóng</button>
-                    <button type="button" class="btn btn-primary fw-bold" onclick="copyAiReport()"><i class="fa-solid fa-copy me-1"></i> Sao chép Nội dung Báo cáo</button>
+                <div class="modal-footer bg-white border-0 p-3 rounded-bottom-4">
+                    <button type="button" class="btn btn-light" data-bs-dismiss="modal">Đóng</button>
+                    <button type="button" class="btn btn-primary" onclick="copyAiReport()"><i class="fa-solid fa-copy me-1"></i> Sao chép Báo cáo</button>
                 </div>
             </div>
         </div>
@@ -303,36 +489,33 @@
 	<!-- MODAL CÀI ĐẶT BAREM -->
     <div class="modal fade" id="settingsModal" tabindex="-1" aria-hidden="true">
         <div class="modal-dialog">
-            <div class="modal-content">
-                <div class="modal-header bg-info text-white">
-                    <h5 class="modal-title fw-bold"><i class="fa-solid fa-gear"></i> Cài đặt Barem Điểm & Khống chế</h5>
-                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            <div class="modal-content border-0 shadow-lg" style="border-radius: 16px;">
+                <div class="modal-header bg-light border-0" style="padding: 20px 24px;">
+                    <h5 class="modal-title fw-bold text-dark"><i class="fa-solid fa-gear text-primary"></i> Cài đặt Barem Điểm</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                 </div>
                 <form action="/save_settings" method="POST">
-                    <div class="modal-body text-start">
-                        <div class="alert alert-info py-2" style="font-size: 13px;">
-                            Cấu hình điểm số quy ước. Hệ thống sẽ tự động dùng số này để tính tổng điểm cho toàn trường trong năm học.
-                        </div>
+                    <div class="modal-body text-start px-4">
                         <div class="row g-3">
                             <div class="col-md-4">
                                 <label class="form-label fw-bold small text-secondary m-0">Điểm 8 bằng:</label>
-                                <input type="number" step="0.5" class="form-control text-center fw-bold" name="diem_8" value="{{ score_settings.diem_8 if score_settings else 1 }}">
+                                <input type="number" step="0.5" class="form-control text-center fw-bold bg-light" name="diem_8" value="{{ score_settings.diem_8 if score_settings else 1 }}">
                             </div>
                             <div class="col-md-4">
                                 <label class="form-label fw-bold small text-secondary m-0">Điểm 9 bằng:</label>
-                                <input type="number" step="0.5" class="form-control text-center fw-bold text-primary" name="diem_9" value="{{ score_settings.diem_9 if score_settings else 3 }}">
+                                <input type="number" step="0.5" class="form-control text-center fw-bold text-primary bg-light" name="diem_9" value="{{ score_settings.diem_9 if score_settings else 3 }}">
                             </div>
                             <div class="col-md-4">
                                 <label class="form-label fw-bold small text-secondary m-0">Điểm 10 bằng:</label>
-                                <input type="number" step="0.5" class="form-control text-center fw-bold text-danger" name="diem_10" value="{{ score_settings.diem_10 if score_settings else 5 }}">
+                                <input type="number" step="0.5" class="form-control text-center fw-bold text-danger bg-light" name="diem_10" value="{{ score_settings.diem_10 if score_settings else 5 }}">
                             </div>
                             <div class="col-md-6">
                                 <label class="form-label fw-bold small text-primary m-0">Thưởng Tuần Khá:</label>
-                                <input type="number" step="0.5" class="form-control fw-bold" name="tuan_kha" value="{{ score_settings.diem_tuan_kha if score_settings else 20 }}">
+                                <input type="number" step="0.5" class="form-control fw-bold bg-light" name="tuan_kha" value="{{ score_settings.diem_tuan_kha if score_settings else 20 }}">
                             </div>
                             <div class="col-md-6">
                                 <label class="form-label fw-bold small text-success m-0">Thưởng Tuần Tốt:</label>
-                                <input type="number" step="0.5" class="form-control fw-bold" name="tuan_tot" value="{{ score_settings.diem_tuan_tot if score_settings else 30 }}">
+                                <input type="number" step="0.5" class="form-control fw-bold bg-light" name="tuan_tot" value="{{ score_settings.diem_tuan_tot if score_settings else 30 }}">
                             </div>
                             <div class="col-md-6">
                                 <label class="form-label fw-bold small text-danger m-0"><i class="fa-solid fa-ban"></i> Khống chế Tốt/Tuần:</label>
@@ -344,21 +527,19 @@
                             </div>
                         </div>
 
-                        <hr class="text-muted mt-4 mb-3">
-                        <div class="d-flex justify-content-between align-items-center bg-light p-3 rounded border border-danger">
+                        <hr class="text-muted mt-4 mb-3 opacity-25">
+                        <div class="d-flex justify-content-between align-items-center bg-light p-3 rounded-3 border">
                             <div>
                                 <h6 class="fw-bold text-danger m-0"><i class="fa-solid fa-scale-unbalanced"></i> Thư viện Lỗi Vi phạm</h6>
-                                <small class="text-muted">Quản lý danh mục lỗi trừ tự động cho năm học</small>
                             </div>
-                            <a href="/violation-categories" class="btn btn-outline-danger fw-bold btn-sm">
-                                Cập nhật Lỗi <i class="fa-solid fa-arrow-right"></i>
+                            <a href="/violation-categories" class="btn btn-outline-danger fw-bold btn-sm rounded-pill px-3 shadow-sm">
+                                Cập nhật <i class="fa-solid fa-arrow-right ms-1"></i>
                             </a>
                         </div>
                     </div>
-                    <div class="modal-footer">
-                        <button type="button" class="btn btn-secondary fw-bold" data-bs-dismiss="modal">Hủy</button>
-                        <!-- Nút LƯU đã được mở khóa và chuyển thành type="submit" -->
-                        <button type="submit" class="btn btn-success fw-bold">Lưu Cấu Hình</button>
+                    <div class="modal-footer border-0 p-4 pt-2">
+                        <button type="button" class="btn btn-light text-secondary" data-bs-dismiss="modal">Hủy</button>
+                        <button type="submit" class="btn btn-primary">Lưu Cấu Hình</button>
                     </div>
                 </form>
             </div>
@@ -368,40 +549,40 @@
     <!-- MODAL FORM NHẬP CHI TIẾT -->
     <div class="modal fade" id="detailModal" tabindex="-1" aria-hidden="true" data-bs-backdrop="static">
         <div class="modal-dialog modal-xl modal-dialog-centered">
-            <div class="modal-content">
-                <div class="modal-header" style="background-color: #e8f0fe; border-bottom: 2px solid #b6d4fe;">
-                    <h5 class="modal-title fw-bold text-primary w-100 text-center" id="detailModalTitle" style="letter-spacing: 1px;">
+            <div class="modal-content border-0 shadow-lg" style="border-radius: 20px;">
+                <div class="modal-header border-0" style="background-color: #eff6ff; padding: 20px 24px; border-radius: 20px 20px 0 0;">
+                    <h5 class="modal-title fw-bold text-primary w-100 text-center" id="detailModalTitle" style="letter-spacing: 0.5px;">
                         ĐANG THAO TÁC: CHI ĐOÀN ...
                     </h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                 </div>
-                <div class="modal-body" style="background-color: #f4f6f9;">
-                    <div class="row g-3">
+                <div class="modal-body p-4" style="background-color: #f8fafc;">
+                    <div class="row g-4">
                         <div class="col-md-7">
-                            <div class="card h-100" style="border: 1.5px solid #0d6efd;">
-                                <div class="card-header text-white fw-bold py-2" style="background-color: #0d6efd;">
-                                    <i class="fa-solid fa-book"></i> Điểm Học Tập (Theo sổ đầu bài)
+                            <div class="card h-100 border-0 shadow-sm" style="border-radius: 16px;">
+                                <div class="card-header text-white fw-bold py-3 border-0" style="background-color: var(--primary-blue); border-radius: 16px 16px 0 0;">
+                                    <i class="fa-solid fa-book me-2"></i> Điểm Học Tập (Theo sổ đầu bài)
                                 </div>
-                                <div class="card-body p-2">
-                                    <div class="table-responsive" style="max-height: 250px;">
-                                        <table class="table table-sm table-bordered text-center align-middle" id="subjectsTable">
-                                            <thead class="table-light sticky-top">
+                                <div class="card-body p-3">
+                                    <div class="table-responsive mb-3" style="max-height: 250px; border-radius: 8px; border: 1px solid var(--border-color);">
+                                        <table class="table table-sm table-borderless table-striped text-center align-middle m-0" id="subjectsTable">
+                                            <thead class="table-light sticky-top" style="border-bottom: 2px solid var(--border-color);">
                                                 <tr>
-                                                    <th>Môn học</th>
-                                                    <th style="width: 20%;">SL Điểm 10</th>
-                                                    <th style="width: 20%;">SL Điểm 9</th>
-                                                    <th style="width: 20%;">SL Điểm 8</th>
-                                                    <th style="width: 8%;">Xóa</th>
+                                                    <th class="py-2 text-muted fw-bold">Môn học</th>
+                                                    <th class="py-2 text-muted fw-bold" style="width: 20%;">SL Điểm 10</th>
+                                                    <th class="py-2 text-muted fw-bold" style="width: 20%;">SL Điểm 9</th>
+                                                    <th class="py-2 text-muted fw-bold" style="width: 20%;">SL Điểm 8</th>
+                                                    <th class="py-2 text-muted fw-bold" style="width: 8%;">Xóa</th>
                                                 </tr>
                                             </thead>
                                             <tbody id="subjectsBody">
                                             </tbody>
                                         </table>
                                     </div>
-                                    <button class="btn btn-sm w-100 fw-bold mb-3" style="background-color: #f8f9fa; color: #0d6efd; border: 1px dashed #0d6efd;" onclick="addSubjectRow()">
-                                        <i class="fa-solid fa-plus"></i> Thêm môn học
+                                    <button class="btn btn-sm w-100 fw-bold mb-3 rounded-3 py-2" style="background-color: #eff6ff; color: var(--primary-blue); border: 1px dashed #bfdbfe;" onclick="addSubjectRow()">
+                                        <i class="fa-solid fa-plus me-1"></i> Thêm môn học
                                     </button>
-                                    <div class="alert alert-success text-center fw-bold py-2 m-0" id="liveCounter" style="border-radius: 4px;">
+                                    <div class="alert bg-success bg-opacity-10 text-success text-center fw-bold py-2 m-0 border-0" id="liveCounter" style="border-radius: 8px;">
                                         Tổng số con điểm Tốt: 0 / 14
                                     </div>
                                 </div>
@@ -409,69 +590,82 @@
                         </div>
                         
                         <div class="col-md-5">
-                            <div class="card h-100" style="border: 1.5px solid #fd7e14;">
-                                <div class="card-header text-white fw-bold py-2" style="background-color: #fd7e14;">
-                                    <i class="fa-solid fa-scale-balanced"></i> Điểm Nền & Biến Động
+                            <div class="card h-100 border-0 shadow-sm" style="border-radius: 16px;">
+                                <div class="card-header text-white fw-bold py-3 border-0" style="background-color: #f59e0b; border-radius: 16px 16px 0 0;">
+                                    <i class="fa-solid fa-scale-balanced me-2"></i> Điểm Nền & Biến Động
                                 </div>
-                                <div class="card-body">
-                                    <div class="mb-3 d-flex align-items-center">
-                                        <label class="form-label fw-bold small text-secondary w-50 m-0">Xếp loại Tuần:</label>
-                                        <select class="form-select fw-bold text-danger w-50" id="detailRating">
+                                <div class="card-body p-4">
+                                    <div class="mb-3 d-flex align-items-center bg-light p-2 rounded-3 border">
+                                        <label class="form-label fw-bold small text-secondary w-50 m-0 ps-2">Xếp loại Tuần:</label>
+                                        <select class="form-select border-0 bg-transparent fw-bold text-danger w-50 shadow-none" id="detailRating">
                                             <option value="Bình thường">Bình thường</option>
                                             <option value="Tuần Khá">Tuần Khá</option>
                                             <option value="Tuần Tốt">Tuần Tốt</option>
                                         </select>
                                     </div>
-                                    <div class="mb-4 d-flex align-items-center">
-                                        <label class="form-label fw-bold small text-secondary w-50 m-0">Điểm mặc định (Trực):</label>
-                                        <input type="number" class="form-control text-center fw-bold w-50" style="background-color: #e9ecef;" id="detailBase" value="100" readonly>
+                                    <div class="mb-4 d-flex align-items-center bg-light p-2 rounded-3 border">
+                                        <label class="form-label fw-bold small text-secondary w-50 m-0 ps-2">Điểm mặc định:</label>
+                                        <input type="number" class="form-control border-0 bg-transparent text-center fw-bold w-50 shadow-none text-muted" id="detailBase" value="100" readonly>
                                     </div>
                                     <div class="row g-2 mb-3">
                                         <div class="col-4">
                                             <label class="form-label fw-bold small text-success">Cộng (+):</label>
-                                            <input type="number" step="0.5" class="form-control text-center fw-bold text-success" id="detailBonus" value="0">
+                                            <input type="number" step="0.5" class="form-control text-center fw-bold text-success bg-light border-success border-opacity-25" id="detailBonus" value="0">
                                         </div>
                                         <div class="col-8">
                                             <label class="form-label fw-bold small text-secondary">Lý do cộng:</label>
-                                            <input type="text" class="form-control" id="detailBonusNote" placeholder="Ghi chú...">
+                                            <input type="text" class="form-control bg-light border-0" id="detailBonusNote" placeholder="Ghi chú...">
                                         </div>
                                     </div>
                                     <div class="row g-2">
                                         <div class="col-4">
                                             <label class="form-label fw-bold small text-danger">Trừ (-):</label>
-                                            <input type="number" step="0.5" class="form-control text-center fw-bold text-danger" id="detailPenalty" value="0">
+                                            <input type="number" step="0.5" class="form-control text-center fw-bold text-danger bg-light border-danger border-opacity-25" id="detailPenalty" value="0">
                                         </div>
                                         <div class="col-8">
                                             <label class="form-label fw-bold small text-secondary">Lý do trừ:</label>
-                                            <input type="text" class="form-control" id="detailPenaltyNote" placeholder="Ghi chú...">
+                                            <input type="text" class="form-control bg-light border-0" id="detailPenaltyNote" placeholder="Ghi chú...">
                                         </div>
                                     </div>
                                 </div>
                             </div>
                         </div>
 
-                        <div class="col-12">
-                            <div class="card" style="border: 1.5px solid #dc3545;">
-                                <div class="card-header text-white fw-bold py-2 d-flex justify-content-between align-items-center" style="background-color: #dc3545;">
-                                    <span><i class="fa-solid fa-robot"></i> Hệ Thống Quét Lỗi Tự Động</span>
-                                    <span class="badge bg-white text-danger" id="autoPenaltyPreview">Đang trừ tự động: 0đ</span>
+						<div class="col-12">
+                            <div class="card border-0 shadow-sm" style="border-radius: 16px;">
+                                <div class="card-header text-white fw-bold py-3 d-flex justify-content-between align-items-center border-0" style="background-color: #ef4444; border-radius: 16px 16px 0 0;">
+                                    <span><i class="fa-solid fa-robot me-2"></i> Hệ Thống Quét Lỗi Tự Động</span>
+                                    <span class="badge bg-white text-danger px-3 py-2 rounded-pill shadow-sm" id="autoPenaltyPreview">Đang trừ tự động: 0đ</span>
                                 </div>
-                                <div class="card-body p-2">
+                                <div class="card-body p-4">
+                                    <!-- GIẢI PHÁP 1: MỞ RỘNG VÙNG NHẬP (Chuyển thành Textarea đa dòng) -->
                                     <div style="position: relative;">
-                                        <input type="text" class="form-control form-control-lg border-2 fw-bold text-danger mb-2" id="detailNote" placeholder="Gõ tên lỗi (Ví dụ: vắng, muộn...) hệ thống sẽ tự gợi ý..." autocomplete="off">
-                                        <div id="suggestion-box" class="list-group" style="position: absolute; top: 100%; left: 0; z-index: 1000; width: 100%; display: none; max-height: 200px; overflow-y: auto; box-shadow: 0 4px 10px rgba(0,0,0,0.15);"></div>
+                                        <textarea class="form-control border-2 fw-bold text-danger mb-3 rounded-3 p-3" id="detailNote" rows="3" placeholder="Gõ tên lỗi (Ví dụ: vắng, muộn...) hệ thống sẽ tự gợi ý..." style="resize: vertical; font-size: 15px; line-height: 1.6;"></textarea>
+                                        
+                                        <div id="suggestion-box" class="list-group" style="position: absolute; top: 100%; left: 0; z-index: 1000; width: 100%; display: none; max-height: 200px; overflow-y: auto; box-shadow: 0 10px 25px rgba(0,0,0,0.1); border-radius: 12px; border: 1px solid var(--border-color);"></div>
                                     </div>
-                                    <div class="d-flex flex-wrap gap-1 mt-2" id="quickErrorTags">
-                                        <span class="badge bg-secondary text-white" style="font-size: 11px;">Thẻ chọn nhanh:</span>
+                                    
+                                    <!-- GIẢI PHÁP 2: THU GỌN VÙNG THẺ CHỌN (Tạo hộp chứa có thanh cuộn) -->
+                                    <div class="p-3 bg-light rounded-3 border" style="border-color: #fca5a5 !important;">
+                                        <div class="d-flex align-items-center mb-2 pb-2 border-bottom" style="border-color: #fca5a5 !important;">
+                                            <span class="badge bg-danger bg-opacity-10 text-danger border-0 px-3 py-1 rounded-pill" style="font-size: 12px;">
+                                                <i class="fa-solid fa-tags me-1"></i> Thẻ chọn nhanh
+                                            </span>
+                                            <span class="ms-2 text-muted" style="font-size: 11px; font-style: italic;">(Cuộn xuống để xem thêm lỗi)</span>
+                                        </div>
+                                        
+                                        <!-- Khống chế chiều cao max-height 110px -->
+                                        <div class="d-flex flex-wrap gap-2" id="quickErrorTags" style="max-height: 110px; overflow-y: auto; padding-right: 5px;">
+                                            <!-- Dữ liệu JS sẽ đổ thẻ bấm vào đây -->
+                                        </div>
                                     </div>
                                 </div>
                             </div>
                         </div>
-                    </div>
                 </div>
-                <div class="modal-footer bg-white">
-                    <button type="button" class="btn btn-secondary fw-bold" data-bs-dismiss="modal">❌ Hủy bỏ (Esc)</button>
-                    <button type="button" class="btn btn-primary fw-bold" onclick="saveDetailModal()"><i class="fa-solid fa-floppy-disk"></i> Lưu dữ liệu xuống bảng chính (Enter)</button>
+                <div class="modal-footer bg-white border-0 p-4 rounded-bottom-4">
+                    <button type="button" class="btn btn-light text-secondary" data-bs-dismiss="modal">Hủy bỏ (Esc)</button>
+                    <button type="button" class="btn btn-primary px-4" onclick="saveDetailModal()"><i class="fa-solid fa-floppy-disk me-2"></i> Lưu dữ liệu xuống bảng chính (Enter)</button>
                 </div>
             </div>
         </div>
@@ -481,14 +675,80 @@
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script>
         function changeWeek(weekName) { window.location.href = `/weekly?week=${encodeURIComponent(weekName)}`; }
-        function previewBlacklist() { 
-            window.location.href = `/preview_blacklist?week=${encodeURIComponent(document.getElementById('weekSelector').value)}`; 
-        }
+        function previewBlacklist() { window.location.href = `/preview_blacklist?week=${encodeURIComponent(document.getElementById('weekSelector').value)}`; }
         function previewAndExport() { window.location.href = `/preview_report?week=${encodeURIComponent(document.getElementById('weekSelector').value)}`; }
 
-        // ==========================================
+        // MÃ JS LỌC BẢNG (MỚI THÊM)
+        function filterTable() {
+            const searchText = document.getElementById('searchInput').value.toLowerCase();
+            const groupFilter = document.getElementById('groupFilter').value;
+            const rows = document.querySelectorAll('.branch-row');
+
+            rows.forEach(row => {
+                const branchName = row.querySelector('.branch-name').innerText.toLowerCase();
+                const group = row.getAttribute('data-group');
+                
+                const matchesSearch = branchName.includes(searchText);
+                const matchesGroup = groupFilter === "" || group.includes(groupFilter);
+
+                if (matchesSearch && matchesGroup) {
+                    row.style.display = "";
+                } else {
+                    row.style.display = "none";
+                }
+            });
+        }
+
+        // JS Định dạng màu Xếp loại & Đánh giá (MỚI THÊM)
+        function updateRowStyle(selectElement) {
+            const val = selectElement.value;
+            const statusCell = document.getElementById(`status_${selectElement.name.split('_')[1]}`);
+            
+            if (val === 'Tuần Tốt') {
+                selectElement.style.color = '#10b981';
+                selectElement.style.backgroundColor = '#dcfce7';
+                selectElement.style.borderColor = '#bbf7d0';
+            } else if (val === 'Tuần Khá') {
+                selectElement.style.color = '#f59e0b';
+                selectElement.style.backgroundColor = '#fef3c7';
+                selectElement.style.borderColor = '#fde68a';
+            } else {
+                selectElement.style.color = '#64748b';
+                selectElement.style.backgroundColor = 'transparent';
+                selectElement.style.borderColor = '#e2e8f0';
+            }
+        }
+
+        function autoUpdateRatingText(bId, total) {
+            const statusSpan = document.getElementById(`status_${bId}`);
+            if(!statusSpan) return;
+            if (total >= 140) {
+                statusSpan.innerText = "Xuất sắc";
+                statusSpan.style.color = "#10b981";
+            } else if (total >= 120) {
+                statusSpan.innerText = "Tốt";
+                statusSpan.style.color = "#2563eb";
+            } else if (total >= 110) {
+                statusSpan.innerText = "Khá";
+                statusSpan.style.color = "#f59e0b";
+            } else {
+                statusSpan.innerText = "Cần cố gắng";
+                statusSpan.style.color = "#ef4444";
+            }
+        }
+
+        // Khởi tạo màu sắc khi load trang
+        document.addEventListener("DOMContentLoaded", function() {
+            document.querySelectorAll('.select-rating').forEach(el => updateRowStyle(el));
+            // Cập nhật text Xuất sắc
+            document.querySelectorAll('tr.branch-row').forEach(row => {
+                const bId = row.querySelector('.select-rating').name.split('_')[1];
+                const totalSpan = document.getElementById(`total_${bId}`);
+                if(totalSpan) autoUpdateRatingText(bId, parseFloat(totalSpan.innerText));
+            });
+        });
+
         // 🤖 LOGIC GỌI TRỢ LÝ AI PHÂN TÍCH TUẦN
-        // ==========================================
         function openAiReportModal(weekName) {
             const loadingDiv = document.getElementById('aiLoading');
             const contentDiv = document.getElementById('aiContentContainer');
@@ -506,11 +766,8 @@
                 .then(data => {
                     loadingDiv.style.display = 'none';
                     contentDiv.style.display = 'block';
-                    if (data.error) {
-                        reportText.innerText = "❌ Lỗi: " + data.error;
-                    } else {
-                        reportText.innerText = data.report;
-                    }
+                    if (data.error) reportText.innerText = "❌ Lỗi: " + data.error;
+                    else reportText.innerText = data.report;
                 })
                 .catch(error => {
                     loadingDiv.style.display = 'none';
@@ -544,125 +801,118 @@
                 } else {
                     alert("Lỗi: " + res.error);
                 }
-            } catch (err) {
-                console.error(err);
-                alert("Lỗi kết nối đến máy chủ!");
-            }
+            } catch (err) { console.error(err); alert("Lỗi kết nối đến máy chủ!"); }
         }
 
-		// =========================================================================
 		// JAVASCRIPT HỖ TRỢ UPLOAD VÀ ĐIỀN FORM TỰ ĐỘNG BẰNG AI
 		// =========================================================================
-		async function uploadSDB(inputElement, branchId) {
-			let file = inputElement.files[0];
-			if (!file) return;
-			
-			let statusLabel = document.getElementById(`status_sdb_${branchId}`);
-			statusLabel.innerHTML = '<i class="fa-solid fa-spinner fa-spin text-primary"></i> Đang đọc file...';
-			
-			let formData = new FormData();
-			formData.append("excel_file", file);
+        // HÀM QUÉT SĐB LẺ TỪNG LỚP (ĐÃ ĐỒNG BỘ THUẬT TOÁN LÀM SẠCH TÊN LỚP)
+        // =========================================================================
+        async function uploadSDB(inputElement, branchId) {
+            let file = inputElement.files[0];
+            if (!file) return;
             
-            // --- [TÍNH NĂNG MỚI]: LẤY TÊN LỚP ĐỂ GỬI LÊN SERVER XÁC THỰC ---
+            let statusLabel = document.getElementById(`status_sdb_${branchId}`);
+            if(statusLabel) statusLabel.innerHTML = '<i class="fa-solid fa-spinner fa-spin text-primary"></i> Đang đọc file...';
+            
+            let formData = new FormData();
+            formData.append("excel_file", file);
             let tr = inputElement.closest('tr');
-            let branchNameNode = tr.querySelector('.text-primary').childNodes[0];
-            let branchName = branchNameNode ? branchNameNode.textContent.trim() : "";
-            formData.append("expected_branch_name", branchName);
-            // -------------------------------------------------------------
-			
-			try {
-				let cleanUrl = window.location.origin + '/api/parse_sodaubai';
-				
-				let response = await fetch(cleanUrl, { 
-					method: 'POST', 
-					body: formData 
-				});
-				
-				let contentType = response.headers.get("content-type");
-				if (!contentType || !contentType.includes("application/json")) {
-					throw new Error("Máy chủ trả về dữ liệu không hợp lệ.");
-				}
-				
-				let result = await response.json();
-				
-				if (result.success) {
-                    statusLabel.innerHTML = '<i class="fa-solid fa-check text-success"></i> Tự động điền xong!';
-                    
-                    let branchGroup = tr.querySelector('.text-muted').innerText.replace(/[()]/g, '').trim();
+            
+            // [BẢN VÁ LỖI]: Quét tên lớp và làm sạch tuyệt đối giống hệ thống Hàng Loạt
+            let branchNameNode = tr.querySelector('.branch-name');
+            let cleanBranchName = branchNameNode.textContent.replace(/[^a-zA-Z0-9]/g, '').toUpperCase();
+            formData.append("expected_branch_name", cleanBranchName);
+            
+            try {
+                let cleanUrl = window.location.origin + '/api/parse_sodaubai';
+                let response = await fetch(cleanUrl, { method: 'POST', body: formData });
+                
+                let result;
+                let contentType = response.headers.get("content-type");
+                
+                // Mở rộng bộ đón lỗi để nhận diện chính xác phản hồi từ Python
+                if (contentType && contentType.includes("application/json")) {
+                    result = await response.json();
+                } else {
+                    throw new Error("Máy chủ trả về dữ liệu không hợp lệ.");
+                }
+                
+                if (result.success) {
+                    if(statusLabel) statusLabel.innerHTML = '<i class="fa-solid fa-check text-success"></i> Điền xong!';
+                    let branchGroup = tr.getAttribute('data-group');
 
-                    // 1. Tự động mở Modal Chi tiết của lớp vừa chọn
-                    await openDetailModal(branchId, branchName, branchGroup);
+                    // Lấy tên nguyên bản (có dấu cách) để hiển thị đẹp trên Modal
+                    let displayBranchName = branchNameNode.innerText.trim();
+                    await openDetailModal(branchId, displayBranchName, branchGroup);
 
-                    // 2. Chờ 0.5s cho Modal mở và load xong điểm cũ, sau đó AI sẽ BƠM đè dữ liệu mới vào
                     setTimeout(() => {
-                        // Xóa bảng cũ
                         const tbody = document.getElementById('subjectsBody');
                         if (tbody) {
                             tbody.innerHTML = '';
-							if (result.raw_list && result.raw_list.length > 0) {
-								result.raw_list.forEach(item => {
-									addSubjectRow(item.subj, item.c10, item.c9, item.c8);
-								});
-							} else {
-								addSubjectRow("Chưa có điểm", 0, 0, 0);
-							}
+                            if (result.raw_list && result.raw_list.length > 0) {
+                                result.raw_list.forEach(item => { addSubjectRow(item.subj, item.c10, item.c9, item.c8); });
+                            } else {
+                                addSubjectRow("Chưa có điểm", 0, 0, 0);
+                            }
                         }
 
-                        // Xếp loại tuần
                         const ratingSelect = document.getElementById('detailRating');
-                        if (ratingSelect) {
-                            ratingSelect.value = result.xep_loai;
-                        }
+                        if (ratingSelect) ratingSelect.value = result.xep_loai;
 
-                        // Điểm kém (Lỗi vào sổ đen)
                         const noteInput = document.getElementById('detailNote');
                         if (noteInput && result.note) {
                             let currentVal = noteInput.value.trim();
-                            noteInput.value = currentVal ? `${currentVal}, ${result.note}` : result.note;
-                            // Kích hoạt hàm tính tự động trừ điểm
+                            noteInput.value = currentVal ? `${currentVal} ; ${result.note}` : result.note;
+                            // Kích hoạt tính điểm tự động ngay lập tức
                             noteInput.dispatchEvent(new Event('input', { bubbles: true }));
                         }
-
-                        // Cập nhật lại thanh đếm tổng số điểm
                         updateLiveTotal();
-                        
                     }, 500);
-
-				} else {
-					statusLabel.innerHTML = `<i class="fa-solid fa-xmark text-danger"></i> Lỗi`;
-					alert(result.error); // Đã sửa: In nguyên văn dòng cảnh báo từ Server ra
-				}
-			} catch (e) {
-				statusLabel.innerHTML = '<i class="fa-solid fa-xmark text-danger"></i> Lỗi kết nối';
-				console.error("Chi tiết lỗi fetch:", e);
-				alert("Không thể kết nối tới API /api/parse_sodaubai. Hãy kiểm tra lại backend Python!");
-			}
-			inputElement.value = ""; 
-		}
-
-        document.addEventListener("DOMContentLoaded", async function() {
-            const weekName = document.getElementById('weekSelector').value;
+                } else {
+                    if(statusLabel) statusLabel.innerHTML = `<i class="fa-solid fa-xmark text-danger"></i> Lỗi`;
+                    alert(result.error || "Có lỗi xảy ra khi đọc file Sổ Đầu Bài!"); 
+                }
+            } catch (e) {
+                if(statusLabel) statusLabel.innerHTML = '<i class="fa-solid fa-xmark text-danger"></i> Lỗi kết nối';
+                console.error("Chi tiết lỗi fetch:", e);
+                alert("Không thể kết nối tới API /api/parse_sodaubai. Hãy kiểm tra lại backend Python hoặc xem bảng Console (F12)!");
+            }
+            inputElement.value = ""; 
+        }
+		
+		document.addEventListener("DOMContentLoaded", async function() {
+            const weekSelector = document.getElementById('weekSelector');
+            if (!weekSelector) return;
+            const weekName = weekSelector.value;
+            
             try {
                 const response = await fetch(`/api/get_week_lock_status/${encodeURIComponent(weekName)}`);
                 const res = await response.json();
                 
                 const lockBtn = document.getElementById('lockBtn');
+                const lockText = document.getElementById('lockStatusText');
+
                 if (res.is_locked) {
-                    lockBtn.className = "btn btn-danger btn-sm fw-bold shadow-sm";
-                    lockBtn.innerHTML = `<i class="fa-solid fa-lock"></i> Đã chốt sổ (Khóa)`;
+                    if (lockBtn) {
+                        lockBtn.className = "btn btn-danger btn-sm rounded-pill fw-bold mb-1 shadow-sm text-white";
+                        lockBtn.innerHTML = `<i class="fa-solid fa-lock"></i> ĐÃ CHỐT SỔ`;
+                    }
+                    if (lockText) lockText.innerText = "Dữ liệu tuần đã bị khóa";
                     
-                    document.querySelectorAll('#scoreForm input, #scoreForm select').forEach(el => {
-                        el.disabled = true;
-                    });
-                    
+                    document.querySelectorAll('#scoreForm input, #scoreForm select').forEach(el => el.disabled = true);
                     const saveBtn = document.querySelector('button[form="scoreForm"]');
                     if (saveBtn) saveBtn.style.display = 'none';
                 } else {
-                    lockBtn.className = "btn btn-warning btn-sm fw-bold shadow-sm";
-                    lockBtn.innerHTML = `<i class="fa-solid fa-lock-open"></i> Chưa chốt sổ`;
+                    if (lockBtn) {
+                        lockBtn.className = "btn btn-outline-success btn-sm rounded-pill fw-bold mb-1";
+                        lockBtn.style.borderWidth = "1.5px";
+                        lockBtn.innerHTML = `<i class="fa-solid fa-lock-open"></i> ĐANG NHẬP DỮ LIỆU`;
+                    }
+                    if (lockText) lockText.innerText = "Bấm để chốt/mở sổ";
                 }
-            } catch (err) {
-                console.error("Không thể lấy trạng thái khóa:", err);
+            } catch (err) { 
+                console.error("Không thể lấy trạng thái khóa:", err); 
             }
         });
 
@@ -674,26 +924,19 @@
                 violationBank.forEach(cat => {
                     if (cat.type !== 'Điểm cộng') {
                         const btn = document.createElement('span');
-                        btn.className = 'badge bg-white border border-danger text-danger py-1 px-2';
+                        btn.className = 'badge bg-white border border-danger text-danger py-2 px-3 rounded-pill shadow-sm';
                         btn.style.cursor = 'pointer';
                         btn.style.transition = '0.2s';
                         btn.innerHTML = `${cat.name} (-${cat.points})`;
                         
-                        btn.onmouseover = () => { 
-                            btn.classList.remove('bg-white', 'text-danger'); 
-                            btn.classList.add('bg-danger', 'text-white'); 
-                        }
-                        btn.onmouseout = () => { 
-                            btn.classList.remove('bg-danger', 'text-white'); 
-                            btn.classList.add('bg-white', 'text-danger'); 
-                        }
+                        btn.onmouseover = () => { btn.classList.remove('bg-white', 'text-danger'); btn.classList.add('bg-danger', 'text-white'); }
+                        btn.onmouseout = () => { btn.classList.remove('bg-danger', 'text-white'); btn.classList.add('bg-white', 'text-danger'); }
                         
                         btn.onclick = () => {
                             const noteInput = document.getElementById('detailNote');
                             let currentVal = noteInput.value.trim();
                             let appendText = `${cat.name} x1`;
                             noteInput.value = currentVal ? `${currentVal}, ${appendText}` : appendText;
-                            
                             noteInput.dispatchEvent(new Event('input', { bubbles: true }));
                         };
                         tagsContainer.appendChild(btn);
@@ -702,14 +945,39 @@
             }
         });
 
+		// 1. Hàm bóc tách thông minh cho Frontend (Chống cắt nhầm dấu phẩy trong ngoặc)
+        function smartSplitNoteJS(noteText) {
+            if (!noteText) return [];
+            let parts = [];
+            let currentPart = '';
+            let inBracket = 0;
+            for (let i = 0; i < noteText.length; i++) {
+                let char = noteText[i];
+                if (char === '[' || char === '(') inBracket++;
+                else if (char === ']' || char === ')') inBracket--;
+                
+                if ((char === ',' || char === ';' || char === '+' || char === '\n') && inBracket <= 0) {
+                    parts.push(currentPart.trim());
+                    currentPart = '';
+                } else {
+                    currentPart += char;
+                }
+            }
+            if (currentPart.trim()) parts.push(currentPart.trim());
+            return parts.filter(p => p);
+        }
+
+        // 2. Hàm tự động trừ điểm (Đã được nâng cấp để hiểu dữ liệu từ Sổ Đầu Bài)
         function calculateAutoPenalty(noteText) {
             let penalty = 0;
             if (!noteText) return 0;
-            const parts = noteText.split(',');
+            const parts = smartSplitNoteJS(noteText); // Kích hoạt thuật toán thông minh
             
             parts.forEach(part => {
                 const p = part.toLowerCase();
+                let isMatched = false;
                 violationBank.forEach(cat => {
+                    if (isMatched) return; // Đã tìm thấy lỗi thì dừng để tránh trừ đúp
                     const catName = cat.name.toLowerCase();
                     if (p.includes(catName)) {
                         const escapedCatName = catName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
@@ -720,6 +988,7 @@
                         if (cat.type !== 'Điểm cộng') {
                             penalty += (cat.points * qty);
                         }
+                        isMatched = true;
                     }
                 });
             });
@@ -741,44 +1010,31 @@
                 const currentPart = parts[parts.length - 1]; 
                 const searchTerm = currentPart.trim().toLowerCase();
 
-                if (!searchTerm) {
-                    suggestionBox.style.display = 'none';
-                    return;
-                }
+                if (!searchTerm) { suggestionBox.style.display = 'none'; return; }
 
-                const matches = violationBank.filter(cat => 
-                    cat.name.toLowerCase().includes(searchTerm) && cat.type !== 'Điểm cộng'
-                );
+                const matches = violationBank.filter(cat => cat.name.toLowerCase().includes(searchTerm) && cat.type !== 'Điểm cộng');
 
                 if (matches.length > 0) {
                     suggestionBox.style.display = 'block';
                     matches.forEach(match => {
                         const btnItem = document.createElement('a');
-                        btnItem.className = 'list-group-item list-group-item-action py-2 text-danger fw-bold border-danger';
+                        btnItem.className = 'list-group-item list-group-item-action py-3 text-danger fw-bold border-0 border-bottom';
                         btnItem.style.cursor = 'pointer';
-                        btnItem.innerHTML = `<i class="fa-solid fa-triangle-exclamation"></i> ${match.name} <span class="badge bg-danger float-end">-${match.points}đ</span>`;
+                        btnItem.innerHTML = `<i class="fa-solid fa-triangle-exclamation me-2"></i> ${match.name} <span class="badge bg-danger float-end rounded-pill">-${match.points}đ</span>`;
                         
                         btnItem.onclick = function() {
                             parts[parts.length - 1] = (parts.length > 1 ? ' ' : '') + match.name + ' x1';
                             noteInput.value = parts.join(',') + ', ';
-                            
                             suggestionBox.style.display = 'none';
                             noteInput.focus();
-                            
                             noteInput.dispatchEvent(new Event('input', { bubbles: true }));
                         };
                         suggestionBox.appendChild(btnItem);
                     });
-                } else {
-                    suggestionBox.style.display = 'none';
-                }
+                } else { suggestionBox.style.display = 'none'; }
             });
 
-            document.addEventListener('click', function(e) {
-                if (e.target !== noteInput) {
-                    suggestionBox.style.display = 'none';
-                }
-            });
+            document.addEventListener('click', function(e) { if (e.target !== noteInput) suggestionBox.style.display = 'none'; });
         }
 
         let currentTargetBranchId = null;
@@ -811,8 +1067,6 @@
                 
                 if(result.data && result.data.length > 0) {
                     result.data.forEach(item => addSubjectRow(item.subj, item.c10, item.c9, item.c8));
-                } else {
-                    // Không áp đặt cứng, để trống nếu chưa có
                 }
                 updateLiveTotal();
             } catch (error) {
@@ -828,18 +1082,18 @@
             
             const isGroup1 = currentTargetBranchGroup.includes("1");
             const c8Input = isGroup1 
-                ? `<input type="number" class="form-control form-control-sm text-center fw-bold val-c8" value="0" readonly style="background-color: #e9ecef; cursor: not-allowed;" title="Nhóm 1 không tính điểm 8">`
-                : `<input type="number" class="form-control form-control-sm text-center fw-bold val-c8" value="${c8}" min="0" onchange="updateLiveTotal()">`;
+                ? `<input type="number" class="form-control form-control-sm text-center fw-bold val-c8 border-0 bg-transparent text-muted shadow-none" value="0" readonly title="Nhóm 1 không tính điểm 8">`
+                : `<input type="number" class="form-control form-control-sm text-center fw-bold val-c8 sub-c8" value="${c8}" min="0" onchange="updateLiveTotal()">`;
 
             tr.innerHTML = `
                 <td><input type="text" class="form-control form-control-sm text-center fw-bold text-primary subject-name sub-name-input" value="${subj}" placeholder="Tên môn"></td>
                 <td><input type="number" class="form-control form-control-sm text-center fw-bold text-danger val-c10 sub-c10" value="${c10}" min="0" onchange="updateLiveTotal()"></td>
                 <td><input type="number" class="form-control form-control-sm text-center fw-bold text-primary val-c9 sub-c9" value="${c9}" min="0" onchange="updateLiveTotal()"></td>
-                <td>${c8Input.replace('val-c8', 'val-c8 sub-c8')}</td>
-                <td><button type="button" class="btn btn-sm btn-danger px-2" onclick="this.parentElement.parentElement.remove(); updateLiveTotal();"><i class="fa-solid fa-trash"></i></button></td>
+                <td>${c8Input}</td>
+                <td><button type="button" class="btn btn-sm btn-light text-danger px-2 border rounded-3" onclick="this.parentElement.parentElement.remove(); updateLiveTotal();"><i class="fa-solid fa-trash"></i></button></td>
             `;
             tbody.appendChild(tr);
-            updateLiveTotal(); // Cập nhật lại ngay khi thêm dòng
+            updateLiveTotal(); 
         }
 
         function updateLiveTotal() {
@@ -867,10 +1121,10 @@
             
             if (sum > maxTot) {
                 counterDiv.innerHTML = `Tổng số con điểm Tốt: ${sum} / ${maxTot} (VƯỢT TRẦN TUẦN - Sẽ tự cắt)`;
-                counterDiv.className = "alert text-center fw-bold py-2 m-0 alert-danger";
+                counterDiv.className = "alert bg-danger bg-opacity-10 text-danger text-center fw-bold py-2 m-0 border-0 rounded-3";
             } else {
                 counterDiv.innerHTML = `Tổng số con điểm Tốt: ${sum} / ${maxTot}`;
-                counterDiv.className = "alert text-center fw-bold py-2 m-0 alert-success";
+                counterDiv.className = "alert bg-success bg-opacity-10 text-success text-center fw-bold py-2 m-0 border-0 rounded-3";
             }
             window.tempCalculated = { c10: total10, c9: total9, c8: total8, sum: sum, maxTot: maxTot };
         }
@@ -880,7 +1134,6 @@
             const bId = currentTargetBranchId;
             const weekName = document.getElementById('weekSelector').value;
             
-            // Đảm bảo luôn cập nhật lại tổng tính toán mới nhất trước khi lưu
             updateLiveTotal();
 
             let f10 = window.tempCalculated ? window.tempCalculated.c10 : 0;
@@ -897,7 +1150,6 @@
                 alert("Hệ thống đã tự động gọt phần điểm môn học dư thừa do vượt trần thi đua tuần.");
             }
 
-            // Quét toàn bộ dữ liệu môn học thô trong bảng modal
             const rawList = [];
             document.querySelectorAll('#subjectsBody tr').forEach(row => {
                 const subjInput = row.querySelector('.subject-name') || row.querySelector('.sub-name-input');
@@ -915,7 +1167,6 @@
                 }
             });
 
-            // Gửi dữ liệu thô lên API để lưu vào bảng RawScore
             try {
                 await fetch(`/api/raw_scores/${encodeURIComponent(weekName)}/${bId}`, {
                     method: 'POST',
@@ -924,7 +1175,6 @@
                 });
             } catch(e) { console.error("Lỗi lưu điểm gốc:", e); }
 
-            // Đẩy kết quả đã tính toán ra các ô input ẩn/hiện ở bảng chính
             const ratingEl = document.getElementById('detailRating');
             const c8Main = document.querySelector(`input[name="c8_${bId}"]`);
             const c9Main = document.querySelector(`input[name="c9_${bId}"]`);
@@ -935,7 +1185,10 @@
 
             if(ratingEl) {
                 const ratingSelect = document.querySelector(`select[name="rating_${bId}"]`);
-                if(ratingSelect) ratingSelect.value = ratingEl.value;
+                if(ratingSelect) {
+                    ratingSelect.value = ratingEl.value;
+                    updateRowStyle(ratingSelect);
+                }
             }
             if(c8Main) c8Main.value = f8;
             if(c9Main) c9Main.value = f9;
@@ -949,14 +1202,10 @@
                 noteMain.dispatchEvent(new Event('input', { bubbles: true }));
             }
 
-            // Đóng Modal gọn gàng bằng Bootstrap 5
             const modalElement = document.getElementById('detailModal');
             const modalInstance = bootstrap.Modal.getInstance(modalElement);
-            if (modalInstance) {
-                modalInstance.hide();
-            } else {
-                new bootstrap.Modal(modalElement).hide();
-            }
+            if (modalInstance) modalInstance.hide();
+            else new bootstrap.Modal(modalElement).hide();
         }
 
         document.addEventListener('input', function (e) {
@@ -980,7 +1229,8 @@
                 const cong = parseFloat(document.querySelector(`input[name="cong_${bId}"]`).value) || 0;
                 const tru = parseFloat(document.querySelector(`input[name="tru_${bId}"]`).value) || 0;
                 
-                const groupText = ratingSelect.closest('tr').querySelector('.text-muted').innerText;
+                const branchRow = ratingSelect.closest('tr');
+                const groupText = branchRow.getAttribute('data-group');
 
                 let diem_quy_uoc = 0;
                 if (groupText.includes("1")) {
@@ -1000,12 +1250,13 @@
                 let total = truc + diem_xep_лоai + diem_quy_uoc + cong - tru - diem_tru_auto;
 
                 const totalSpan = document.getElementById(`total_${bId}`);
-                totalSpan.innerText = total + " ⏳";
-                totalSpan.className = "fw-bold fs-5 text-warning";
+                if(totalSpan) {
+                    totalSpan.innerText = total.toFixed(1);
+                    autoUpdateRatingText(bId, total);
+                }
             }
         });
 		
-        // HÀM TỰ ĐỘNG QUÉT NGẦM DỮ LIỆU ĐIỂM TUẦN MỖI 10 GIÂY (ĐÃ CHUẨN HÓA ID)
         function startAutoPollingForWeekly() {
             const urlParams = new URLSearchParams(window.location.search);
             const currentWeek = urlParams.get('week') || "{{ current_week }}";
@@ -1028,9 +1279,7 @@
                                 let oldVal = parseFloat(scoreCell.innerText) || 0;
                                 if (oldVal !== item.total_score) {
                                     scoreCell.innerText = item.total_score.toFixed(1);
-                                    scoreCell.style.transition = "color 0.5s";
-                                    scoreCell.style.color = "#198754"; 
-                                    setTimeout(() => { scoreCell.style.color = ""; }, 2000);
+                                    autoUpdateRatingText(item.branch_id, item.total_score);
                                 }
                             }
 
@@ -1046,10 +1295,177 @@
                 }
             }, 10000); 
         }
+		function startAutoPollingForWeekly() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const currentWeek = urlParams.get('week') || "{{ current_week }}";
+            window.hasUnsavedChanges = false; // Biến cờ hiệu
 
+            // Cắm cờ hiệu mỗi khi gõ phím hoặc đổ dữ liệu
+            document.addEventListener('input', function() { window.hasUnsavedChanges = true; });
+
+            setInterval(async () => {
+                if (document.activeElement && (document.activeElement.tagName === 'INPUT' || document.activeElement.tagName === 'TEXTAREA')) return;
+                
+                // NẾU ĐANG ĐỔ FILE HÀNG LOẠT HOẶC VỪA GÕ TAY XONG CHƯA LƯU THÌ DỪNG QUÉT NGẦM
+                if (window.hasUnsavedChanges) return; 
+
+                try {
+                    let response = await fetch(`/api/weekly_scores_json/${encodeURIComponent(currentWeek)}`);
+                    let result = await response.json();
+                    if (result.success && result.data) {
+                        // ... logic cập nhật tự động cũ giữ nguyên ...
+                        result.data.forEach(item => {
+                            let scoreCell = document.getElementById(`total_${item.branch_id}`);
+                            let noteInput = document.querySelector(`input[name="note_${item.branch_id}"]`);
+                            if (scoreCell) {
+                                let oldVal = parseFloat(scoreCell.innerText) || 0;
+                                if (oldVal !== item.total_score) {
+                                    scoreCell.innerText = item.total_score.toFixed(1);
+                                    autoUpdateRatingText(item.branch_id, item.total_score);
+                                }
+                            }
+                            if (noteInput && document.activeElement !== noteInput) noteInput.value = item.note;
+                        });
+                    }
+                } catch (err) {}
+            }, 10000); 
+        }
         document.addEventListener("DOMContentLoaded", () => {
             startAutoPollingForWeekly();
         });	
+		// =========================================================================
+        // HÀM SIÊU TỐC: UPLOAD VÀ XỬ LÝ HÀNG LOẠT SỔ ĐẦU BÀI (ĐÃ VÁ LỖI HIỂN THỊ)
+        // =========================================================================
+        async function uploadMultipleSDB(inputElement) {
+            let files = inputElement.files;
+            if (!files || files.length === 0) return;
+
+            window.hasUnsavedChanges = true; // KHÓA TIẾN TRÌNH QUÉT NGẦM TRÁNH GHI ĐÈ DỮ LIỆU
+
+            let overlay = document.createElement('div');
+            overlay.id = 'batchUploadOverlay';
+            overlay.innerHTML = `
+                <div style="position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.85); z-index:9999; display:flex; flex-direction:column; align-items:center; justify-content:center; color:white;">
+                    <i class="fa-solid fa-gears fa-spin fa-4x mb-4 text-warning"></i>
+                    <h3 class="fw-bold" id="batchProgressText">Đang phân tích 0 / ${files.length} Sổ đầu bài...</h3>
+                    <p class="text-muted mt-2">Vui lòng không đóng trình duyệt!</p>
+                </div>
+            `;
+            document.body.appendChild(overlay);
+
+            let successCount = 0; let failCount = 0; let failLogs = [];
+
+            // Thu thập Bản đồ Lớp (Chuẩn hóa loại bỏ icon và khoảng trắng thừa)
+            let branchMap = {};
+            document.querySelectorAll('.branch-row').forEach(row => {
+                let bNameNode = row.querySelector('.branch-name');
+                let bName = bNameNode.textContent.replace(/[^a-zA-Z0-9]/g, '').toUpperCase();
+                let selectElement = row.querySelector('.select-rating');
+                if (selectElement) {
+                    let bId = selectElement.name.split('_')[1];
+                    let bGroup = row.getAttribute('data-group');
+                    branchMap[bName] = { id: bId, group: bGroup };
+                }
+            });
+
+            const weekName = document.getElementById('weekSelector').value;
+            const maxMon = parseInt(document.getElementById('configMaxMon').value) || 4;
+            const maxTot = parseInt(document.getElementById('configMaxTot').value) || 14;
+
+            for (let i = 0; i < files.length; i++) {
+                document.getElementById('batchProgressText').innerText = `Đang phân tích ${i+1} / ${files.length} Sổ đầu bài...`;
+                let file = files[i];
+                let formData = new FormData();
+                formData.append("excel_file", file);
+                
+                try {
+                    let response = await fetch('/api/parse_sodaubai', { method: 'POST', body: formData });
+                    let result = await response.json();
+
+                    if (result.success && result.branch_name) {
+                        let resultBName = result.branch_name.replace(/[^a-zA-Z0-9]/g, '').toUpperCase();
+                        let branchInfo = branchMap[resultBName];
+
+                        if (branchInfo) {
+                            let bId = branchInfo.id;
+                            let bGroup = branchInfo.group;
+
+                            // 1. Âm thầm gửi điểm gốc (raw_scores) xuống Database
+                            if (result.raw_list && result.raw_list.length > 0) {
+                                await fetch(`/api/raw_scores/${encodeURIComponent(weekName)}/${bId}`, {
+                                    method: 'POST',
+                                    headers: {'Content-Type': 'application/json'},
+                                    body: JSON.stringify({raw_list: result.raw_list})
+                                });
+                            }
+
+                            // 2. Tính toán gọt điểm (Xén trần)
+                            let t10 = 0, t9 = 0, t8 = 0;
+                            if (result.raw_list && result.raw_list.length > 0) {
+                                result.raw_list.forEach(item => {
+                                    let c10 = item.c10 || 0; let c9 = item.c9 || 0; let c8 = item.c8 || 0;
+                                    if (bGroup.includes("1")) c8 = 0;
+                                    let k10 = Math.min(c10, maxMon); let k9 = Math.min(c9, maxMon - k10); let k8 = Math.min(c8, maxMon - k10 - k9);
+                                    t10 += k10; t9 += k9; t8 += k8;
+                                });
+                            } else {
+                                t10 = result.c10 || 0; t9 = result.c9 || 0; t8 = bGroup.includes("1") ? 0 : (result.c8 || 0);
+                            }
+
+                            let sumVal = t10 + t9 + t8;
+                            let excess = sumVal - maxTot;
+                            if(excess > 0) {
+                                let cut8 = Math.min(t8, excess); t8 -= cut8; excess -= cut8;
+                                if(excess > 0) { let cut9 = Math.min(t9, excess); t9 -= cut9; excess -= cut9; }
+                                if(excess > 0) { t10 -= excess; }
+                            }
+
+                            // 3. Bơm điểm vào ô input
+                            let c8Input = document.querySelector(`input[name="c8_${bId}"]`);
+                            let c9Input = document.querySelector(`input[name="c9_${bId}"]`);
+                            let c10Input = document.querySelector(`input[name="c10_${bId}"]`);
+                            let ratingSelect = document.querySelector(`select[name="rating_${bId}"]`);
+                            let noteInput = document.querySelector(`input[name="note_${bId}"]`);
+
+                            if (c8Input) c8Input.value = t8;
+                            if (c9Input) c9Input.value = t9;
+                            
+                            // BẮT BUỘC RA LỆNH TÍNH TỔNG ĐIỂM NGAY CẢ KHI KHÔNG CÓ LỖI (VÁ LỖI HIỂN THỊ)
+                            if (c10Input) {
+                                c10Input.value = t10;
+                                c10Input.dispatchEvent(new Event('input', { bubbles: true })); 
+                            }
+                            
+                            if (ratingSelect) {
+                                ratingSelect.value = result.xep_loai;
+                                updateRowStyle(ratingSelect);
+                            }
+
+                            if (noteInput && result.note) {
+                                let currentVal = noteInput.value.trim();
+                                noteInput.value = currentVal ? `${currentVal} ; ${result.note}` : result.note;
+                                noteInput.dispatchEvent(new Event('input', { bubbles: true }));
+                            }
+
+                            successCount++;
+                        } else {
+                            failCount++; failLogs.push(`- File "${file.name}": Không khớp được với danh sách lớp trên bảng.`);
+                        }
+                    } else {
+                        failCount++; failLogs.push(`- File "${file.name}": ${result.error || 'AI không nhận diện được Lớp.'}`);
+                    }
+                } catch (e) {
+                    failCount++; failLogs.push(`- File "${file.name}": Lỗi kết nối.`);
+                }
+            }
+
+            document.body.removeChild(overlay);
+            inputElement.value = ""; 
+
+            let alertMsg = `🎉 HOÀN TẤT XỬ LÝ HÀNG LOẠT!\n\n✅ Thành công: ${successCount} sổ.\n❌ Thất bại: ${failCount} file.\n\n⚠️ QUAN TRỌNG: Hãy kiểm tra dữ liệu trên bảng và nhấn [Lưu toàn bộ (Ctrl+S)] để chốt số liệu!`;
+            if (failCount > 0) alertMsg += `\n\nChi tiết lỗi:\n${failLogs.join('\n')}`;
+            alert(alertMsg);
+        }
     </script>
 </body>
 </html>

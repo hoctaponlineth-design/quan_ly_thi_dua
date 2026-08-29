@@ -92,13 +92,49 @@
         .btn-modern-warning { background-color: #f59e0b; color: white; }
         .btn-modern-warning:hover { background-color: #d97706; }
 
-        /* TABS HIỆN ĐẠI */
-        .modern-tabs-container { padding: 16px 24px 0 24px; border-bottom: 1px solid var(--border); }
-        .modern-tabs { display: flex; gap: 24px; overflow-x: auto; scrollbar-width: none; margin-bottom: -1px; }
-        .modern-tabs::-webkit-scrollbar { display: none; }
-        .modern-tab { background: none; border: none; padding: 12px 4px; font-size: 14px; font-weight: 600; color: var(--text-muted); border-bottom: 2px solid transparent; white-space: nowrap; transition: all 0.2s; cursor: pointer; display: flex; align-items: center; gap: 8px;}
-        .modern-tab:hover { color: var(--text-main); }
-        .modern-tab.active { color: var(--primary); border-bottom-color: var(--primary); }
+		/* TABS HIỆN ĐẠI DẠNG SCROLLABLE PILLS (NÂNG CẤP) */
+        .modern-tabs-container { 
+            padding: 12px 16px; 
+            background: var(--surface); 
+        }
+        .modern-tabs { 
+            display: flex; 
+            flex-wrap: nowrap !important; /* Ép buộc nằm trên 1 dòng */
+            gap: 8px; /* Khoảng cách giữa các viên thuốc */
+            overflow-x: auto; /* Cho phép vuốt ngang */
+            scrollbar-width: none; /* Ẩn thanh cuộn Firefox */
+            -ms-overflow-style: none; /* Ẩn thanh cuộn IE */
+            padding-bottom: 4px; /* Chừa không gian cho bóng mờ */
+        }
+        .modern-tabs::-webkit-scrollbar { 
+            display: none; /* Ẩn thanh cuộn Chrome/Safari */
+        }
+		.modern-tab { 
+            background: #f1f5f9; 
+            border: 1.5px solid transparent; /* Tăng độ dày viền thành 1.5px để tạo khung nét hơn */
+            border-radius: 20px; 
+            padding: 8px 16px; 
+            font-size: 13px; 
+            font-weight: 600; 
+            color: #475569; 
+            white-space: nowrap; 
+            transition: all 0.3s ease; 
+            cursor: pointer; 
+            display: flex; 
+            align-items: center; 
+            gap: 6px;
+        }
+        .modern-tab:hover { 
+            background: #e2e8f0; 
+            color: var(--text-main);
+        }
+        .modern-tab.active { 
+            background: #eff6ff; 
+            color: var(--primary); 
+            /* 👇 ĐỔ MÀU VIỀN ĐẬM VÀ LÀM NỔI BẬT THEO ĐỀ XUẤT CỦA ĐỒNG CHÍ 👇 */
+            border: 1.5px solid var(--primary); 
+            box-shadow: 0 4px 12px rgba(37,99,235,0.2); /* Hiệu ứng bóng đổ phát sáng màu xanh */
+        }
 
         /* BẢNG DỮ LIỆU DESKTOP */
         .table-responsive-custom { width: 100%; overflow-x: auto; }
@@ -188,6 +224,64 @@
         
         @media (max-width: 480px) {
             .widget-grid { grid-template-columns: 1fr; }
+        }
+
+        /* =========================================
+           THIẾT KẾ BOTTOM NAV BAR (CHỈ HIỆN TRÊN MOBILE)
+           ========================================= */
+        .bottom-nav {
+            display: none;
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            background-color: var(--surface);
+            box-shadow: 0 -4px 20px rgba(0,0,0,0.08);
+            border-radius: 24px 24px 0 0;
+            z-index: 1040;
+            padding: 10px 10px;
+            padding-bottom: max(10px, env(safe-area-inset-bottom));
+            border-top: 1px solid var(--border);
+        }
+        .bottom-nav-item {
+            flex: 1;
+            text-align: center;
+            color: #94a3b8; /* Màu xám nhạt mặc định */
+            text-decoration: none;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.3s ease;
+            background: transparent;
+            border: none;
+            padding: 5px 0;
+        }
+        .bottom-nav-item i {
+            font-size: 22px;
+            margin-bottom: 4px;
+            transition: all 0.3s ease;
+        }
+        .bottom-nav-item span {
+            font-size: 11px;
+            font-weight: 600;
+        }
+        
+        /* Hiệu ứng khi được chọn (Active) */
+        .bottom-nav-item.active {
+            color: #e11d48; /* Màu Đỏ nổi bật */
+        }
+        .bottom-nav-item.active i {
+            transform: translateY(-2px); /* Nảy icon lên một chút */
+        }
+        
+        @media (max-width: 768px) {
+            .bottom-nav {
+                display: flex; /* Chỉ kích hoạt trên màn hình điện thoại */
+            }
+            .main-content {
+                padding-bottom: 85px !important; /* Đẩy nội dung lên để không bị menu che khuất */
+            }
         }
     </style>
 </head>
@@ -306,7 +400,7 @@
                 <ul class="nav modern-tabs" id="classDataTabs" role="tablist">
                     <li class="nav-item" role="presentation">
                         <button class="modern-tab active" data-bs-toggle="tab" data-bs-target="#scores-pane" type="button" role="tab">
-                            <i class="fa-solid fa-chart-line"></i> Điểm Thi Đua
+                            <i class="fa-solid fa-chart-line"></i> Điểm thi đua Tuần
                         </button>
                     </li>
                     <li class="nav-item" role="presentation">
@@ -316,12 +410,12 @@
                     </li>
                     <li class="nav-item" role="presentation">
                         <button class="modern-tab" data-bs-toggle="tab" data-bs-target="#monitor-pane" type="button" role="tab">
-                            <i class="fa-solid fa-eye"></i> Sao Đỏ Chấm Lớp
+                            <i class="fa-solid fa-eye"></i> Sao Đỏ TRỰC Lớp tôi
                         </button>
                     </li>
                     <li class="nav-item" role="presentation">
                         <button class="modern-tab" data-bs-toggle="tab" data-bs-target="#assignments-pane" type="button" role="tab">
-                            <i class="fa-solid fa-user-shield"></i> HS Đi Trực
+                            <i class="fa-solid fa-user-shield"></i> Sao Đỏ Lớp tôi đi trực
                         </button>
                     </li>
 					<li class="nav-item" role="presentation">
@@ -431,7 +525,7 @@
                                         {% if is_gvcn and not sc.is_locked %}
                                             {% if sc.is_appeal_expired %}
                                                 <div class="badge-soft mt-2 w-100 justify-content-center py-2" style="background: #f1f5f9; color: #94a3b8; border: 1px dashed #cbd5e1; cursor: not-allowed;" title="Đã quá 3 ngày kể từ khi công bố điểm">
-                                                    <i class="fa-solid fa-clock-rotate-left me-1"></i> Quá hạn phúc khảo (3 ngày)
+                                                    <i class="fa-solid fa-clock-rotate-left me-1"></i> Quá hạn phúc khảo
                                                 </div>
                                             {% elif sc.has_appealed_today %}
                                                 <div class="badge-soft mt-2 w-100 justify-content-center py-2 text-warning fw-bold" style="background: #fffbeb; border: 1px dashed #fcd34d; cursor: not-allowed;">
@@ -491,12 +585,12 @@
                         <ul class="nav nav-pills nav-fill mb-3 bg-white p-1 rounded shadow-sm border" id="groupTabs" role="tablist">
                             <li class="nav-item" role="presentation">
                                 <button class="nav-link active fw-bold py-2" id="group1-tab" data-bs-toggle="pill" data-bs-target="#group1Pane" type="button" role="tab">
-                                    🏆 Nhóm 1 (Khối chuyên/chọn)
+                                    🏆 Nhóm 1
                                 </button>
                             </li>
                             <li class="nav-item" role="presentation">
                                 <button class="nav-link fw-bold py-2" id="group2-tab" data-bs-toggle="pill" data-bs-target="#group2Pane" type="button" role="tab">
-                                    🏅 Nhóm 2 (Khối thường)
+                                    🏅 Nhóm 2
                                 </button>
                             </li>
                         </ul>
@@ -548,7 +642,7 @@
                 <div class="tab-pane fade" id="monitor-pane" role="tabpanel">
                     <div class="p-4 pb-0">
                         <div class="alert alert-primary bg-opacity-10 border-0 text-primary fw-bold rounded-3 small mb-0 d-flex gap-2">
-                            <i class="fa-solid fa-circle-info mt-1"></i> Danh sách các đội viên Sao đỏ được phân công giám sát lớp {{ selected_branch.name }}, kèm theo tổng điểm thi đua tuần tương ứng.
+                            <i class="fa-solid fa-circle-info mt-1"></i> Danh sách Sao đỏ đã được phân công giám sát lớp {{ selected_branch.name }}, kèm theo tổng điểm thi đua tuần tương ứng.
                         </div>
                     </div>
                     <div class="table-responsive-custom mt-3">
@@ -623,7 +717,7 @@
                             <thead>
                                 <tr>
                                     <th>Tuần</th>
-                                    <th>Họ và tên Học sinh (SĐ)</th>
+                                    <th>Họ và tên Sao đỏ</th>
                                     <th>Ca trực & Thời gian</th>
                                     <th>Các lớp phụ trách / Nhiệm vụ</th>
                                 </tr>
@@ -722,7 +816,7 @@
                         <div class="widget-label mb-2">Đang phúc khảo cho:</div>
                         <input type="text" class="form-control fw-bold text-primary bg-primary bg-opacity-10 border-0 mb-4" id="appealWeekName" readonly style="font-size: 15px; padding: 12px 16px; border-radius: 12px;">
                         
-                        <div class="widget-label mb-2">Nội dung giải trình:</div>
+                        <div class="widget-label mb-2">Nội dung phúc khảo:</div>
                         <textarea class="form-control" name="reason" rows="4" placeholder="Nhập lý do..." required style="border-radius: 12px; resize: none; padding: 16px; font-size: 14px; background: #f8fafc; border: 1px solid var(--border);"></textarea>
                     </div>
                     <div class="modal-footer border-0 px-4 pb-4 pt-0">
@@ -942,6 +1036,32 @@
                 </div>
             </div>
         </div>
+    </div>
+
+		<!-- =========================================
+         THANH ĐIỀU HƯỚNG DƯỚI ĐÁY (BOTTOM NAV) - BẢN NATIVE API
+         ========================================= -->
+    <div class="bottom-nav d-md-none" id="mobileBottomNav" role="tablist">
+        <button class="bottom-nav-item active" data-bs-toggle="tab" data-bs-target="#scores-pane" type="button" role="tab">
+            <i class="fa-solid fa-house"></i>
+            <span>Trang chủ</span>
+        </button>
+        
+        <button class="bottom-nav-item" data-bs-toggle="tab" data-bs-target="#leaderboard-pane" type="button" role="tab" onclick="if(typeof loadSchoolLeaderboard === 'function') loadSchoolLeaderboard();">
+            <i class="fa-solid fa-trophy"></i>
+            <span>Xếp hạng</span>
+        </button>
+        
+        <button class="bottom-nav-item" data-bs-toggle="tab" data-bs-target="#violation-bank-pane" type="button" role="tab">
+            <i class="fa-solid fa-scale-balanced"></i>
+            <span>Tra cứu</span>
+        </button>
+        
+        <!-- NÚT ĐĂNG XUẤT ĐƯỢC ĐƯA RA NGOÀI MÀN HÌNH ĐIỆN THOẠI -->
+        <button class="bottom-nav-item" type="button" onclick="window.location.href='/logout'">
+            <i class="fa-solid fa-right-from-bracket"></i>
+            <span>Đăng xuất</span>
+        </button>
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
@@ -1328,6 +1448,39 @@
                 btn.innerHTML = '<i class="fa-solid fa-floppy-disk me-1"></i> Lưu Thay Đổi';
             }
         }
+    </script>
+
+<script>
+<script>
+        // ======================================================
+        // ĐỒNG BỘ HIỆU ỨNG MÀU SẮC GIỮA TAB TRÊN VÀ MENU DƯỚI
+        // ======================================================
+        document.addEventListener("DOMContentLoaded", function() {
+            // Lắng nghe sự kiện chuyển Tab mặc định của hệ thống
+            var triggerTabList = [].slice.call(document.querySelectorAll('button[data-bs-toggle="tab"]'));
+            
+            triggerTabList.forEach(function (tabEl) {
+                tabEl.addEventListener('shown.bs.tab', function (event) {
+                    // 1. Lấy ID của Tab vừa được mở
+                    var targetId = event.target.getAttribute('data-bs-target');
+                    
+                    // 2. Xóa hiệu ứng active ở TẤT CẢ các nút (cả trên và dưới)
+                    document.querySelectorAll('.modern-tab, .bottom-nav-item').forEach(btn => {
+                        if (btn.getAttribute('data-bs-toggle') === 'tab') {
+                            btn.classList.remove('active');
+                        }
+                    });
+
+                    // 3. Bật hiệu ứng active cho ĐÚNG các nút trỏ về Tab đang mở
+                    document.querySelectorAll(`button[data-bs-target="${targetId}"]`).forEach(btn => {
+                        btn.classList.add('active');
+                    });
+                    
+                    // 4. Cuộn mượt mà lên đầu trang để GVCN dễ đọc nội dung
+                    window.scrollTo({ top: 0, behavior: 'smooth' });
+                });
+            });
+        });
     </script>
 </body>
 </html>

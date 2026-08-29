@@ -42,7 +42,7 @@
         {% if session.get('role') not in ['Giáo viên chủ nhiệm', 'Ban Giám hiệu'] %}
         
         <!-- NHÓM 1: QUẢN LÝ CHUNG -->
-        <div class="text-info small fw-bold mt-2 mb-1 px-3" style="font-size: 11px; letter-spacing: 1px;">_____ 📁 QUẢN LÝ CHUNG _____</div>
+        <div class="text-info small fw-bold mt-2 mb-1 px-3" style="font-size: 16px; letter-spacing: 1px;">📁 QUẢN LÝ CHUNG</div>
         <li><a href="/dashboard" class="nav-link"><i class="fa-solid fa-chart-pie me-2"></i> Tổng quan</a></li>
         <li><a href="/branches" class="nav-link"><i class="fa-solid fa-school me-2"></i> Quản lý Chi đoàn</a></li>
         
@@ -66,7 +66,7 @@
         <li><a href="/violation-categories" class="nav-link"><i class="fa-solid fa-scale-unbalanced me-2"></i> Thư viện Lỗi tự động</a></li>
 
         <!-- NHÓM 2: THI ĐUA -->
-        <div class="text-info small fw-bold mt-3 mb-1 px-3" style="font-size: 11px; letter-spacing: 1px;">________ 📝 THI ĐUA ________</div>
+        <div class="text-info small fw-bold mt-3 mb-1 px-3" style="font-size: 16px; letter-spacing: 1px;">___📝 THI ĐUA ___</div>
         <li><a href="/weekly" class="nav-link"><i class="fa-solid fa-calendar-week me-2"></i> Điểm thi đua Tuần</a></li>
         <li><a href="/monthly" class="nav-link"><i class="fa-solid fa-award me-2"></i> Thi đua Tháng</a></li>
         <li><a href="/semester" class="nav-link"><i class="fa-solid fa-graduation-cap me-2"></i> Thi đua Học kỳ</a></li>
@@ -75,8 +75,8 @@
         {% endif %} <!-- KẾT THÚC VÙNG QUẢN LÝ & THI ĐUA -->
 
 		<!-- NHÓM 3: BÁO CÁO & ĐIỀU HÀNH (HIỂN THỊ CHO CẢ ADMIN, BGH VÀ GVCN) -->
-        <div class="text-info small fw-bold mt-3 mb-1 px-3" style="font-size: 11px; letter-spacing: 1px;">________ 📊 BÁO CÁO ________</div>
-        
+        <div class="text-info small fw-bold mt-3 mb-1 px-3" style="font-size: 16px; letter-spacing: 1px;">__📊 BÁO CÁO__</div>
+       
         {% if session.get('role') != 'Giáo viên chủ nhiệm' %}
         <li><a href="/reports" class="nav-link"><i class="fa-solid fa-chart-line me-2"></i> Báo cáo & Thống kê</a></li>
         {% endif %}
@@ -102,7 +102,7 @@
 
         <!-- NHÓM 4: HỆ THỐNG (CHỈ DÀNH CHO QUẢN TRỊ VIÊN / ADMIN) -->
         {% if session.get('role') in ['Quản trị viên', 'Admin'] %}
-        <div class="text-info small fw-bold mt-3 mb-1 px-3" style="font-size: 11px; letter-spacing: 1px;">________ ⚙️ HỆ THỐNG ________</div>
+        <div class="text-info small fw-bold mt-3 mb-1 px-3" style="font-size: 16px; letter-spacing: 1px;">_⚙️ HỆ THỐNG _</div>
         <li><a href="/school-years" class="nav-link"><i class="fa-solid fa-calendar-check me-2"></i> Cấu hình Năm học</a></li>
         <li><a href="/users" class="nav-link"><i class="fa-solid fa-users-gear me-2"></i> Quản lý Người dùng</a></li>
         
