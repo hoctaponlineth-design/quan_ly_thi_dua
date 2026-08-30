@@ -62,11 +62,6 @@
             display: block;
         }
         
-        /* HEADER MOBILE */
-        .mobile-header { display: none; background: var(--surface); color: var(--text-main); padding: 15px 20px; padding-top: max(15px, env(safe-area-inset-top)); position: sticky; top: 0; z-index: 1030; box-shadow: var(--shadow-sm); align-items: center; justify-content: space-between; border-bottom: 1px solid var(--border); width: 100%;}
-        .mobile-header .app-title { font-size: 18px; font-weight: 700; margin: 0; white-space: nowrap;}
-        .mobile-header .btn-menu { color: var(--text-main); font-size: 22px; padding: 5px 10px; border: none; background: none; cursor: pointer;}
-
         /* KHOẢNG TRẮNG & THẺ CHUNG */
         .glass-card { background: var(--surface); border-radius: var(--radius-lg); box-shadow: var(--shadow-sm); border: 1px solid var(--border); margin-bottom: 24px; overflow: hidden; display: block;}
         .card-header-modern { padding: 20px 24px; border-bottom: 1px solid var(--border); background: var(--surface); display: flex; justify-content: space-between; align-items: center; }
@@ -92,7 +87,7 @@
         .btn-modern-warning { background-color: #f59e0b; color: white; }
         .btn-modern-warning:hover { background-color: #d97706; }
 
-		/* TABS HIỆN ĐẠI DẠNG SCROLLABLE PILLS (NÂNG CẤP) */
+		/* TABS HIỆN ĐẠI DẠNG SCROLLABLE PILLS */
         .modern-tabs-container { 
             padding: 12px 16px; 
             background: var(--surface); 
@@ -111,7 +106,7 @@
         }
 		.modern-tab { 
             background: #f1f5f9; 
-            border: 1.5px solid transparent; /* Tăng độ dày viền thành 1.5px để tạo khung nét hơn */
+            border: 1.5px solid transparent; 
             border-radius: 20px; 
             padding: 8px 16px; 
             font-size: 13px; 
@@ -131,9 +126,8 @@
         .modern-tab.active { 
             background: #eff6ff; 
             color: var(--primary); 
-            /* 👇 ĐỔ MÀU VIỀN ĐẬM VÀ LÀM NỔI BẬT THEO ĐỀ XUẤT CỦA ĐỒNG CHÍ 👇 */
             border: 1.5px solid var(--primary); 
-            box-shadow: 0 4px 12px rgba(37,99,235,0.2); /* Hiệu ứng bóng đổ phát sáng màu xanh */
+            box-shadow: 0 4px 12px rgba(37,99,235,0.2); 
         }
 
         /* BẢNG DỮ LIỆU DESKTOP */
@@ -153,77 +147,137 @@
         .badge-secondary { background: #f1f5f9; color: #475569; }
 
         /* =========================================
+           BANNER ĐỎ DÀNH CHO APP MOBILE (TỐI ƯU KHÔNG GIAN)
+           ========================================= */
+        .mobile-red-banner {
+            background: linear-gradient(135deg, #e11d48, #be123c);
+            color: white;
+            border-radius: 0 0 24px 24px; /* Chỉ bo tròn 2 góc dưới, ốp sát trần */
+            padding: 12px 20px;
+            padding-top: max(15px, env(safe-area-inset-top)); /* Chừa chỗ cho camera (Tai thỏ) */
+            box-shadow: 0 6px 15px rgba(225, 29, 72, 0.3);
+            display: none; /* Ẩn trên máy tính */
+            flex-direction: row; /* Dàn hàng ngang thay vì dọc */
+            align-items: center;
+            justify-content: space-between; /* Đẩy chữ và nút menu ra 2 mép */
+            width: 100%;
+        }
+        
+        .mobile-red-banner .banner-title-wrapper {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        
+        .mobile-red-banner i.fa-shield-halved {
+            font-size: 28px; /* Thu nhỏ icon lại một chút */
+        }
+        
+        .mobile-red-banner h2 {
+            font-size: 18px; /* Thu nhỏ tiêu đề chính */
+            font-weight: 800;
+            margin: 0;
+            letter-spacing: 0.5px;
+        }
+        
+        .mobile-red-banner p {
+            font-size: 12px; /* Thu nhỏ phụ đề */
+            font-weight: 500;
+            margin: 0;
+            opacity: 0.9;
+        }
+
+        .mobile-red-banner .btn-menu {
+            color: white;
+            background: rgba(255,255,255,0.15); /* Tạo viền mờ cho nút bấm */
+            border: none;
+            border-radius: 10px;
+            width: 40px;
+            height: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        /* Tắt thanh trắng thừa thãi */
+        .mobile-header { display: none !important; }
+
+        /* =========================================
            MOBILE RESPONSIVE (SỬA LỖI ÉP KHUNG)
            ========================================= */
         @media (max-width: 1200px) {
+            .mobile-red-banner { display: flex; }
+            
+            .mobile-sticky-wrapper {
+                position: fixed;
+                top: 0; left: 0; width: 100%;
+                z-index: 1030;
+                background-color: transparent; /* Bỏ lót nền vì Banner đã ốp sát trần */
+            }
+
             #desktopSidebar { transform: translateX(-100%) !important; box-shadow: 10px 0 30px rgba(0,0,0,0.3); }
             #desktopSidebar.show { transform: translateX(0) !important; }
             
             .main-content { 
-                margin-left: 0 !important; 
-                width: 100% !important; 
-                max-width: 100vw !important;
+                margin-left: 0 !important; width: 100% !important; max-width: 100vw !important;
                 padding: 0 !important; 
+                padding-top: 90px !important; /* GIẢM ĐƯỢC 1 NỬA KHOẢNG TRỐNG (Từ 180px -> 90px) */
                 display: block !important;
             }
             
-            .mobile-header { display: flex !important; margin-bottom: 15px;}
-            
-            .glass-card, .widget-grid, .empty-state-container { 
-                margin-left: 15px !important; 
-                margin-right: 15px !important; 
-                width: calc(100% - 30px) !important; 
-            }
-            
+            .glass-card, .widget-grid, .empty-state-container { margin-left: 15px !important; margin-right: 15px !important; width: calc(100% - 30px) !important; }
             .widget-grid { grid-template-columns: 1fr 1fr; gap: 12px;}
-            
             .table-modern thead { display: none !important; }
             .table-modern tbody, .table-modern tr, .table-modern td { display: block !important; width: 100% !important; box-sizing: border-box !important; }
             .table-responsive-custom { padding: 15px; background: #f0f2f5;}
-            
-            .table-modern tr { 
-                background: var(--surface); 
-                border-radius: var(--radius-md); 
-                box-shadow: var(--shadow-sm); 
-                margin-bottom: 16px; 
-                border: 1px solid var(--border);
-            }
-            
-            .table-modern td { 
-                padding: 12px 16px !important; 
-                display: flex !important; 
-                justify-content: space-between !important; 
-                align-items: center !important; 
-                border-bottom: 1px solid #f1f5f9 !important; 
-                text-align: right !important;
-            }
-            
-            .table-modern td::before { 
-                content: attr(data-label); 
-                font-size: 12px; 
-                font-weight: 600; 
-                color: var(--text-muted); 
-                text-transform: uppercase; 
-                margin-right: 15px;
-                flex-shrink: 0;
-            }
-
-            .table-modern td.mobile-header-row {
-                background: #f8fafc !important;
-                border-bottom: 2px solid var(--border) !important;
-            }
-            
-            .table-modern td.col-details { 
-                display: block !important; 
-                text-align: left !important; 
-                border-bottom: none !important;
-                background: #ffffff !important;
-            }
+            .table-modern tr { background: var(--surface); border-radius: var(--radius-md); box-shadow: var(--shadow-sm); margin-bottom: 16px; border: 1px solid var(--border);}
+            .table-modern td { padding: 12px 16px !important; display: flex !important; justify-content: space-between !important; align-items: center !important; border-bottom: 1px solid #f1f5f9 !important; text-align: right !important;}
+            .table-modern td::before { content: attr(data-label); font-size: 12px; font-weight: 600; color: var(--text-muted); text-transform: uppercase; margin-right: 15px; flex-shrink: 0;}
+            .table-modern td.mobile-header-row { background: #f8fafc !important; border-bottom: 2px solid var(--border) !important;}
+            .table-modern td.col-details { display: block !important; text-align: left !important; border-bottom: none !important; background: #ffffff !important;}
             .table-modern td.col-details::before { display: block !important; margin-bottom: 8px !important; }
         }
         
-        @media (max-width: 480px) {
-            .widget-grid { grid-template-columns: 1fr; }
+		@media (max-width: 480px) {
+            /* [BẢN VÁ]: BỐ CỤC 2x2 CHO WIDGET TRÊN ĐIỆN THOẠI (TIẾT KIỆM 50% CHIỀU CAO) */
+            .widget-grid { 
+                grid-template-columns: 1fr 1fr; /* Ép thành 2 cột */
+                gap: 10px; /* Thu hẹp khoảng cách giữa các thẻ */
+            }
+            .widget-card { 
+                padding: 12px 8px; 
+                gap: 8px; 
+                flex-direction: column; /* Chuyển icon lên trên, chữ xuống dưới */
+                align-items: center; 
+                text-align: center; 
+                border-radius: 14px;
+            }
+            .widget-icon { 
+                width: 36px; 
+                height: 36px; 
+                font-size: 16px; 
+            }
+            .widget-content {
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                width: 100%;
+            }
+            .widget-label { 
+                font-size: 10px; 
+                margin-bottom: 4px; 
+                letter-spacing: 0; 
+                text-align: center;
+            }
+            .widget-value { 
+                font-size: 13px; 
+                width: 100%;
+                text-align: center;
+            }
+            .widget-sub { 
+                font-size: 11px; 
+                margin-top: 3px; 
+            }
         }
 
         /* =========================================
@@ -297,52 +351,76 @@
     <!-- MAIN CONTENT -->
     <div class="main-content">
         
-        <!-- HEADER MOBILE -->
-        <div class="mobile-header">
-            <div class="d-flex align-items-center gap-2">
-                <i class="fa-solid fa-graduation-cap text-primary fs-4"></i>
-                <h1 class="app-title">Hồ Sơ Lớp</h1>
+        <!-- ======================================================== -->
+        <!-- WRAPPER CỐ ĐỊNH BANNER KHI CUỘN (TỐI ƯU KHÔNG GIAN)      -->
+        <!-- ======================================================== -->
+        <div class="mobile-sticky-wrapper">
+            <!-- BANNER ĐỎ TRÊN MOBILE (ĐÃ TÍCH HỢP MENU) -->
+            <div class="mobile-red-banner">
+                <div class="banner-title-wrapper">
+                    <i class="fa-solid fa-shield-halved"></i>
+                    <div>
+                        <h2>HỆ THỐNG GVCN - QL THI ĐUA</h2>
+                        <p>Design:🏆 Cô Thùy Tiên - Thầy Đức Anh 🏆 </p>
+                    </div>
+                </div>
+                
+                <!-- NÚT MENU ĐƯỢC NHÚNG VÀO GÓC PHẢI BANNER ĐỎ -->
+                <button class="btn-menu" onclick="document.getElementById('desktopSidebar').classList.toggle('show')">
+                    <i class="fa-solid fa-bars fs-4"></i>
+                </button>
             </div>
-            <button class="btn-menu" onclick="document.getElementById('desktopSidebar').classList.toggle('show')">
-                <i class="fa-solid fa-bars"></i>
-            </button>
         </div>
 
-        <!-- BỘ LỌC TÌM KIẾM -->
-        <div class="glass-card">
-            <div class="card-header-modern">
+		<!-- BỘ LỌC TÌM KIẾM VÀ HÀNH ĐỘNG (ĐÃ TỐI ƯU KHÔNG GIAN) -->
+        <div class="glass-card mb-3">
+            <div class="card-header-modern py-3">
                 <h2 class="card-title-modern"><i class="fa-solid fa-magnifying-glass text-primary"></i> Tra Cứu Dữ Liệu</h2>
                 <div class="badge-soft badge-success d-none d-md-flex">
                     {% if active_year %} <i class="fa-solid fa-calendar-check"></i> NH: {{ active_year.name }} {% else %} Chưa kích hoạt {% endif %}
                 </div>
             </div>
-            <div class="filter-section">
+            
+            <!-- Dùng p-3 thay vì filter-section để bóp nhỏ viền trắng -->
+            <div class="p-3">
                 {% with messages = get_flashed_messages(with_categories=true) %}
                     {% if messages %}
                         {% for category, message in messages %}
-                            <div class="alert alert-{{ 'success' if category == 'success' else 'danger' }} bg-opacity-10 border-0 fw-bold rounded-3 mb-3 d-flex align-items-center gap-2">
+                            <div class="alert alert-{{ 'success' if category == 'success' else 'danger' }} bg-opacity-10 border-0 fw-bold rounded-3 mb-2 d-flex align-items-center gap-2" style="font-size: 14px; padding: 10px;">
                                 <i class="fa-solid fa-circle-info"></i> {{ message }}
                             </div>
                         {% endfor %}
                     {% endif %}
                 {% endwith %}
 
-                <form method="GET" action="/class-dashboard" class="row g-3 align-items-end w-100 m-0">
-                    <div class="col-12 col-md-8 px-0 pe-md-2">
-                        <label class="widget-label d-block">Lớp / Chi đoàn</label>
-                        <select class="form-select w-100 form-select-modern" name="branch_id" onchange="this.form.submit()" {% if is_gvcn %}disabled{% endif %}>
+                <form method="GET" action="/class-dashboard" class="row g-2 align-items-end w-100 m-0">
+                    
+                    <!-- 1. CỘT CHỌN LỚP (Bóp padding nhỏ lại) -->
+                    <div class="col-12 col-md-6 px-0 pe-md-2">
+                        <label class="widget-label d-block mb-1">Lớp / Chi đoàn</label>
+						<select class="form-select w-100 form-select-modern py-2" name="branch_id" onchange="this.form.submit()" {% if is_gvcn %}disabled{% endif %}>
                             {% for b in branches %}
                                 <option value="{{ b.id }}" {% if selected_branch and selected_branch.id == b.id %}selected{% endif %}>
-                                    Lớp {{ b.name }} (Nhóm: {{ b.group }})
+                                    Lớp {{ b.name }} ({{ b.group }})
                                 </option>
                             {% endfor %}
                         </select>
                     </div>
-                    <div class="col-12 col-md-4 text-md-end px-0 ps-md-2 mt-3 mt-md-0">
+                    
+                    <!-- 2. CỘT NÚT BẤM (Gom 2 nút thành 1 hàng ngang trên điện thoại) -->
+                    <div class="col-12 col-md-6 px-0 ps-md-2 mt-2 mt-md-0 d-flex gap-2">
                         {% if selected_branch %}
-                            <a href="/preview_class_dashboard/{{ selected_branch.id }}" class="btn-modern btn-modern-warning w-100 text-decoration-none shadow-sm">
+                            <!-- Nút Xuất PDF -->
+                            <a href="/preview_class_dashboard/{{ selected_branch.id }}" class="btn-modern btn-modern-warning w-50 shadow-sm py-2 px-1 text-decoration-none text-center" style="font-size: 13px;">
                                 <i class="fa-solid fa-file-pdf"></i> Xuất Hồ Sơ
                             </a>
+                            
+                            <!-- Nút Cập nhật thông tin (Đã đổi text ngắn gọn hơn) -->
+                            {% if is_gvcn or session.get('role') in ['Quản trị viên', 'Admin', 'Bí thư Đoàn trường'] %}
+                            <button type="button" class="btn-modern btn-modern-primary w-50 shadow-sm py-2 px-1 text-center" style="font-size: 13px;" onclick="openEditBranchModal()">
+                                <i class="fa-solid fa-user-pen"></i> Sửa Thông Tin
+                            </button>
+                            {% endif %}
                         {% endif %}
                     </div>
                 </form>
@@ -350,15 +428,6 @@
         </div>
 
         {% if selected_branch %}
-        <!-- NÚT CHỈNH SỬA THÔNG TIN -->
-        {% if is_gvcn or session.get('role') in ['Quản trị viên', 'Admin', 'Bí thư Đoàn trường'] %}
-        <div class="d-flex justify-content-end mb-3 me-2">
-            <button class="btn-modern btn-modern-primary shadow-sm py-2" onclick="openEditBranchModal()">
-                <i class="fa-solid fa-pen-to-square me-2"></i> Cập nhật Thông tin Liên hệ
-            </button>
-        </div>
-        {% endif %}
-        
         <!-- WIDGETS THÔNG TIN -->
         <div class="widget-grid">
             <div class="widget-card">
@@ -745,7 +814,7 @@
                     </div>
                 </div>
                 
-                <!-- CODE BỔ SUNG: KHỐI NỘI DUNG TAB 4 (NGÂN HÀNG LỖI) -->
+                <!-- KHỐI NỘI DUNG TAB 4 (NGÂN HÀNG LỖI) -->
                 <div class="tab-pane fade" id="violation-bank-pane" role="tabpanel">
                     <div class="p-4 pb-0">
                         <div class="alert alert-secondary bg-opacity-10 border-0 text-secondary fw-bold rounded-3 small mb-0 d-flex gap-2">
@@ -785,7 +854,6 @@
                         </table>
                     </div>
                 </div>
-                <!-- KẾT THÚC CODE BỔ SUNG -->
 
             </div>
         </div>
@@ -1008,7 +1076,15 @@
                 <div class="modal-body p-4">
                     <input type="hidden" id="editBranchId" value="{{ selected_branch.id }}">
                     
-                    <h6 class="fw-bold text-secondary mb-3"><i class="fa-solid fa-chalkboard-user me-2"></i>Thông tin Giáo viên chủ nhiệm</h6>
+                    <!-- [BỔ SUNG]: KHỐI NHẬP SĨ SỐ LỚP -->
+                    <h6 class="fw-bold text-secondary mb-3"><i class="fa-solid fa-users me-2"></i>Thông tin chung</h6>
+                    <div class="mb-4">
+                        <label class="form-label fw-bold small text-muted">Sĩ số lớp (Hiện tại: {{ selected_branch.si_so }} HS):</label>
+                        <input type="number" class="form-control fw-bold text-primary" id="editSiSo" value="{{ selected_branch.si_so or '' }}" placeholder="VD: 45">
+                    </div>
+                    <!-- ============================ -->
+
+                    <h6 class="fw-bold text-secondary mb-3 border-top pt-3"><i class="fa-solid fa-chalkboard-user me-2"></i>Thông tin Giáo viên chủ nhiệm</h6>
                     <div class="mb-3">
                         <label class="form-label fw-bold small text-muted">Họ và Tên GVCN:</label>
                         <input type="text" class="form-control fw-bold text-primary" id="editGvcnName" value="{{ selected_branch.gvcn or '' }}" placeholder="VD: Nguyễn Văn A">
@@ -1038,7 +1114,7 @@
         </div>
     </div>
 
-		<!-- =========================================
+	<!-- =========================================
          THANH ĐIỀU HƯỚNG DƯỚI ĐÁY (BOTTOM NAV) - BẢN NATIVE API
          ========================================= -->
     <div class="bottom-nav d-md-none" id="mobileBottomNav" role="tablist">
@@ -1351,9 +1427,9 @@
 
         document.addEventListener('click', function(event) {
             const sidebar = document.getElementById('desktopSidebar');
-            const toggleBtn = document.querySelector('.mobile-header .btn-menu');
+            const toggleBtn = document.querySelector('.mobile-header .btn-menu') || document.querySelector('.mobile-red-banner .btn-menu');
             if (window.innerWidth <= 1200 && sidebar && sidebar.classList.contains('show')) {
-                if (!sidebar.contains(event.target) && !toggleBtn.contains(event.target)) {
+                if (!sidebar.contains(event.target) && (!toggleBtn || !toggleBtn.contains(event.target))) {
                     sidebar.classList.remove('show');
                 }
             }
@@ -1420,6 +1496,7 @@
 
             const payload = {
                 branch_id: document.getElementById('editBranchId').value,
+				si_so: document.getElementById('editSiSo').value,
                 gvcn: document.getElementById('editGvcnName').value,
                 phone_gvcn: document.getElementById('editGvcnPhone').value,
                 class_monitor: document.getElementById('editMonitorName').value,
@@ -1450,8 +1527,7 @@
         }
     </script>
 
-<script>
-<script>
+    <script>
         // ======================================================
         // ĐỒNG BỘ HIỆU ỨNG MÀU SẮC GIỮA TAB TRÊN VÀ MENU DƯỚI
         // ======================================================
@@ -1476,8 +1552,6 @@
                         btn.classList.add('active');
                     });
                     
-                    // 4. Cuộn mượt mà lên đầu trang để GVCN dễ đọc nội dung
-                    window.scrollTo({ top: 0, behavior: 'smooth' });
                 });
             });
         });
