@@ -7248,6 +7248,15 @@ def update_branch_info():
             branch.class_monitor = data.get('class_monitor', '').strip()
             branch.phone_monitor = data.get('phone_monitor', '').strip()
             
+            # --- [BỔ SUNG VÀ VÁ LỖI]: LƯU SĨ SỐ AN TOÀN ---
+            si_so_val = data.get('si_so')
+            if si_so_val is not None and str(si_so_val).strip() != "":
+                try:
+                    branch.si_so = int(si_so_val)
+                except ValueError:
+                    pass # Bỏ qua nếu dữ liệu đầu vào không phải là số
+            # -----------------------------------------------
+            
             # Bọc bảo vệ hàm log để chắc chắn không gây sập nếu chưa được định nghĩa
             try:
                 log_system_action("CẬP NHẬT HỒ SƠ", f"Cập nhật thông tin liên hệ lớp {branch.name}")
