@@ -6,6 +6,51 @@ from datetime import datetime
 import io
 import re
 
+import base64
+import os
+import time
+
+def process_and_save_evidence(base64_string, branch_id, week_name):
+    """Hàm hứng mảng Base64, giải mã thành nhiều ảnh và lưu nối tiếp bằng dấu |"""
+    if not base64_string or base64_string.strip() in ["", "[]"]:
+        return None
+        
+    try:
+        import json
+        import time
+        import base64
+        import os
+        
+        # Kiểm tra xem có phải mảng JSON không (từ PWA gửi lên nhiều ảnh)
+        if base64_string.startswith('['):
+            base64_list = json.loads(base64_string)
+        else:
+            base64_list = [base64_string]
+            
+        saved_paths = []
+        upload_folder = os.path.join('static', 'uploads', 'evidences')
+        os.makedirs(upload_folder, exist_ok=True)
+        
+        for idx, b64 in enumerate(base64_list):
+            if not b64: continue
+            if ',' in b64:
+                b64 = b64.split(',')[1]
+            b64 = b64 + '=' * (-len(b64) % 4)
+            
+            timestamp = int(time.time())
+            filename = f"evid_{week_name}_b{branch_id}_{timestamp}_{idx}.jpg"
+            filepath = os.path.join(upload_folder, filename)
+            
+            with open(filepath, "wb") as fh:
+                fh.write(base64.b64decode(b64))
+                
+            saved_paths.append(f"/static/uploads/evidences/{filename}")
+            
+        return "|".join(saved_paths) if saved_paths else None
+    except Exception as e:
+        print(f"❌ LỖI GIẢI MÃ ẢNH MINH CHỨNG: {str(e)}")
+        return None
+    
 from flask import Flask, render_template, request, redirect, url_for, flash, session, send_file
 import openpyxl
 from openpyxl.styles import Font, Alignment, Border, Side, PatternFill
@@ -137,10 +182,10 @@ def restrict_access():
         'mobile_sao_do', '', 
         'quick_log_violation_form', 'handle_raw_scores',
         'sao_do_quick_submit_form', 'submit_mobile_sao_do',
-        'api_submit_evaluation'
+        'api_submit_evaluation',
+        'export_filtered_blacklist' # [BỔ SUNG]: Cho phép Sao đỏ xuất file bản lọc nếu cần
     ]
 
-    # [MỚI NHẤT]: DANH SÁCH ĐƯỜNG DẪN DÀNH RIÊNG CHO BGH (CHỈ XEM BÁO CÁO & ĐIỀU HÀNH)
     allowed_for_bgh = [
         'login', 'logout', 'ping', 'change_password', 
         'bgh_dashboard',                 
@@ -167,6 +212,19 @@ def restrict_access():
 
             flash("⛔ Từ chối truy cập: Quyền GVCN!", "error")
             return redirect(url_for('class_dashboard'))
+
+    # [BỔ SUNG QUAN TRỌNG]: Kiểm tra quyền Đội Sao Đỏ (Chặn không cho đi lạc trang khác)
+    elif role == 'Sao đỏ':
+        if request.endpoint and request.endpoint not in allowed_for_saodo:
+            if request.path.startswith('/api/'):
+                return {
+                    "success": False,
+                    "error": "Sao đỏ không có quyền truy cập API này.",
+                    "endpoint": request.endpoint
+                }, 403
+
+            flash("⛔ Từ chối truy cập: Bạn chỉ được phép sử dụng App trực cổng!", "error")
+            return redirect(url_for('mobile_sao_do'))
 
     # Kiểm tra quyền Ban Giám hiệu (Chỉ cho phép xem báo cáo và điều hành)
     elif role == 'Ban Giám hiệu':
@@ -2367,6 +2425,28 @@ def api_toggle_week_lock():
                                 
                         s.note = " ; ".join(final_parts)
                 
+                # =======================================================
+                # [BỔ SUNG]: TỰ ĐỘNG DỌN RÁC (XÓA ẢNH) KHI CHỐT SỔ TUẦN
+                # =======================================================
+                if new_status == True:  # Nếu hành động là Khóa sổ
+                    if getattr(s, 'evidence_image', None):
+                        import os
+                        # Tách mảng đường dẫn ảnh
+                        image_paths = s.evidence_image.split('|')
+                        for img_path in image_paths:
+                            if img_path.strip():
+                                # Loại bỏ dấu '/' ở đầu để lấy đường dẫn vật lý trên server (VD: static/uploads/...)
+                                physical_path = img_path.strip().lstrip('/')
+                                try:
+                                    if os.path.exists(physical_path):
+                                        os.remove(physical_path) # Xóa file vật lý khỏi ổ cứng
+                                except Exception as e:
+                                    print(f"Lỗi dọn rác ảnh tự động: {e}")
+                        
+                        # Xóa đường dẫn trong CSDL để nút "Xem ảnh" trên giao diện tự động biến mất
+                        s.evidence_image = None
+                # =======================================================
+
                 s.is_locked = new_status
                 
             status_text = "Khóa sổ (Đã chốt)" if new_status else "Mở khóa sổ"
@@ -3644,7 +3724,8 @@ def class_dashboard():
                             'total_score': sc.total_score or 0,
                             'note': sc.note or "",
                             'rank': rk,
-                            'is_appeal_expired': getattr(sc, 'is_appeal_expired', False)
+                            'is_appeal_expired': getattr(sc, 'is_appeal_expired', False),
+                            'evidence_image': getattr(sc, 'evidence_image', None)
                         })
                     
                     red_star_ids = [rs.id for rs in selected_branch.red_stars] if hasattr(selected_branch, 'red_stars') else []
@@ -6090,11 +6171,10 @@ def api_ai_weekly_report(week_name):
     except Exception as e:
         return {"error": str(e)}
 # ==========================================
-# MODULE: TRA CỨU SỔ ĐEN CÁ NHÂN TOÀN TRƯỜNG
+# MODULE: TRA CỨU SỔ ĐEN TOÀN TRƯỜNG (ĐẦY ĐỦ MỌI BỘ LỌC)
 # ==========================================
 @app.route('/blacklist', methods=['GET'])
 def blacklist():
-    # Chỉ Admin/Bí thư mới được xem Sổ đen toàn trường
     if session.get('role') not in ['Quản trị viên', 'Admin', 'Bí thư', 'Bí thư Đoàn trường']:
         flash("Bạn không có quyền truy cập Sổ đen!", "error")
         return redirect(url_for('dashboard'))
@@ -6107,33 +6187,68 @@ def blacklist():
                 return redirect(url_for('dashboard'))
                 
             branches = db_session.query(Branch).filter_by(school_year_id=active_year.id).all()
+            categories = db_session.query(ViolationCategory).filter_by(school_year_id=active_year.id).all()
             
-            # Lấy từ khóa tìm kiếm từ giao diện
+            # Lấy danh sách Tuần, Tháng, Học kỳ có dữ liệu trong CSDL để đổ vào bộ lọc thời gian
+            weeks_db = db_session.query(WeeklyScore.week).join(Branch).filter(Branch.school_year_id == active_year.id).distinct().all()
+            available_weeks = sorted([w[0] for w in weeks_db], key=lambda x: int(re.search(r'\d+', x).group()) if re.search(r'\d+', x) else 0)
+            
+            months_db = db_session.query(MonthlyRecord.month_name).filter(
+                MonthlyRecord.school_year_id == active_year.id,
+                MonthlyRecord.month_name.like('Tháng%')
+            ).distinct().all()
+            school_order = ["Tháng 9", "Tháng 10", "Tháng 11", "Tháng 12", "Tháng 1", "Tháng 2", "Tháng 3", "Tháng 4", "Tháng 5"]
+            available_months = sorted([m[0] for m in months_db if m[0]], key=lambda x: school_order.index(x) if x in school_order else 99)
+            
+            semesters_db = db_session.query(MonthlyRecord.month_name).filter(
+                MonthlyRecord.school_year_id == active_year.id,
+                MonthlyRecord.month_name.like('Học kỳ%')
+            ).distinct().all()
+            available_semesters = [s[0] for s in semesters_db if s[0]]
+
+            # Lấy toàn bộ tham số lọc từ giao diện người dùng gửi lên
             search_name = request.args.get('search_name', '').strip()
             search_branch = request.args.get('search_branch', '')
-            
-            # Truy vấn: Tìm tất cả các Lỗi vi phạm CÓ GHI TÊN học sinh
+            search_violation = request.args.get('search_violation', '')
+            time_mode = request.args.get('time_mode', 'all') # 'all', 'year', 'week', 'month', 'semester'
+            time_value = request.args.get('time_value', '')
+
             query = db_session.query(
                 WeeklyViolation, WeeklyScore, Branch, ViolationCategory
-            ).join(
-                WeeklyScore, WeeklyViolation.weekly_score_id == WeeklyScore.id
-            ).join(
-                Branch, WeeklyScore.branch_id == Branch.id
-            ).join(
-                ViolationCategory, WeeklyViolation.violation_id == ViolationCategory.id
-            ).filter(
+            ).join(WeeklyScore, WeeklyViolation.weekly_score_id == WeeklyScore.id)\
+             .join(Branch, WeeklyScore.branch_id == Branch.id)\
+             .join(ViolationCategory, WeeklyViolation.violation_id == ViolationCategory.id)\
+             .filter(
                 Branch.school_year_id == active_year.id,
                 WeeklyViolation.student_name != None,
                 WeeklyViolation.student_name != ''
-            )
+             )
             
-            # Áp dụng bộ lọc nếu có
-            if search_name:
-                query = query.filter(WeeklyViolation.student_name.ilike(f"%{search_name}%"))
-            if search_branch:
-                query = query.filter(Branch.id == search_branch)
+            # 1. Lọc theo Chi đoàn (Lớp)
+            if search_branch and search_branch.isdigit():
+                query = query.filter(Branch.id == int(search_branch))
                 
-            # Sắp xếp theo thứ tự Tuần mới nhất giảm dần
+            # 2. Lọc theo Lỗi vi phạm
+            if search_violation and search_violation.isdigit():
+                query = query.filter(ViolationCategory.id == int(search_violation))
+
+            # 3. Lọc theo Thời gian (Tuần, Tháng, Học kỳ, Năm học)
+            if time_mode == 'year':
+                # Mặc định lấy toàn bộ năm học hiện tại (không cần lọc thêm tuần)
+                pass
+            elif time_mode == 'week' and time_value:
+                query = query.filter(WeeklyScore.week == time_value)
+            elif time_mode in ['month', 'semester'] and time_value:
+                m_rec = db_session.query(MonthlyRecord).filter_by(
+                    school_year_id=active_year.id,
+                    month_name=time_value
+                ).first()
+                if m_rec and m_rec.weeks_used:
+                    valid_weeks = [w.strip() for w in m_rec.weeks_used.split(',') if w.strip()]
+                    query = query.filter(WeeklyScore.week.in_(valid_weeks))
+                else:
+                    query = query.filter(WeeklyScore.week == 'NONE')
+
             results = query.order_by(WeeklyScore.id.desc(), Branch.name).all()
             
             violation_data = []
@@ -6142,7 +6257,7 @@ def blacklist():
                 for raw_n in raw_names:
                     n_clean = raw_n.strip().title()
                     if n_clean:
-                        # Lọc lại để ô tìm kiếm vẫn hoạt động chuẩn xác
+                        # 4. Lọc theo Tên học sinh
                         if search_name and search_name.lower() not in n_clean.lower():
                             continue
                             
@@ -6157,12 +6272,168 @@ def blacklist():
                 
             return render_template('blacklist.html', 
                                    branches=branches, 
+                                   categories=categories,
+                                   available_weeks=available_weeks,
+                                   available_months=available_months,
+                                   available_semesters=available_semesters,
                                    violations=violation_data,
                                    search_name=search_name,
-                                   search_branch=search_branch)
+                                   search_branch=search_branch,
+                                   search_violation=search_violation,
+                                   time_mode=time_mode,
+                                   time_value=time_value,
+                                   active_year=active_year)
     except Exception as e:
         flash(f"Lỗi tải sổ đen: {e}", "error")
         return redirect(url_for('dashboard'))
+
+# ==========================================
+# API: XUẤT EXCEL SỔ ĐEN TOÀN TRƯỜNG (ÁP DỤNG ĐẦY ĐỦ BỘ LỌC)
+# ==========================================
+@app.route('/export_global_blacklist')
+def export_global_blacklist():
+    if session.get('role') not in ['Quản trị viên', 'Admin', 'Bí thư', 'Bí thư Đoàn trường']:
+        flash("Bạn không có quyền xuất Sổ đen!", "error")
+        return redirect(url_for('dashboard'))
+        
+    try:
+        with session_scope() as db_session:
+            active_year = db_session.query(SchoolYear).filter_by(is_active=True).first()
+            if not active_year:
+                return redirect(url_for('dashboard'))
+                
+            search_name = request.args.get('search_name', '').strip()
+            search_branch = request.args.get('search_branch', '')
+            search_violation = request.args.get('search_violation', '')
+            time_mode = request.args.get('time_mode', 'all')
+            time_value = request.args.get('time_value', '')
+            
+            query = db_session.query(
+                WeeklyViolation, WeeklyScore, Branch, ViolationCategory
+            ).join(WeeklyScore, WeeklyViolation.weekly_score_id == WeeklyScore.id)\
+             .join(Branch, WeeklyScore.branch_id == Branch.id)\
+             .join(ViolationCategory, WeeklyViolation.violation_id == ViolationCategory.id)\
+             .filter(
+                Branch.school_year_id == active_year.id,
+                WeeklyViolation.student_name != None,
+                WeeklyViolation.student_name != ''
+             )
+            
+            if search_branch and search_branch.isdigit(): 
+                query = query.filter(Branch.id == int(search_branch))
+            if search_violation and search_violation.isdigit(): 
+                query = query.filter(ViolationCategory.id == int(search_violation))
+
+            if time_mode == 'week' and time_value:
+                query = query.filter(WeeklyScore.week == time_value)
+            elif time_mode in ['month', 'semester'] and time_value:
+                m_rec = db_session.query(MonthlyRecord).filter_by(
+                    school_year_id=active_year.id,
+                    month_name=time_value
+                ).first()
+                if m_rec and m_rec.weeks_used:
+                    valid_weeks = [w.strip() for w in m_rec.weeks_used.split(',') if w.strip()]
+                    query = query.filter(WeeklyScore.week.in_(valid_weeks))
+                else:
+                    query = query.filter(WeeklyScore.week == 'NONE')
+                
+            results = query.order_by(Branch.name, WeeklyScore.id.desc()).all()
+            
+            violation_data = []
+            filter_info = []
+            
+            for v, sc, b, c in results:
+                raw_names = str(v.student_name).replace(';', ',').split(',')
+                for raw_n in raw_names:
+                    n_clean = raw_n.strip().title()
+                    if n_clean:
+                        if search_name and search_name.lower() not in n_clean.lower(): continue
+                        violation_data.append({
+                            'week': sc.week,
+                            'branch_name': b.name,
+                            'student_name': n_clean,
+                            'violation_name': c.name,
+                            'quantity': v.quantity
+                        })
+                        
+            if search_branch and search_branch.isdigit():
+                b_obj = db_session.query(Branch).filter_by(id=int(search_branch)).first()
+                if b_obj: filter_info.append(f"Lớp: {b_obj.name}")
+            if search_violation and search_violation.isdigit():
+                c_obj = db_session.query(ViolationCategory).filter_by(id=int(search_violation)).first()
+                if c_obj: filter_info.append(f"Lỗi: {c_obj.name}")
+            if search_name: filter_info.append(f"Tên HS: {search_name}")
+            if time_mode == 'year': filter_info.append(f"Năm học: {active_year.name}")
+            elif time_mode != 'all' and time_value: filter_info.append(f"Thời gian: {time_value}")
+
+            import openpyxl
+            from openpyxl.styles import Font, Alignment, Border, Side
+            import io
+            from flask import send_file
+            
+            wb = openpyxl.Workbook()
+            ws = wb.active
+            ws.title = "So_Den_Thong_Ke"
+            
+            ws.merge_cells('A1:F1')
+            ws['A1'] = "ĐOÀN TRƯỜNG THPT THANH HÒA"
+            ws['A1'].font = Font(name="Times New Roman", size=11, bold=True)
+            ws.merge_cells('A3:F3')
+            ws['A3'] = "THỐNG KÊ DANH SÁCH SỔ ĐEN KỶ LUẬT"
+            ws['A3'].font = Font(name="Times New Roman", size=14, bold=True)
+            ws['A3'].alignment = Alignment(horizontal="center")
+            
+            if filter_info:
+                ws.merge_cells('A4:F4')
+                ws['A4'] = f"Tiêu chí lọc: {', '.join(filter_info)}"
+                ws['A4'].font = Font(name="Times New Roman", size=12, italic=True)
+                ws['A4'].alignment = Alignment(horizontal="center")
+            
+            headers = ["STT", "Thời gian", "Chi đoàn", "Họ và Tên", "Lỗi Vi Phạm", "Số Lần"]
+            thin = Side(border_style="thin", color="000000")
+            border = Border(left=thin, right=thin, top=thin, bottom=thin)
+            
+            row_start = 6 if filter_info else 5
+            for col, h in enumerate(headers, 1):
+                c = ws.cell(row=row_start, column=col, value=h)
+                c.font = Font(name="Times New Roman", size=11, bold=True)
+                c.alignment = Alignment(horizontal="center", vertical="center")
+                c.border = border
+                
+            for idx, item in enumerate(violation_data, 1):
+                row_idx = idx + row_start
+                c1 = ws.cell(row=row_idx, column=1, value=idx)
+                c2 = ws.cell(row=row_idx, column=2, value=item['week'])
+                c3 = ws.cell(row=row_idx, column=3, value=item['branch_name'])
+                c4 = ws.cell(row=row_idx, column=4, value=item['student_name'])
+                c5 = ws.cell(row=row_idx, column=5, value=item['violation_name'])
+                c6 = ws.cell(row=row_idx, column=6, value=item['quantity'])
+                
+                for cell in [c1, c2, c3, c4, c5, c6]:
+                    cell.font = Font(name="Times New Roman", size=11)
+                    cell.border = border
+                c1.alignment = Alignment(horizontal="center")
+                c2.alignment = Alignment(horizontal="center")
+                c3.alignment = Alignment(horizontal="center")
+                c6.alignment = Alignment(horizontal="center")
+                
+            ws.column_dimensions['A'].width = 6
+            ws.column_dimensions['B'].width = 12
+            ws.column_dimensions['C'].width = 12
+            ws.column_dimensions['D'].width = 25
+            ws.column_dimensions['E'].width = 35
+            ws.column_dimensions['F'].width = 10
+            
+            log_system_action("XUẤT EXCEL", "Xuất Thống kê Sổ đen toàn trường")
+            out = io.BytesIO()
+            wb.save(out)
+            out.seek(0)
+            return send_file(out, download_name="Thong_Ke_So_Den.xlsx", as_attachment=True)
+            
+    except Exception as e:
+        import traceback; traceback.print_exc()
+        flash(f"Lỗi xuất Excel: {e}", "error")
+        return redirect(url_for('blacklist'))
     
 from flask import send_file
 
@@ -6198,7 +6469,7 @@ def sao_do_quick_submit_form():
             raw_branch_id = request.form.get('branch_id')
             raw_viol_id = request.form.get('violation_id')
             student_name = request.form.get('student_name', '').strip()
-            
+            evidence_base64 = request.form.get('evidence_base64') # <--- Bổ sung dòng này            
             if not all([week_name, raw_branch_id, raw_viol_id]):
                 flash("Lỗi: Vui lòng chọn đầy đủ Lớp và Lỗi vi phạm!", "error")
                 return redirect(url_for('mobile_sao_do'))
@@ -6213,6 +6484,16 @@ def sao_do_quick_submit_form():
                 score = WeeklyScore(branch_id=branch.id, week=week_name, week_rating='Bình thường', count_8=0, count_9=0, count_10=0, score_truc=100.0, score_cong=0.0, score_tru=0.0, note='', total_score=100.0)
                 db_session.add(score)
                 db_session.flush() 
+            
+            # --- [BỔ SUNG]: LƯU ẢNH MINH CHỨNG VÀ NỐI TIẾP VỚI ẢNH CŨ ---
+            saved_image_path = process_and_save_evidence(evidence_base64, branch.id, week_name) # (Hoặc branch.id, current_week tùy hàm)
+            if saved_image_path:
+                if getattr(score, 'evidence_image', None):
+                    score.evidence_image = f"{score.evidence_image}|{saved_image_path}"
+                else:
+                    score.evidence_image = saved_image_path
+            # ------------------------------------
+            # ------------------------------------
                 
             old_note = score.note if score and score.note else ""
             
@@ -6345,6 +6626,7 @@ def submit_mobile_sao_do():
             branch_id = int(request.form.get('branch_id'))
             branch = db_session.query(Branch).filter_by(id=branch_id).first()
             score = db_session.query(WeeklyScore).filter_by(branch_id=branch.id, week=current_week).first()
+            evidence_base64 = request.form.get('evidence_base64')
             
             settings = db_session.query(ScoreSettings).filter_by(school_year_id=active_year.id).first()
             max_mon = int(getattr(settings, 'max_diem_mon', 4)) if settings else 4
@@ -6526,18 +6808,23 @@ def submit_mobile_sao_do():
             total_val = truc + diem_xep_loai + diem_quy_uoc + cong - diem_tru_final
 
             # 6. GHI VÀO DATABASE
+            saved_image_path = process_and_save_evidence(evidence_base64, branch.id, current_week)
+            
             if score:
                 score.week_rating = rating
                 score.count_8 = f8; score.count_9 = f9; score.count_10 = f10
                 score.note = final_note
                 score.score_tru = diem_tru_final
                 score.total_score = total_val
+                if saved_image_path:
+                    score.evidence_image = saved_image_path # Cập nhật ảnh mới nếu có
             else:
                 score = WeeklyScore(
                     branch_id=branch.id, week=current_week, week_rating=rating,
                     count_8=f8, count_9=f9, count_10=f10,
                     score_truc=truc, score_cong=cong, score_tru=diem_tru_final,
-                    note=final_note, total_score=total_val
+                    note=final_note, total_score=total_val,
+                    evidence_image=saved_image_path  # Lưu ảnh khi tạo mới
                 )
                 db_session.add(score)
                 db_session.flush()
@@ -7415,6 +7702,133 @@ def api_weekly_scores_json(week_name):
             return {"success": True, "data": data}
     except Exception as e:
         return {"success": False, "error": str(e)}, 500
+    
+# ==========================================
+# API: XUẤT EXCEL SỔ ĐEN TOÀN TRƯỜNG KÈM BỘ LỌC (ĐÃ VÁ LỖI TRUY VẤN)
+# ==========================================
+@app.route('/export_filtered_blacklist', methods=['GET'])
+def export_filtered_blacklist():
+    if session.get('role') not in ['Quản trị viên', 'Admin', 'Bí thư', 'Bí thư Đoàn trường', 'Giáo viên chủ nhiệm', 'Sao đỏ']:
+        return redirect(url_for('dashboard'))
+        
+    try:
+        week_name = request.args.get('week', 'Tuần 1').strip()
+        keyword = request.args.get('q', '').strip().upper()
+        
+        with session_scope() as db_session_inner:
+            from database.models import WeeklyViolation, WeeklyScore, Branch, ViolationCategory, SchoolYear
+            
+            active_year_inner = db_session_inner.query(SchoolYear).filter_by(is_active=True).first()
+            if not active_year_inner:
+                flash("Chưa có năm học nào được kích hoạt!", "error")
+                return redirect(url_for('weekly'))
+                
+            # Truy vấn an toàn, sử dụng điều kiện tương đối với tên tuần để tránh lệch định dạng
+            raw_violations = db_session_inner.query(WeeklyViolation, WeeklyScore, Branch, ViolationCategory)\
+                .join(WeeklyScore, WeeklyViolation.weekly_score_id == WeeklyScore.id)\
+                .join(Branch, WeeklyScore.branch_id == Branch.id)\
+                .join(ViolationCategory, WeeklyViolation.violation_id == ViolationCategory.id)\
+                .filter(
+                    WeeklyViolation.student_name != None,
+                    WeeklyViolation.student_name != '',
+                    Branch.school_year_id == active_year_inner.id
+                ).all()
+                
+            violation_data = []
+            for v, s, b, c in raw_violations:
+                # Kiểm tra tuần khớp (hỗ trợ cả trường hợp lệch chữ hoa/thường hoặc khoảng trắng)
+                if s.week and s.week.strip().upper() != week_name.upper():
+                    continue
+                    
+                if v.student_name and str(v.student_name).strip() != "":
+                    raw_names = str(v.student_name).replace(';', ',').split(',')
+                    for raw_n in raw_names:
+                        n_clean = raw_n.strip().title()
+                        if n_clean:
+                            b_name = str(b.name)
+                            s_name = str(n_clean)
+                            v_name = str(c.name)
+                            
+                            # Lọc theo từ khóa tìm kiếm trên giao diện (nếu có)
+                            if keyword:
+                                combined_text = f"{b_name} {s_name} {v_name}".upper()
+                                if keyword not in combined_text:
+                                    continue
+                                    
+                            violation_data.append({
+                                'branch_name': b_name,
+                                'student_name': s_name,
+                                'violation_name': v_name,
+                                'quantity': int(v.quantity or 1)
+                            })
+                            
+        import openpyxl
+        from openpyxl.styles import Font, Alignment, Border, Side
+        import io
+        from flask import send_file
+        
+        wb = openpyxl.Workbook()
+        ws = wb.active
+        ws.title = f"So_Den_{week_name}"
+        
+        ws.merge_cells('A1:E1')
+        ws['A1'] = "ĐOÀN TRƯỜNG THPT THANH HÒA"
+        ws['A1'].font = Font(name="Times New Roman", size=11, bold=True)
+        ws.merge_cells('A3:E3')
+        ws['A3'] = f"DANH SÁCH SỔ ĐEN KỶ LUẬT - {week_name.upper()}"
+        ws['A3'].font = Font(name="Times New Roman", size=14, bold=True)
+        ws['A3'].alignment = Alignment(horizontal="center")
+        
+        if keyword:
+            ws.merge_cells('A4:E4')
+            ws['A4'] = f"(Đã lọc theo từ khóa: '{keyword}')"
+            ws['A4'].font = Font(name="Times New Roman", size=11, italic=True)
+            ws['A4'].alignment = Alignment(horizontal="center")
+            row_offset = 6
+        else:
+            row_offset = 5
+            
+        headers = ["STT", "Chi đoàn", "Họ và Tên Học Sinh", "Lỗi Vi Phạm", "Số Lần"]
+        thin = Side(border_style="thin", color="000000")
+        border = Border(left=thin, right=thin, top=thin, bottom=thin)
+        
+        for col, h in enumerate(headers, 1):
+            c = ws.cell(row=row_offset, column=col, value=h)
+            c.font = Font(name="Times New Roman", size=11, bold=True)
+            c.alignment = Alignment(horizontal="center", vertical="center")
+            c.border = border
+            
+        for idx, item in enumerate(violation_data, 1):
+            row_idx = idx + row_offset
+            c1 = ws.cell(row=row_idx, column=1, value=idx)
+            c2 = ws.cell(row=row_idx, column=2, value=item['branch_name'])
+            c3 = ws.cell(row=row_idx, column=3, value=item['student_name'])
+            c4 = ws.cell(row=row_idx, column=4, value=item['violation_name'])
+            c5 = ws.cell(row=row_idx, column=5, value=item['quantity'])
+            
+            for cell in [c1, c2, c3, c4, c5]:
+                cell.font = Font(name="Times New Roman", size=11)
+                cell.border = border
+            c1.alignment = Alignment(horizontal="center")
+            c2.alignment = Alignment(horizontal="center")
+            c5.alignment = Alignment(horizontal="center")
+            
+        ws.column_dimensions['A'].width = 6
+        ws.column_dimensions['B'].width = 15
+        ws.column_dimensions['C'].width = 25
+        ws.column_dimensions['D'].width = 35
+        ws.column_dimensions['E'].width = 10
+        
+        log_system_action("XUẤT EXCEL", f"Xuất Sổ đen {week_name} theo bản lọc")
+        out = io.BytesIO()
+        wb.save(out)
+        out.seek(0)
+        return send_file(out, download_name=f"So_Den_{week_name.replace(' ', '_')}.xlsx", as_attachment=True)
+        
+    except Exception as e:
+        import traceback; traceback.print_exc()
+        flash(f"Lỗi xuất Excel: {e}", "error")
+        return redirect(url_for('weekly'))
     
 if __name__ == "__main__":
     auto_init_accounts()
