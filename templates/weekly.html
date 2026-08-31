@@ -36,7 +36,7 @@
         
         .main-content { margin-left: 260px; padding: 20px 24px 100px 24px; height: 100vh; display: flex; flex-direction: column; box-sizing: border-box; } 
         
-        /* CARD CẤU TRÚC (Giống trong hình) */
+        /* CARD CẤU TRÚC */
         .dashboard-card {
             background: var(--surface);
             border-radius: 12px;
@@ -46,7 +46,6 @@
             box-shadow: 0 1px 3px rgba(0,0,0,0.02);
         }
 
-        /* KHU VỰC THÔNG TIN (4 Cột) */
         .info-grid {
             display: grid;
             grid-template-columns: 2fr 3fr 2fr 3fr;
@@ -92,7 +91,6 @@
         }
         .table-erp thead th:last-child { border-right: none; }
 
-        /* Tiêu đề gộp (colspan) */
         .th-group {
             background-color: #ffffff !important;
             border-bottom: 1px solid var(--border-color) !important;
@@ -111,7 +109,6 @@
         }
         .table-erp tbody td:last-child { border-right: none; }
 
-        /* INPUT STYLES (Không viền, số nổi bật) */
         .input-erp {
             width: 100%;
             border: 1px solid transparent;
@@ -134,7 +131,6 @@
         input[type="number"] { -moz-appearance: textfield; }
         input[type="number"]::-webkit-outer-spin-button, input[type="number"]::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
 
-        /* SELECT BỞI XẾP LOẠI */
         .select-rating {
             font-size: 13px;
             border: 1px solid var(--border-color);
@@ -145,15 +141,12 @@
             background-color: transparent;
         }
 
-        /* BADGES */
         .badge-stt { background: #3b82f6; color: white; border-radius: 4px; padding: 4px 8px; font-weight: 600; }
         .badge-group { background: #f3e8ff; color: #7e22ce; border-radius: 20px; padding: 4px 10px; font-size: 11px; font-weight: 600; }
         
-        /* CỘT TỔNG ĐIỂM */
         .col-total { background-color: #f8fafc; font-weight: 800; font-size: 16px; color: var(--primary-blue); }
         .status-text { font-size: 10px; font-weight: 600; color: var(--success); display: block; margin-top: -2px; }
 
-        /* BOTTOM BAR (Ghép đúng ảnh) */
         .fixed-bottom-bar {
             position: fixed;
             bottom: 0; left: 260px; right: 0;
@@ -184,7 +177,6 @@
         .btn-outline-green { background: transparent; border: 1px solid var(--success); color: var(--success); }
         .btn-blue { background: var(--primary-blue); color: white; }
 
-        /* Nút quét SĐB Mini */
         .btn-scan-mini {
             font-size: 9px;
             padding: 2px 6px;
@@ -243,7 +235,7 @@
             {% endif %}
         {% endwith %}
 
-        <!-- 2. CARD CÀI ĐẶT THỜI GIAN VÀ TRẠNG THÁI (Mô phỏng 100% hình ảnh) -->
+        <!-- 2. CARD CÀI ĐẶT THỜI GIAN VÀ TRẠNG THÁI -->
         <div class="dashboard-card p-0 mb-3 overflow-hidden">
             <div class="info-grid">
                 <!-- Chọn tuần -->
@@ -306,7 +298,7 @@
             });
         </script>
 
-        <!-- 3. THANH TÌM KIẾM VÀ LỌC -->
+		<!-- 3. THANH TÌM KIẾM VÀ LỌC -->
         <div class="d-flex justify-content-between align-items-center mb-2">
             <div class="d-flex gap-2">
                 <div class="input-group" style="width: 200px;">
@@ -326,11 +318,17 @@
                 <button type="button" class="btn-custom bg-white border text-dark" data-bs-toggle="modal" data-bs-target="#settingsModal">
                     <i class="fa-solid fa-gear"></i> Cài đặt hiển thị
                 </button>
+                
+                <!-- [ĐÃ CHUYỂN LÊN]: NÚT LƯU DỮ LIỆU -->
+                <button type="submit" form="scoreForm" class="btn-custom btn-blue shadow-sm">
+                    <i class="fa-solid fa-floppy-disk"></i> Lưu dữ liệu
+                </button>
+                <!-- ================================== -->
+                
             </div>
         </div>
 
 		<!-- 4. BẢNG DỮ LIỆU CHÍNH -->
-        <!-- 4. BẢNG DỮ LIỆU CHÍNH -->
         <div class="d-flex flex-column" style="flex: 1; min-height: 0; background: #ffffff; border-radius: 12px; border: 1px solid #e2e8f0; overflow: hidden; margin-bottom: 40px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05);">
             <div class="table-container-scroll" style="flex: 1; overflow-y: auto; border: none; border-radius: 0;">
                 <form id="scoreForm" method="POST" action="/weekly">
@@ -369,16 +367,14 @@
                                 <div class="d-flex flex-column align-items-start">
                                     <span class="fw-bold branch-name" style="color: #1e3a8a;"><i class="fa-solid fa-users me-2 text-muted"></i>{{ b.name }}</span>
                                     
-                                    <!-- CỤM NÚT SĐB ĐÃ ĐƯỢC PHỤC HỒI ĐẦY ĐỦ CHỨC NĂNG VÀ CHẶN CLICK -->
+                                    <!-- CỤM NÚT SĐB -->
                                     <div onclick="event.stopPropagation();" class="mt-1">
                                         <label class="btn-scan-mini m-0" title="Tải file Excel Sổ Đầu Bài">
                                             <i class="fa-solid fa-file-excel"></i> Quét SĐB
                                             <input type="file" class="d-none" accept=".xlsx, .xls" onchange="uploadSDB(this, '{{ b.id }}')">
                                         </label>
-                                        <!-- Thẻ in trạng thái bắt buộc phải có để JS hoạt động -->
                                         <div class="text-muted fw-bold" id="status_sdb_{{ b.id }}" style="font-size: 9px; margin-top: 2px;"></div>
                                     </div>
-                                    
                                 </div>
                             </td>
                             <td><span class="badge-group">{{ b.group }}</span></td>
@@ -397,7 +393,18 @@
                             <td><input type="number" class="input-erp text-blue" name="c9_{{ b.id }}" value="{{ sc.count_9 if sc else 0 }}"></td>
                             <td><input type="number" class="input-erp text-blue" name="c10_{{ b.id }}" value="{{ sc.count_10 if sc else 0 }}"></td>
                             
-                            <td><input type="text" class="input-erp text-red" style="text-align: left;" name="note_{{ b.id }}" value="{{ sc.note if sc else '' }}" placeholder="Nhập lỗi ở đây..."></td>
+							<!-- [GIẢI PHÁP TỐI THƯỢNG]: Ô NHẬP LỖI CÓ CHỨA NÚT XEM ẢNH -->
+                            <td style="position: relative;">
+                                <input type="text" class="input-erp text-red" style="text-align: left; padding-right: 35px;" name="note_{{ b.id }}" value="{{ sc.note if sc else '' }}" placeholder="Nhập lỗi ở đây...">
+                                
+                                {% if sc and sc.evidence_image %}
+                                <button type="button" class="btn btn-sm shadow-sm" title="Xem ảnh minh chứng từ Sao đỏ"
+                                        style="position: absolute; right: 5px; top: 50%; transform: translateY(-50%); background: #fee2e2; color: #dc2626; border: 1px solid #f87171; border-radius: 6px; padding: 2px 6px;"
+                                        onclick="viewEvidenceSafe(event, '{{ sc.evidence_image }}', '{{ sc.week }}')">
+                                    <i class="fa-regular fa-image"></i>
+                                </button>
+                                {% endif %}
+                            </td>
                             
                             <td><input type="number" step="0.5" class="input-erp text-green" name="cong_{{ b.id }}" value="{{ sc.score_cong if sc else 0 }}"></td>
                             <td><input type="number" step="0.5" class="input-erp text-red" name="tru_{{ b.id }}" value="{{ sc.score_tru if sc else 0 }}"></td>
@@ -421,7 +428,7 @@
             </form>
 			</div>
             
-			<!-- CHÚ GIẢI (Legend) LUÔN HIỂN THỊ CỐ ĐỊNH Ở ĐÁY BẢNG -->
+			<!-- CHÚ GIẢI -->
             <div class="d-flex flex-wrap gap-4 px-4 py-3 bg-white border-top align-items-center" style="position: sticky; bottom: 0; z-index: 10; font-size: 12px; font-weight: 500; color: #475569; box-shadow: 0 -4px 10px rgba(0,0,0,0.03);">
                 <div><i class="fa-solid fa-circle" style="color: #2563eb; font-size: 10px; margin-right: 4px;"></i><span style="color: #2563eb; font-weight: 700;">Đ.8:</span> Điểm 8</div>
                 <div><i class="fa-solid fa-circle" style="color: #2563eb; font-size: 10px; margin-right: 4px;"></i><span style="color: #2563eb; font-weight: 700;">Đ.9:</span> Điểm 9</div>
@@ -435,7 +442,6 @@
 		<!-- 5. THANH CÔNG CỤ DƯỚI ĐÁY -->
         <div class="fixed-bottom-bar">
             <div class="d-flex gap-2">
-                <!-- Nút này trên ảnh, nhưng thực tế chức năng đang ở từng dòng. Ta hiển thị alert hướng dẫn -->
 				<label class="btn-custom btn-purple m-0" style="cursor: pointer;" title="Tải lên hàng loạt nhiều Sổ Đầu Bài cùng lúc">
                     <i class="fa-solid fa-upload"></i> Nhập SĐB Hàng Loạt
                     <input type="file" class="d-none" accept=".xlsx, .xls" multiple onchange="uploadMultipleSDB(this)">
@@ -451,15 +457,11 @@
                 <button class="btn-custom btn-outline-green fw-bold bg-white" onclick="previewAndExport()">
                     <i class="fa-solid fa-file-excel"></i> Xuất Excel
                 </button>
-                <button type="submit" form="scoreForm" class="btn-custom btn-blue shadow-sm">
-                    <i class="fa-solid fa-floppy-disk"></i> Lưu dữ liệu (Ctrl + S)
-                </button>
             </div>
         </div>
     </div>
 
-    <!-- CÁC MODAL GIỮ NGUYÊN HOÀN TOÀN CẤU TRÚC VÀ ID CỦA ĐỒNG CHÍ -->
-    <!-- MODAL HIỂN THỊ BÁO CÁO TỪ TRỢ LÝ AI -->
+    <!-- MODAL AI -->
     <div class="modal fade" id="aiReportModal" tabindex="-1" aria-hidden="true">
         <div class="modal-dialog modal-lg">
             <div class="modal-content border-0 shadow-lg" style="border-radius: 16px;">
@@ -638,14 +640,12 @@
                                     <span class="badge bg-white text-danger px-3 py-2 rounded-pill shadow-sm" id="autoPenaltyPreview">Đang trừ tự động: 0đ</span>
                                 </div>
                                 <div class="card-body p-4">
-                                    <!-- GIẢI PHÁP 1: MỞ RỘNG VÙNG NHẬP (Chuyển thành Textarea đa dòng) -->
                                     <div style="position: relative;">
                                         <textarea class="form-control border-2 fw-bold text-danger mb-3 rounded-3 p-3" id="detailNote" rows="3" placeholder="Gõ tên lỗi (Ví dụ: vắng, muộn...) hệ thống sẽ tự gợi ý..." style="resize: vertical; font-size: 15px; line-height: 1.6;"></textarea>
                                         
                                         <div id="suggestion-box" class="list-group" style="position: absolute; top: 100%; left: 0; z-index: 1000; width: 100%; display: none; max-height: 200px; overflow-y: auto; box-shadow: 0 10px 25px rgba(0,0,0,0.1); border-radius: 12px; border: 1px solid var(--border-color);"></div>
                                     </div>
                                     
-                                    <!-- GIẢI PHÁP 2: THU GỌN VÙNG THẺ CHỌN (Tạo hộp chứa có thanh cuộn) -->
                                     <div class="p-3 bg-light rounded-3 border" style="border-color: #fca5a5 !important;">
                                         <div class="d-flex align-items-center mb-2 pb-2 border-bottom" style="border-color: #fca5a5 !important;">
                                             <span class="badge bg-danger bg-opacity-10 text-danger border-0 px-3 py-1 rounded-pill" style="font-size: 12px;">
@@ -654,9 +654,7 @@
                                             <span class="ms-2 text-muted" style="font-size: 11px; font-style: italic;">(Cuộn xuống để xem thêm lỗi)</span>
                                         </div>
                                         
-                                        <!-- Khống chế chiều cao max-height 110px -->
                                         <div class="d-flex flex-wrap gap-2" id="quickErrorTags" style="max-height: 110px; overflow-y: auto; padding-right: 5px;">
-                                            <!-- Dữ liệu JS sẽ đổ thẻ bấm vào đây -->
                                         </div>
                                     </div>
                                 </div>
@@ -671,6 +669,46 @@
         </div>
     </div>
 
+	<!-- ========================================================================= -->
+    <!-- [GIẢI PHÁP TỐI THƯỢNG]: KHUNG XEM ẢNH ĐỘC LẬP (MIỄN NHIỄM VỚI LỖI TIỆN ÍCH) -->
+    <!-- ========================================================================= -->
+    <div id="customEvidenceOverlay" style="display: none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0,0,0,0.85); z-index: 999999; align-items: center; justify-content: center; flex-direction: column;">
+        <div style="position: absolute; top: 20px; right: 30px; color: white; font-size: 45px; cursor: pointer; font-weight: bold; z-index: 9999999; text-shadow: 0 2px 5px rgba(0,0,0,0.5);" onclick="closeEvidenceSafe()">&times;</div>
+        
+        <h4 id="customEvidenceTitle" style="color: white; margin-bottom: 20px; font-weight: bold; font-family: 'Inter', sans-serif;"><i class="fa-regular fa-image me-2"></i>Ảnh Minh Chứng</h4>
+        
+        <!-- Khung chứa ảnh sẽ có thanh cuộn nếu nhiều ảnh -->
+        <div id="customEvidenceImgContainer" style="overflow-y: auto; max-height: 80vh; width: 100%; text-align: center; padding: 0 10px;">
+            <!-- JS tự động chèn các thẻ <img> vào đây -->
+        </div>
+    </div>
+
+    <script>
+        function viewEvidenceSafe(event, imagePaths, weekName) {
+            // Chặn click lây lan
+            if(event) { event.preventDefault(); event.stopPropagation(); }
+            
+            // Tách chuỗi ảnh (Bằng dấu |)
+            let paths = imagePaths.split('|');
+            let imgHtml = '';
+            
+            paths.forEach(p => {
+                if(p.trim()) {
+                    imgHtml += `<img src="${p.trim()}" style="max-width: 100%; height: auto; display: block; margin: 0 auto 15px auto; border-radius: 12px; box-shadow: 0 10px 30px rgba(0,0,0,0.5);">`;
+                }
+            });
+            
+            document.getElementById('customEvidenceImgContainer').innerHTML = imgHtml;
+            document.getElementById('customEvidenceTitle').innerHTML = '<i class="fa-regular fa-image me-2"></i>Ảnh Minh Chứng - ' + weekName;
+            document.getElementById('customEvidenceOverlay').style.display = 'flex';
+        }
+
+        function closeEvidenceSafe() {
+            document.getElementById('customEvidenceOverlay').style.display = 'none';
+            document.getElementById('customEvidenceImgContainer').innerHTML = '';
+        }
+    </script>
+
     <!-- SCRIPTS -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script>
@@ -678,7 +716,6 @@
         function previewBlacklist() { window.location.href = `/preview_blacklist?week=${encodeURIComponent(document.getElementById('weekSelector').value)}`; }
         function previewAndExport() { window.location.href = `/preview_report?week=${encodeURIComponent(document.getElementById('weekSelector').value)}`; }
 
-        // MÃ JS LỌC BẢNG (MỚI THÊM)
         function filterTable() {
             const searchText = document.getElementById('searchInput').value.toLowerCase();
             const groupFilter = document.getElementById('groupFilter').value;
@@ -699,7 +736,6 @@
             });
         }
 
-        // JS Định dạng màu Xếp loại & Đánh giá (MỚI THÊM)
         function updateRowStyle(selectElement) {
             const val = selectElement.value;
             const statusCell = document.getElementById(`status_${selectElement.name.split('_')[1]}`);
@@ -737,10 +773,8 @@
             }
         }
 
-        // Khởi tạo màu sắc khi load trang
         document.addEventListener("DOMContentLoaded", function() {
             document.querySelectorAll('.select-rating').forEach(el => updateRowStyle(el));
-            // Cập nhật text Xuất sắc
             document.querySelectorAll('tr.branch-row').forEach(row => {
                 const bId = row.querySelector('.select-rating').name.split('_')[1];
                 const totalSpan = document.getElementById(`total_${bId}`);
@@ -748,7 +782,6 @@
             });
         });
 
-        // 🤖 LOGIC GỌI TRỢ LÝ AI PHÂN TÍCH TUẦN
         function openAiReportModal(weekName) {
             const loadingDiv = document.getElementById('aiLoading');
             const contentDiv = document.getElementById('aiContentContainer');
@@ -804,10 +837,6 @@
             } catch (err) { console.error(err); alert("Lỗi kết nối đến máy chủ!"); }
         }
 
-		// JAVASCRIPT HỖ TRỢ UPLOAD VÀ ĐIỀN FORM TỰ ĐỘNG BẰNG AI
-		// =========================================================================
-        // HÀM QUÉT SĐB LẺ TỪNG LỚP (ĐÃ ĐỒNG BỘ THUẬT TOÁN LÀM SẠCH TÊN LỚP)
-        // =========================================================================
         async function uploadSDB(inputElement, branchId) {
             let file = inputElement.files[0];
             if (!file) return;
@@ -819,7 +848,6 @@
             formData.append("excel_file", file);
             let tr = inputElement.closest('tr');
             
-            // [BẢN VÁ LỖI]: Quét tên lớp và làm sạch tuyệt đối giống hệ thống Hàng Loạt
             let branchNameNode = tr.querySelector('.branch-name');
             let cleanBranchName = branchNameNode.textContent.replace(/[^a-zA-Z0-9]/g, '').toUpperCase();
             formData.append("expected_branch_name", cleanBranchName);
@@ -831,7 +859,6 @@
                 let result;
                 let contentType = response.headers.get("content-type");
                 
-                // Mở rộng bộ đón lỗi để nhận diện chính xác phản hồi từ Python
                 if (contentType && contentType.includes("application/json")) {
                     result = await response.json();
                 } else {
@@ -842,7 +869,6 @@
                     if(statusLabel) statusLabel.innerHTML = '<i class="fa-solid fa-check text-success"></i> Điền xong!';
                     let branchGroup = tr.getAttribute('data-group');
 
-                    // Lấy tên nguyên bản (có dấu cách) để hiển thị đẹp trên Modal
                     let displayBranchName = branchNameNode.innerText.trim();
                     await openDetailModal(branchId, displayBranchName, branchGroup);
 
@@ -864,7 +890,6 @@
                         if (noteInput && result.note) {
                             let currentVal = noteInput.value.trim();
                             noteInput.value = currentVal ? `${currentVal} ; ${result.note}` : result.note;
-                            // Kích hoạt tính điểm tự động ngay lập tức
                             noteInput.dispatchEvent(new Event('input', { bubbles: true }));
                         }
                         updateLiveTotal();
@@ -876,7 +901,7 @@
             } catch (e) {
                 if(statusLabel) statusLabel.innerHTML = '<i class="fa-solid fa-xmark text-danger"></i> Lỗi kết nối';
                 console.error("Chi tiết lỗi fetch:", e);
-                alert("Không thể kết nối tới API /api/parse_sodaubai. Hãy kiểm tra lại backend Python hoặc xem bảng Console (F12)!");
+                alert("Không thể kết nối tới API /api/parse_sodaubai.");
             }
             inputElement.value = ""; 
         }
@@ -945,7 +970,6 @@
             }
         });
 
-		// 1. Hàm bóc tách thông minh cho Frontend (Chống cắt nhầm dấu phẩy trong ngoặc)
         function smartSplitNoteJS(noteText) {
             if (!noteText) return [];
             let parts = [];
@@ -967,17 +991,16 @@
             return parts.filter(p => p);
         }
 
-        // 2. Hàm tự động trừ điểm (Đã được nâng cấp để hiểu dữ liệu từ Sổ Đầu Bài)
         function calculateAutoPenalty(noteText) {
             let penalty = 0;
             if (!noteText) return 0;
-            const parts = smartSplitNoteJS(noteText); // Kích hoạt thuật toán thông minh
+            const parts = smartSplitNoteJS(noteText);
             
             parts.forEach(part => {
                 const p = part.toLowerCase();
                 let isMatched = false;
                 violationBank.forEach(cat => {
-                    if (isMatched) return; // Đã tìm thấy lỗi thì dừng để tránh trừ đúp
+                    if (isMatched) return;
                     const catName = cat.name.toLowerCase();
                     if (p.includes(catName)) {
                         const escapedCatName = catName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
@@ -1260,60 +1283,19 @@
         function startAutoPollingForWeekly() {
             const urlParams = new URLSearchParams(window.location.search);
             const currentWeek = urlParams.get('week') || "{{ current_week }}";
+            window.hasUnsavedChanges = false;
 
-            setInterval(async () => {
-                if (document.activeElement && (document.activeElement.tagName === 'INPUT' || document.activeElement.tagName === 'TEXTAREA')) {
-                    return;
-                }
-
-                try {
-                    let response = await fetch(`/api/weekly_scores_json/${encodeURIComponent(currentWeek)}`);
-                    let result = await response.json();
-
-                    if (result.success && result.data) {
-                        result.data.forEach(item => {
-                            let scoreCell = document.getElementById(`total_${item.branch_id}`);
-                            let noteInput = document.querySelector(`input[name="note_${item.branch_id}"]`);
-
-                            if (scoreCell) {
-                                let oldVal = parseFloat(scoreCell.innerText) || 0;
-                                if (oldVal !== item.total_score) {
-                                    scoreCell.innerText = item.total_score.toFixed(1);
-                                    autoUpdateRatingText(item.branch_id, item.total_score);
-                                }
-                            }
-
-                            if (noteInput && document.activeElement !== noteInput) {
-                                if (noteInput.value !== item.note) {
-                                    noteInput.value = item.note;
-                                }
-                            }
-                        });
-                    }
-                } catch (err) {
-                    console.error("Lỗi đồng bộ ngầm điểm tuần:", err);
-                }
-            }, 10000); 
-        }
-		function startAutoPollingForWeekly() {
-            const urlParams = new URLSearchParams(window.location.search);
-            const currentWeek = urlParams.get('week') || "{{ current_week }}";
-            window.hasUnsavedChanges = false; // Biến cờ hiệu
-
-            // Cắm cờ hiệu mỗi khi gõ phím hoặc đổ dữ liệu
             document.addEventListener('input', function() { window.hasUnsavedChanges = true; });
 
             setInterval(async () => {
                 if (document.activeElement && (document.activeElement.tagName === 'INPUT' || document.activeElement.tagName === 'TEXTAREA')) return;
                 
-                // NẾU ĐANG ĐỔ FILE HÀNG LOẠT HOẶC VỪA GÕ TAY XONG CHƯA LƯU THÌ DỪNG QUÉT NGẦM
                 if (window.hasUnsavedChanges) return; 
 
                 try {
                     let response = await fetch(`/api/weekly_scores_json/${encodeURIComponent(currentWeek)}`);
                     let result = await response.json();
                     if (result.success && result.data) {
-                        // ... logic cập nhật tự động cũ giữ nguyên ...
                         result.data.forEach(item => {
                             let scoreCell = document.getElementById(`total_${item.branch_id}`);
                             let noteInput = document.querySelector(`input[name="note_${item.branch_id}"]`);
@@ -1333,14 +1315,12 @@
         document.addEventListener("DOMContentLoaded", () => {
             startAutoPollingForWeekly();
         });	
-		// =========================================================================
-        // HÀM SIÊU TỐC: UPLOAD VÀ XỬ LÝ HÀNG LOẠT SỔ ĐẦU BÀI (ĐÃ VÁ LỖI HIỂN THỊ)
-        // =========================================================================
+
         async function uploadMultipleSDB(inputElement) {
             let files = inputElement.files;
             if (!files || files.length === 0) return;
 
-            window.hasUnsavedChanges = true; // KHÓA TIẾN TRÌNH QUÉT NGẦM TRÁNH GHI ĐÈ DỮ LIỆU
+            window.hasUnsavedChanges = true;
 
             let overlay = document.createElement('div');
             overlay.id = 'batchUploadOverlay';
@@ -1355,7 +1335,6 @@
 
             let successCount = 0; let failCount = 0; let failLogs = [];
 
-            // Thu thập Bản đồ Lớp (Chuẩn hóa loại bỏ icon và khoảng trắng thừa)
             let branchMap = {};
             document.querySelectorAll('.branch-row').forEach(row => {
                 let bNameNode = row.querySelector('.branch-name');
@@ -1390,7 +1369,6 @@
                             let bId = branchInfo.id;
                             let bGroup = branchInfo.group;
 
-                            // 1. Âm thầm gửi điểm gốc (raw_scores) xuống Database
                             if (result.raw_list && result.raw_list.length > 0) {
                                 await fetch(`/api/raw_scores/${encodeURIComponent(weekName)}/${bId}`, {
                                     method: 'POST',
@@ -1399,7 +1377,6 @@
                                 });
                             }
 
-                            // 2. Tính toán gọt điểm (Xén trần)
                             let t10 = 0, t9 = 0, t8 = 0;
                             if (result.raw_list && result.raw_list.length > 0) {
                                 result.raw_list.forEach(item => {
@@ -1420,7 +1397,6 @@
                                 if(excess > 0) { t10 -= excess; }
                             }
 
-                            // 3. Bơm điểm vào ô input
                             let c8Input = document.querySelector(`input[name="c8_${bId}"]`);
                             let c9Input = document.querySelector(`input[name="c9_${bId}"]`);
                             let c10Input = document.querySelector(`input[name="c10_${bId}"]`);
@@ -1430,7 +1406,6 @@
                             if (c8Input) c8Input.value = t8;
                             if (c9Input) c9Input.value = t9;
                             
-                            // BẮT BUỘC RA LỆNH TÍNH TỔNG ĐIỂM NGAY CẢ KHI KHÔNG CÓ LỖI (VÁ LỖI HIỂN THỊ)
                             if (c10Input) {
                                 c10Input.value = t10;
                                 c10Input.dispatchEvent(new Event('input', { bubbles: true })); 

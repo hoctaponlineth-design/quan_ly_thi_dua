@@ -78,9 +78,72 @@
         .class-quick-btn:active { transform: scale(0.92); }
         .modal-quick-tag { transition: all 0.2s; }
         .modal-quick-tag.active { background-color: #dc3545 !important; color: white !important; box-shadow: 0 4px 10px rgba(220,53,69,0.3); border-color: #c82333 !important; transform: scale(1.05); }
+
+        /* ======================================================== */
+        /* [BỔ SUNG]: GIAO DIỆN TRẠNG THÁI MẠNG (OFFLINE MODE)      */
+        /* ======================================================== */
+        #network-status-banner {
+            position: fixed; top: 0; left: 0; width: 100%; z-index: 9999;
+            background-color: #f59e0b; color: white;
+            text-align: center; font-size: 13px; font-weight: 700;
+            padding: 8px 15px; display: none;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+        }
+        #sync-button-container {
+            position: fixed; bottom: 80px; right: 20px; z-index: 9998;
+            display: none;
+        }
+        .btn-sync-float {
+            background-color: #10b981; color: white;
+            border: none; border-radius: 50px;
+            padding: 12px 20px; font-weight: bold; font-size: 14px;
+            box-shadow: 0 6px 15px rgba(16, 185, 129, 0.4);
+            display: flex; align-items: center; gap: 8px;
+        }
+        /* ======================================================== */
     </style>
 </head>
 <body>
+
+    <!-- Thanh thông báo mất mạng -->
+    <div id="network-status-banner">
+        <i class="fa-solid fa-wifi-slash me-1"></i> MẤT KẾT NỐI MẠNG! App đã chuyển sang chế độ lưu tạm.
+    </div>
+
+    <!-- ======================================================== -->
+    <!-- [BỔ SUNG]: NÚT GIỎ CHỜ VÀ MODAL QUẢN LÝ ÂN HẠN           -->
+    <!-- ======================================================== -->
+    <div id="sync-button-container">
+        <button class="btn-sync-float" style="background-color: #f59e0b;" onclick="openGraceQueueModal()">
+            <i class="fa-solid fa-basket-shopping"></i>
+            <span>Giỏ chờ (<span id="pending-count">0</span>)</span>
+        </button>
+    </div>
+
+    <!-- MODAL QUẢN LÝ HÀNG CHỜ ÂN HẠN -->
+    <div class="modal fade" id="graceQueueModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-bottom m-0" style="position: absolute; bottom: 0; width: 100%; z-index: 1060;">
+            <div class="modal-content border-0" style="border-top-left-radius: 24px; border-top-right-radius: 24px; box-shadow: 0 -10px 25px rgba(0,0,0,0.1);">
+                <div class="modal-header border-0 pb-0 justify-content-center position-relative">
+                    <div style="width: 40px; height: 5px; background: #dee2e6; border-radius: 10px; position: absolute; top: 12px;"></div>
+                    <h5 class="modal-title fw-bold text-dark mt-3 fs-5"><i class="fa-solid fa-clock-rotate-left text-warning me-1"></i> Giỏ Chờ & Hoàn Tác</h5>
+                    <button type="button" class="btn-close position-absolute top-0 end-0 mt-3 me-3" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body pt-3 pb-4">
+                    <div class="alert alert-info border-0 bg-info bg-opacity-10 small fw-bold rounded-3">
+                        <i class="fa-solid fa-circle-info me-1"></i> Các phiếu điểm dưới đây đang bị giữ lại trong 15 phút. Bạn có thể bấm <strong class="text-danger">Hủy nộp</strong> để sửa lại nếu có sai sót.
+                    </div>
+                    <div id="queueListContainer" class="d-flex flex-column gap-2 mb-3" style="max-height: 50vh; overflow-y: auto;">
+                        <!-- JS sẽ đổ danh sách vào đây -->
+                    </div>
+                    <button class="btn btn-primary w-100 fw-bold rounded-3 py-3 shadow-sm" onclick="forceSyncAllNow()">
+                        <i class="fa-solid fa-cloud-arrow-up me-1"></i> BỎ QUA ÂN HẠN - NỘP TẤT CẢ NGAY
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+    <!-- ======================================================== -->
 
     <div class="app-header">
         <div class="d-flex align-items-center justify-content-center w-100">
@@ -261,7 +324,32 @@
                                 </div>
                             </div>
 
-                            <!-- 4. KHỐI TỔNG ĐIỂM DỰ KIẾN (LIVE) -->
+							<!-- [NÂNG CẤP] 4. MINH CHỨNG SỐ (CAMERA ĐA ẢNH) -->
+                            <div class="mb-4 bg-white p-2 rounded-3 border">
+                                <label class="form-label small fw-bold text-secondary mb-2"><i class="fa-solid fa-camera text-danger me-1"></i> 4. Ảnh minh chứng:</label>
+                                
+                                <!-- NÚT XEM ẢNH ĐÃ GỬI (Dành cho Sao Đỏ) -->
+                                {% if sc and sc.evidence_image %}
+                                <div class="mb-3">
+                                    <button type="button" class="btn btn-sm btn-info text-white fw-bold shadow-sm" style="border-radius: 8px;" onclick="viewEvidenceSafe(event, '{{ sc.evidence_image }}', '{{ sc.week }}')">
+                                        <i class="fa-solid fa-images"></i> Xem ảnh đã gửi lên
+                                    </button>
+                                </div>
+                                {% endif %}
+
+                                <div class="d-flex gap-2 align-items-center">
+                                    <button type="button" class="btn btn-sm btn-outline-danger fw-bold shadow-sm" onclick="document.getElementById('cameraInput_{{ b.id }}').click()" style="border-radius: 8px;">
+                                        <i class="fa-solid fa-camera"></i> Chụp thêm ảnh
+                                    </button>
+                                    <input type="file" id="cameraInput_{{ b.id }}" accept="image/*" capture="environment" style="display: none;" onchange="processEvidenceImage(this, 'preview_{{ b.id }}Container', 'evidenceBase64_{{ b.id }}')">
+                                    <input type="hidden" name="evidence_base64" id="evidenceBase64_{{ b.id }}" value="[]">
+                                </div>
+                                
+                                <div id="preview_{{ b.id }}Container" class="d-flex flex-wrap gap-2 mt-2"></div>
+                            </div>
+                            <!-- ==================================== -->
+
+                            <!-- 5. KHỐI TỔNG ĐIỂM DỰ KIẾN (LIVE) -->
                             <div class="card-custom mb-3" style="border: 2px solid #20c997; border-radius: 12px; box-shadow: 0 4px 8px rgba(32, 201, 151, 0.15);">
                                 <div class="p-3 d-flex justify-content-between align-items-center bg-white" style="border-radius: 10px;">
                                     <div class="d-flex align-items-center">
@@ -340,7 +428,7 @@
                     <button type="button" class="btn-close position-absolute top-0 end-0 mt-3 me-3" data-bs-dismiss="modal"></button>
                 </div>
                 
-                <form action="/sao_do_quick_submit_form" method="POST" onsubmit="triggerHaptic(40); let btn=document.getElementById('btnSubmitQuickLog'); btn.disabled=true; btn.innerHTML='<i class=\'fa-solid fa-spinner fa-spin me-2\'></i> ĐANG XỬ LÝ...';">
+                <form action="/sao_do_quick_submit_form" method="POST" id="quickLogForm">
                     <div class="modal-body pt-2 pb-4">
                         <input type="hidden" name="week_name" value="{{ current_week }}">
                         
@@ -395,6 +483,20 @@
                             </div>
                         </div>
                         <input type="hidden" name="violation_id" id="hiddenQuickViolationId" required>
+
+<						!-- [NÂNG CẤP] 4. MINH CHỨNG SỐ DÀNH CHO GHI NHANH -->
+                        <div class="mb-4 bg-light p-2 rounded-3 border">
+                            <label class="form-label small fw-bold text-secondary mb-2">4. Ảnh minh chứng (Tùy chọn):</label>
+                            <div class="d-flex gap-2 align-items-center">
+                                <button type="button" class="btn btn-outline-danger fw-bold bg-white" onclick="document.getElementById('quickCameraInput').click()" style="border-radius: 10px;">
+                                    <i class="fa-solid fa-camera fs-5"></i> Bật Camera
+                                </button>
+                                <input type="file" id="quickCameraInput" accept="image/*" capture="environment" style="display: none;" onchange="processEvidenceImage(this, 'quickPreviewContainer', 'quickEvidenceBase64')">
+                                <input type="hidden" name="evidence_base64" id="quickEvidenceBase64" value="[]">
+                            </div>
+                            <div id="quickPreviewContainer" class="d-flex flex-wrap gap-2 mt-2"></div>
+                        </div>
+                        <!-- ============================================== -->
 
                         <!-- NÚT GỬI ĐƯỢC KHÓA BẢO VỆ -->
                         <button type="submit" class="btn btn-secondary w-100 fw-bold btn-submit" id="btnSubmitQuickLog" style="height: 50px; border-radius: 14px;" disabled>
@@ -528,6 +630,48 @@
                     handleNoteInput('{{ b.id }}', '{{ b.group }}');
                 {% endfor %}
             {% endif %}
+            
+            // =========================================================
+            // [KÍCH HOẠT OFFLINE MODE MỚI THÊM VÀO]
+            // =========================================================
+            window.addEventListener('online', handleNetworkChange);
+            window.addEventListener('offline', handleNetworkChange);
+            handleNetworkChange();
+            updatePendingUI();
+
+            // Chặn Form Trực Cổng Ghi Nhanh đẩy vào Giỏ chờ 15 phút
+            const quickLogForm = document.getElementById('quickLogForm');
+            if (quickLogForm) {
+                quickLogForm.addEventListener('submit', function(e) {
+                    e.preventDefault(); // LUÔN CHẶN NỘP TRỰC TIẾP
+                    
+                    const formData = new FormData(quickLogForm);
+                    const dataObj = {};
+                    formData.forEach((value, key) => { dataObj[key] = value });
+                    
+                    // Lưu vào Giỏ chờ ân hạn
+                    saveToOfflineStorage(quickLogForm.action, dataObj, false, "Ghi nhanh lỗi: " + (dataObj['student_name'] || "Khuyết danh"));
+                    
+                    showNativeToast("Đã đưa vào Giỏ chờ. Bạn có 15 phút để chỉnh sửa!", "success");
+                    
+                    try { bootstrap.Modal.getInstance(document.getElementById('quickLogModal')).hide(); } catch(err) {}
+                    
+                    // Reset Form
+                    quickLogForm.reset();
+                    document.getElementById('quickSelectedBranchLabel').innerHTML = '⚠️ Chưa chọn lớp nào';
+                    document.getElementById('quickSelectedBranchLabel').className = "p-2 mb-2 rounded-3 text-center fw-bold text-danger border border-danger border-opacity-50 bg-light";
+                    document.querySelectorAll('.class-quick-btn').forEach(btn => {
+                        btn.classList.remove('btn-primary', 'text-white');
+                        btn.classList.add('btn-outline-primary');
+                    });
+                    document.querySelectorAll('.modal-quick-tag').forEach(tag => tag.classList.remove('active'));
+                    
+                    // XÓA ẢNH MINH CHỨNG TRONG FORM GHI NHANH SAU KHI NỘP
+                    clearEvidence('quickCameraInput', 'quickPreviewContainer', 'quickEvidenceBase64');
+                    
+                    checkQuickFormValidity();
+                });
+            }
         });
 
         async function loadRawScoresSilent(weekName, branchId, branchGroup) {
@@ -575,7 +719,6 @@
             tbody.appendChild(tr);
         }
 
-        // HÀM CHỌN NHANH LỖI (ĐÃ ĐƯỢC PHỤC HỒI)
         function appendQuickTag(branchId, branchGroup, catName) {
             triggerHaptic(20);
             let input = document.getElementById(`detailNote_${branchId}`);
@@ -654,7 +797,6 @@
             const tbody = document.getElementById(`subjectsBody_${branchId}`);
             if(!tbody) return;
 
-            // 1. TÍNH ĐIỂM HỌC TẬP & XẾP LOẠI HIỆN TẠI TRÊN MÀN HÌNH (CURRENT)
             let total10 = 0, total9 = 0, total8 = 0;
             tbody.querySelectorAll('tr').forEach(row => {
                 let c10Input = row.querySelector('.sub-c10');
@@ -702,7 +844,6 @@
                 else if (ratingSelect.value === "Tuần Khá") currentRatingScore = BAREM.kha;
             }
 
-            // 2. TÍNH ĐIỂM HỌC TẬP & XẾP LOẠI CŨ (OLD) TỪ CSDL ĐỂ TÌM ĐỘ CHÊNH LỆCH (DELTA)
             let oldC10 = parseInt(document.getElementById(`old_c10_${branchId}`).value) || 0;
             let oldC9 = parseInt(document.getElementById(`old_c9_${branchId}`).value) || 0;
             let oldC8 = parseInt(document.getElementById(`old_c8_${branchId}`).value) || 0;
@@ -726,35 +867,44 @@
             if (oldRatingVal === "Tuần Tốt") oldRatingScore = BAREM.tot;
             else if (oldRatingVal === "Tuần Khá") oldRatingScore = BAREM.kha;
 
-            // 3. TÍNH TOÁN BIẾN ĐỘNG (DELTA)
             let deltaHocTap = currentHocTap - oldHocTap;
             let deltaRating = currentRatingScore - oldRatingScore;
 
-            // Điểm trừ của MỘT MÌNH lỗi mới vừa gõ/tích chọn hôm nay
             let previewLabel = document.getElementById(`autoPenaltyPreview_${branchId}`);
             let penaltyAttr = previewLabel ? previewLabel.getAttribute('data-penalty') : '0';
             let newPenalty = parseFloat(penaltyAttr) || 0.0; 
 
-            // 4. LẤY TỔNG ĐIỂM CŨ LÀM MỐC VÀ CỘNG BIẾN ĐỘNG (Đồng bộ tuyệt đối với Bảng tuần)
             let oldTotalScoreEl = document.getElementById(`old_total_score_${branchId}`);
             let baseTotalScore = oldTotalScoreEl ? parseFloat(oldTotalScoreEl.value) || 100.0 : 100.0;
 
-            // CÔNG THỨC CHUẨN: Tổng Cũ + Biến động Học tập + Biến động Xếp loại - Lỗi Mới
             let finalScore = baseTotalScore + deltaHocTap + deltaRating - newPenalty;
             
             let scoreDisplay = document.getElementById(`live_total_score_${branchId}`);
             if(scoreDisplay) {
                 scoreDisplay.innerText = finalScore.toFixed(1) + " đ";
             }
-        } // ĐÃ SỬA LỖI NGOẶC DƯ Ở ĐÂY
+        } 
 
         function submitFormSafe(btnElement, branchId, branchName, branchGroup) {
             triggerHaptic(50);
-            if (confirm('Xác nhận gửi điểm chi tiết cho ' + branchName + '? Toàn bộ môn học và lỗi sẽ được gửi lên hệ thống.')) {
-                btnElement.disabled = true;
-                btnElement.classList.replace('btn-primary', 'btn-secondary');
-                btnElement.innerHTML = '<i class="fa-solid fa-spinner fa-spin me-2"></i> ĐANG TẢI LÊN...';
-
+            if (confirm('Xác nhận Chấm điểm cho lớp ' + branchName + '? Dữ liệu sẽ được lưu vào Giỏ chờ 15 phút để bạn có thể Hoàn tác.')) {
+                
+				// ========================================================
+                // [BỔ SUNG CHỐT CHẶN]: ÉP BUỘC GHI CHÚ KHI CÓ ẢNH
+                // ========================================================
+                let evidenceInput = document.getElementById(`evidenceBase64_${branchId}`);
+                let noteInput = document.getElementById(`detailNote_${branchId}`);
+                
+                if (evidenceInput && evidenceInput.value !== "") {
+                    // Nếu có ảnh mà ô ghi chú Sổ đen trống trơn
+                    if (!noteInput || noteInput.value.trim() === "") {
+                        showNativeToast("⚠️ BẠN QUÊN CHÚ THÍCH: Vui lòng gõ rõ nội dung vi phạm vào ô Sổ đen để giải thích cho bức ảnh này!", "error");
+                        // Rung cảnh báo lỗi mạnh
+                        if (navigator.vibrate) { navigator.vibrate([100, 50, 100]); }
+                        return; // Chặn đứng lệnh nộp
+                    }
+                }
+                // Thu thập điểm Sổ đầu bài
                 const tbody = document.getElementById(`subjectsBody_${branchId}`);
                 let rawList = []; 
                 let rawTotal10 = 0, rawTotal9 = 0, rawTotal8 = 0;
@@ -791,6 +941,7 @@
                 document.getElementById(`hidden_c9_${branchId}`).value = rawTotal9;
                 document.getElementById(`hidden_c8_${branchId}`).value = rawTotal8;
 
+                // Tách lọc ghi chú
                 let manualInputEl = document.getElementById(`detailNote_${branchId}`);
                 let oldNoteEl = document.getElementById(`old_note_${branchId}`);
                 
@@ -848,7 +999,35 @@
                 let manualInput = document.getElementById(`manual_note_${branchId}`);
                 if(manualInput) manualInput.value = manualNotes.join(', ');
 
-                document.getElementById('form_submit_' + branchId).submit(); 
+                // ========================================================
+                // [CƠ CHẾ MỚI]: BỎ HÀNH ĐỘNG SUBMIT CHUẨN, ÉP VÀO GIỎ CHỜ
+                // ========================================================
+                let targetForm = document.getElementById('form_submit_' + branchId);
+                const formData = new FormData(targetForm);
+                const dataObj = {};
+                formData.forEach((value, key) => { dataObj[key] = value });
+                
+                // Đưa vào Giỏ Chờ
+                saveToOfflineStorage(targetForm.action, dataObj, false, `Chấm điểm lớp ${branchName}`);
+                
+                showNativeToast(`Đã đưa vào Giỏ chờ. Bạn có 15 phút để chỉnh sửa!`, "success");
+                
+                // Đóng giao diện lớp đó lại và thêm nhãn "Chờ nộp"
+                const headingBtn = document.querySelector(`#heading${branchId} .accordion-button`);
+                if(headingBtn && !headingBtn.innerHTML.includes('Chờ nộp')) {
+                    headingBtn.innerHTML += `<span class="badge bg-warning text-dark ms-auto me-2 pending-badge" style="font-size: 11px;"><i class="fa-regular fa-clock"></i> Chờ nộp</span>`;
+                }
+                
+                let collapseEl = document.getElementById(`collapse${branchId}`);
+                if(collapseEl) {
+                    let bsCollapse = bootstrap.Collapse.getInstance(collapseEl) || new bootstrap.Collapse(collapseEl);
+                    bsCollapse.hide();
+                }
+                
+                // Khôi phục nút bấm để có thể sửa lại sau khi undo
+                btnElement.disabled = false;
+                btnElement.classList.replace('btn-secondary', 'btn-primary');
+                btnElement.innerHTML = '<i class="fa-solid fa-floppy-disk me-2"></i> CHUYỂN LÊN HỆ THỐNG';
             }
         }
 
@@ -882,30 +1061,15 @@
                 comment: "" 
             };
 
-            try {
-                const response = await fetch('/api/submit_evaluation', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
-                    body: JSON.stringify(payload)
-                });
-                
-                const textResponse = await response.text();
-                let result;
-                try { result = JSON.parse(textResponse); } 
-                catch (e) { throw new Error("Phản hồi máy chủ lỗi"); }
-
-                if (result.success) {
-                    showNativeToast(result.message, "success");
-                    bootstrap.Modal.getInstance(document.getElementById('evalTeamModal')).hide();
-                } else {
-                    showNativeToast("Lỗi: " + result.error, "error");
-                }
-            } catch (error) {
-                showNativeToast("Lỗi kết nối máy chủ!", "error");
-            } finally {
-                btn.disabled = false;
-                btn.innerHTML = '<i class="fa-solid fa-paper-plane me-1"></i> GỬI ĐÁNH GIÁ ẨN DANH';
-            }
+            // ========================================================
+            // [BỔ SUNG VÀO GIỎ CHỜ CHO FORM ĐÁNH GIÁ ĐỒNG ĐỘI]
+            // ========================================================
+            saveToOfflineStorage('/api/submit_evaluation', payload, true, "Đánh giá đồng đội"); 
+            showNativeToast("Phiếu đánh giá đã được đưa vào Giỏ chờ 15 phút.", "success");
+            bootstrap.Modal.getInstance(document.getElementById('evalTeamModal')).hide();
+            btn.disabled = false;
+            btn.innerHTML = '<i class="fa-solid fa-paper-plane me-1"></i> GỬI ĐÁNH GIÁ ẨN DANH';
+            return;
         }
 
         // =========================================================
@@ -1038,6 +1202,216 @@
             
             checkQuickFormValidity();
         }
+
+        // =========================================================
+        // [BỔ SUNG]: HỆ THỐNG XỬ LÝ VÀ NÉN ẢNH MINH CHỨNG
+        // =========================================================
+		function processEvidenceImage(input, previewContainerId, hiddenInputId) {
+            if (input.files && input.files[0]) {
+                let file = input.files[0];
+                if (!file.type.match('image.*')) {
+                    showNativeToast("Chỉ hỗ trợ chụp hoặc chọn định dạng ảnh!", "error"); return;
+                }
+                let reader = new FileReader();
+                reader.onload = function(e) {
+                    let img = new Image();
+                    img.onload = function() {
+                        let canvas = document.createElement('canvas');
+                        let ctx = canvas.getContext('2d');
+                        let MAX_WIDTH = 800; let MAX_HEIGHT = 800; // Tăng chất lượng xíu
+                        let width = img.width; let height = img.height;
+                        if (width > height) { if (width > MAX_WIDTH) { height *= MAX_WIDTH / width; width = MAX_WIDTH; } } 
+                        else { if (height > MAX_HEIGHT) { width *= MAX_HEIGHT / height; height = MAX_HEIGHT; } }
+                        canvas.width = width; canvas.height = height;
+                        ctx.drawImage(img, 0, 0, width, height);
+
+                        let dataUrl = canvas.toDataURL('image/jpeg', 0.6);
+                        
+                        let hiddenInput = document.getElementById(hiddenInputId);
+                        let currentData = [];
+                        try { currentData = JSON.parse(hiddenInput.value); } catch(e) { currentData = []; }
+                        currentData.push(dataUrl);
+                        hiddenInput.value = JSON.stringify(currentData);
+                        
+                        renderPreviewImages(hiddenInputId, previewContainerId);
+                    }
+                    img.src = e.target.result;
+                }
+                reader.readAsDataURL(file);
+            }
+        }
+
+        function removePreviewImage(index, hiddenInputId, previewContainerId) {
+            triggerHaptic(20);
+            let hiddenInput = document.getElementById(hiddenInputId);
+            let currentData = JSON.parse(hiddenInput.value);
+            currentData.splice(index, 1);
+            hiddenInput.value = JSON.stringify(currentData);
+            renderPreviewImages(hiddenInputId, previewContainerId);
+        }
+
+        function renderPreviewImages(hiddenInputId, previewContainerId) {
+            let hiddenInput = document.getElementById(hiddenInputId);
+            let currentData = JSON.parse(hiddenInput.value);
+            let container = document.getElementById(previewContainerId);
+            container.innerHTML = '';
+            
+            currentData.forEach((dataUrl, index) => {
+                let wrapper = document.createElement('div');
+                wrapper.style.position = 'relative';
+                wrapper.innerHTML = `
+                    <img src="${dataUrl}" style="height: 60px; border-radius: 6px; border: 1px solid #dc3545; object-fit: cover;">
+                    <button type="button" class="btn-close position-absolute top-0 start-100 translate-middle bg-white rounded-circle shadow-sm" style="padding: 3px; font-size: 10px;" onclick="removePreviewImage(${index}, '${hiddenInputId}', '${previewContainerId}')"></button>
+                `;
+                container.appendChild(wrapper);
+            });
+        }
+        // ========================================================
+        // [CƠ CHẾ GIỎ CHỜ ÂN HẠN (GRACE PERIOD) & ĐỒNG BỘ OFFLINE]
+        // ========================================================
+        const GRACE_PERIOD_MS = 15 * 60 * 1000; // 15 Phút ân hạn
+
+        function handleNetworkChange() {
+            const banner = document.getElementById('network-status-banner');
+            if (navigator.onLine) {
+                banner.style.display = 'none';
+                autoSyncOfflineData(); 
+            } else {
+                banner.style.display = 'block';
+            }
+        }
+
+        function saveToOfflineStorage(url, dataObj, isJson = false, description = "Phiếu điểm") {
+            let pending = JSON.parse(localStorage.getItem('saodo_offline_queue') || '[]');
+            let id = 'task_' + new Date().getTime();
+            let now = new Date().getTime();
+            
+            pending.push({ 
+                id: id,
+                url: url, 
+                data: dataObj, 
+                isJson: isJson,
+                description: description,
+                timestamp: now,
+                graceEnd: now + GRACE_PERIOD_MS 
+            });
+            localStorage.setItem('saodo_offline_queue', JSON.stringify(pending));
+            updatePendingUI();
+        }
+
+        function updatePendingUI() {
+            let pending = JSON.parse(localStorage.getItem('saodo_offline_queue') || '[]');
+            const btnContainer = document.getElementById('sync-button-container');
+            const countSpan = document.getElementById('pending-count');
+            
+            if (pending.length > 0) {
+                btnContainer.style.display = 'block';
+                countSpan.innerText = pending.length;
+            } else {
+                btnContainer.style.display = 'none';
+            }
+        }
+
+        function openGraceQueueModal() {
+            triggerHaptic(20);
+            let pending = JSON.parse(localStorage.getItem('saodo_offline_queue') || '[]');
+            const container = document.getElementById('queueListContainer');
+            container.innerHTML = '';
+
+            if (pending.length === 0) {
+                container.innerHTML = '<div class="text-center text-muted py-3 fw-bold">Giỏ chờ đang trống</div>';
+            } else {
+                let now = new Date().getTime();
+                pending.forEach(item => {
+                    let timeLeft = Math.max(0, Math.floor((item.graceEnd - now) / 1000));
+                    let min = Math.floor(timeLeft / 60);
+                    let sec = timeLeft % 60;
+                    let timeStr = `${min}:${sec < 10 ? '0' : ''}${sec}`;
+
+                    container.innerHTML += `
+                        <div class="bg-light border p-3 rounded-3 d-flex justify-content-between align-items-center">
+                            <div>
+                                <div class="fw-bold text-dark" style="font-size: 14px;">${item.description}</div>
+                                <div class="small text-danger fw-bold"><i class="fa-regular fa-clock"></i> Còn ${timeStr}</div>
+                            </div>
+                            <button class="btn btn-sm btn-outline-danger fw-bold" onclick="undoTask('${item.id}')">
+                                <i class="fa-solid fa-rotate-left"></i> Hủy nộp
+                            </button>
+                        </div>
+                    `;
+                });
+            }
+            var myModal = bootstrap.Modal.getInstance(document.getElementById('graceQueueModal')) || new bootstrap.Modal(document.getElementById('graceQueueModal'));
+            myModal.show();
+        }
+
+        function undoTask(taskId) {
+            triggerHaptic(30);
+            let pending = JSON.parse(localStorage.getItem('saodo_offline_queue') || '[]');
+            pending = pending.filter(item => item.id !== taskId);
+            localStorage.setItem('saodo_offline_queue', JSON.stringify(pending));
+            
+            showNativeToast("Đã rút lại phiếu điểm thành công! Bạn có thể sửa lại trên màn hình.", "success");
+            
+            updatePendingUI();
+            openGraceQueueModal(); 
+            
+            document.querySelectorAll('.pending-badge').forEach(el => el.remove());
+        }
+
+        async function autoSyncOfflineData() {
+            if (!navigator.onLine) return;
+            let pending = JSON.parse(localStorage.getItem('saodo_offline_queue') || '[]');
+            if (pending.length === 0) return;
+
+            let now = new Date().getTime();
+            let expiredTasks = pending.filter(item => now >= item.graceEnd);
+            let keepingTasks = pending.filter(item => now < item.graceEnd); 
+
+            if (expiredTasks.length === 0) return; 
+
+            let successCount = 0;
+            for (let item of expiredTasks) {
+                let fetchOptions = { method: 'POST' };
+                if (item.isJson) {
+                    fetchOptions.headers = { 'Content-Type': 'application/json', 'Accept': 'application/json' };
+                    fetchOptions.body = JSON.stringify(item.data);
+                } else {
+                    let formData = new FormData();
+                    for (let key in item.data) { formData.append(key, item.data[key]); }
+                    fetchOptions.body = formData;
+                }
+                try {
+                    const response = await fetch(item.url, fetchOptions);
+                    if (response.ok) successCount++;
+                    else keepingTasks.push(item);
+                } catch (error) { keepingTasks.push(item); }
+            }
+
+            localStorage.setItem('saodo_offline_queue', JSON.stringify(keepingTasks));
+            updatePendingUI();
+            if (successCount > 0) {
+                showNativeToast(`Đã tự động nộp ${successCount} phiếu điểm lên hệ thống!`, "success");
+                setTimeout(() => window.location.reload(), 1500);
+            }
+        }
+
+        function forceSyncAllNow() {
+            triggerHaptic(40);
+            if (!navigator.onLine) {
+                alert("Vui lòng kết nối Internet/4G trước khi đồng bộ!");
+                return;
+            }
+            let pending = JSON.parse(localStorage.getItem('saodo_offline_queue') || '[]');
+            pending.forEach(item => item.graceEnd = 0);
+            localStorage.setItem('saodo_offline_queue', JSON.stringify(pending));
+            
+            bootstrap.Modal.getInstance(document.getElementById('graceQueueModal')).hide();
+            showNativeToast("Đang đẩy toàn bộ dữ liệu lên hệ thống...", "success");
+            autoSyncOfflineData();
+        }
+
+        setInterval(autoSyncOfflineData, 10000); 
     </script>
 </body>
 </html>

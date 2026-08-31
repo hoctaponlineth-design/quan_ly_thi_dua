@@ -360,7 +360,7 @@
                 <div class="banner-title-wrapper">
                     <i class="fa-solid fa-shield-halved"></i>
                     <div>
-                        <h2>HỆ THỐNG GVCN - QL THI ĐUA</h2>
+                        <h2>HỆ THỐNG THI ĐUA GVCN</h2>
                         <p>Design:🏆 Cô Thùy Tiên - Thầy Đức Anh 🏆 </p>
                     </div>
                 </div>
@@ -566,6 +566,14 @@
                                     
 									<td data-label="Ghi Chú Lỗi" class="col-details">
                                         <div class="text-main fw-bold mb-2 auto-color-note" style="line-height: 1.5;">{{ sc.note }}</div>
+										<!-- [BỔ SUNG]: NÚT XEM ẢNH MINH CHỨNG SỐ -->
+                                        {% if sc.evidence_image %}
+                                        <div class="mb-2 mt-1">
+                                            <button class="btn btn-sm fw-bold shadow-sm" style="color: #dc3545; border: 1px solid #dc3545; background: #fff5f5; border-radius: 8px;" onclick="viewEvidence('{{ sc.evidence_image }}', '{{ sc.week }}')">
+                                                <i class="fa-regular fa-image me-1"></i> Xem ảnh minh chứng
+                                            </button>
+                                        </div>
+                                        {% endif %}
                                         
                                         <!-- HIỂN THỊ LỊCH SỬ PHÚC KHẢO -->
                                         {% if sc.appeal_reason %}
@@ -1113,7 +1121,77 @@
             </div>
         </div>
     </div>
+	<!-- [BỔ SUNG]: MODAL XEM ẢNH MINH CHỨNG (ĐÃ VÁ LỖI HIỂN THỊ ĐA ẢNH) -->
+    <div class="modal fade" id="evidenceModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered modal-lg">
+            <div class="modal-content" style="border-radius: 20px; border: none; overflow: hidden; box-shadow: 0 20px 40px rgba(0,0,0,0.2);">
+                <div class="modal-header text-white" style="background: var(--primary);">
+                    <h5 class="modal-title fw-bold"><i class="fa-regular fa-image me-2"></i> Ảnh Minh Chứng - <span id="evidenceWeek"></span></h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <!-- Container rỗng để JS tự động bơm ảnh vào -->
+                <div class="modal-body p-0 bg-light" id="evidenceImageContainer" style="max-height: 75vh; overflow-y: auto; padding: 20px !important;">
+                </div>
+                <div class="modal-footer border-0 p-3 bg-white justify-content-center">
+                    <button type="button" class="btn-modern btn-light fw-bold w-50" style="background: #f1f5f9; color: var(--text-main);" data-bs-dismiss="modal">Đóng</button>
+                </div>
+            </div>
+        </div>
+    </div>
 
+    <!-- Script điều khiển mở Modal (Đã đồng bộ thuật toán chia mảng Base64) -->
+    <script>
+        function viewEvidence(imagePaths, weekName) {
+            // 1. Cập nhật tiêu đề Tuần
+            document.getElementById('evidenceWeek').innerText = weekName;
+            
+            // 2. Tách chuỗi đường dẫn ảnh (Bằng dấu |)
+            let paths = imagePaths.split('|');
+            let imgHtml = '';
+            
+            // 3. Quét từng đường dẫn và tạo thẻ <img> tương ứng
+            paths.forEach(p => {
+                if(p.trim()) {
+                    imgHtml += `<img src="${p.trim()}" alt="Ảnh minh chứng" style="max-width: 100%; height: auto; display: block; margin: 0 auto 15px auto; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.15);">`;
+                }
+            });
+            
+            // 4. Bơm danh sách ảnh vào container
+            document.getElementById('evidenceImageContainer').innerHTML = imgHtml;
+            
+            // 5. Hiển thị Modal
+            var modalEl = document.getElementById('evidenceModal');
+            var evidenceModal = bootstrap.Modal.getInstance(modalEl) || new bootstrap.Modal(modalEl);
+            evidenceModal.show();
+        }
+    </script>
+
+	<!-- Script điều khiển mở Modal -->
+	<script>
+		function viewEvidence(imagePaths, weekName) {
+			// 1. Cập nhật tiêu đề Tuần
+			document.getElementById('evidenceWeek').innerText = weekName;
+			
+			// 2. Tách chuỗi đường dẫn ảnh (Bằng dấu |)
+			let paths = imagePaths.split('|');
+			let imgHtml = '';
+			
+			// 3. Quét từng đường dẫn và tạo thẻ <img> tương ứng
+			paths.forEach(p => {
+				if(p.trim()) {
+					imgHtml += `<img src="${p.trim()}" alt="Ảnh minh chứng" style="max-width: 100%; height: auto; display: block; margin: 0 auto 15px auto; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.15);">`;
+				}
+			});
+			
+			// 4. Bơm danh sách ảnh vào container
+			document.getElementById('evidenceImageContainer').innerHTML = imgHtml;
+			
+			// 5. Hiển thị Modal
+			var modalEl = document.getElementById('evidenceModal');
+			var evidenceModal = bootstrap.Modal.getInstance(modalEl) || new bootstrap.Modal(modalEl);
+			evidenceModal.show();
+		}
+	</script>
 	<!-- =========================================
          THANH ĐIỀU HƯỚNG DƯỚI ĐÁY (BOTTOM NAV) - BẢN NATIVE API
          ========================================= -->
