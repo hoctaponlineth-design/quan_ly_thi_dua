@@ -10,7 +10,17 @@ self.addEventListener('activate', (event) => {
 });
 
 self.addEventListener('fetch', (event) => {
-    // Để trống hoặc thiết lập cache cơ bản. 
-    // Trình duyệt sẽ chạy app mượt mà hơn nhờ có file này.
-    event.respondWith(fetch(event.request));
+    let url = new URL(event.request.url);
+
+    // [VÁ LỖI]: Bỏ qua hoàn toàn các yêu cầu xuất file hoặc gọi API động
+    if (url.pathname.includes('/export_') || url.pathname.includes('/api/')) {
+        return; // Trình duyệt sẽ tự xử lý kết nối trực tiếp với server, không qua Service Worker
+    }
+
+    event.respondWith(
+        fetch(event.request).catch(() => {
+            // Dự phòng khi mất mạng
+            return caches.match(event.request);
+        })
+    );
 });
