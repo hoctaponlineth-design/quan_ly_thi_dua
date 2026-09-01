@@ -1413,80 +1413,121 @@
         setInterval(autoSyncOfflineData, 10000); 
     </script>
 	<script>
-		// Hàm tự động đồng bộ dữ liệu và ĐÓNG BĂNG GIAO DIỆN từ Bảng tuần ra App Sao Đỏ
-		function startAutoSyncSaoDo(weekName) {
-			setInterval(async () => {
-				try {
-					let response = await fetch(`/api/weekly_scores_json/${encodeURIComponent(weekName)}`);
-					if (response.status === 401) return; // Bỏ qua nếu mất phiên đăng nhập
-					
-					let result = await response.json();
-					if (result.success && result.data) {
-						result.data.forEach(item => {
-							let branchId = item.branch_id;
-							
-							// 1. Luôn cập nhật các trường ẩn làm "Mỏ neo" tính toán
-							let oldNoteEl = document.getElementById(`old_note_${branchId}`);
-							if (oldNoteEl) oldNoteEl.value = item.note;
-							
-							let oldTotalScoreEl = document.getElementById(`old_total_score_${branchId}`);
-							if (oldTotalScoreEl) oldTotalScoreEl.value = item.total_score;
+        // Hàm tự động đồng bộ dữ liệu, HỢP NHẤT NHÁP và ĐÓNG BĂNG GIAO DIỆN từ Bảng tuần ra App Sao Đỏ
+        function startAutoSyncSaoDo(weekName) {
+            setInterval(async () => {
+                try {
+                    let response = await fetch(`/api/weekly_scores_json/${encodeURIComponent(weekName)}`);
+                    if (response.status === 401) return; // Bỏ qua nếu mất phiên đăng nhập
+                    
+                    let result = await response.json();
+                    if (result.success && result.data) {
+                        result.data.forEach(item => {
+                            let branchId = item.branch_id;
+                            
+                            let oldNoteEl = document.getElementById(`old_note_${branchId}`);
+                            let oldTotalScoreEl = document.getElementById(`old_total_score_${branchId}`);
+                            let noteInputEl = document.getElementById(`detailNote_${branchId}`);
+                            let liveScoreEl = document.getElementById(`live_total_score_${branchId}`);
+                            
+                            // ========================================================
+                            // THUẬT TOÁN ĐỒNG BỘ THÔNG MINH (CHỐNG MẤT CHỮ ĐANG GÕ)
+                            // ========================================================
+                            if (noteInputEl && oldNoteEl && oldTotalScoreEl) {
+                                let currentInput = noteInputEl.value.trim();
+                                let oldServerNote = oldNoteEl.value.trim();
+                                let newServerNote = item.note || "";
+                                
+                                // TRƯỜNG HỢP 1: Sao đỏ đã ấn Submit hoặc Ghi chú đang khớp hoàn toàn với Server
+                                if (currentInput === newServerNote) {
+                                    oldNoteEl.value = newServerNote;
+                                    oldTotalScoreEl.value = item.total_score;
+                                    if (liveScoreEl) liveScoreEl.innerText = item.total_score.toFixed(1);
+                                    
+                                // TRƯỜNG HỢP 2: Sao đỏ CHƯA gõ gì (Ô ghi chú trống trơn hoặc không thay đổi)
+                                } else if (currentInput === oldServerNote) {
+                                    noteInputEl.value = newServerNote;
+                                    oldNoteEl.value = newServerNote;
+                                    oldTotalScoreEl.value = item.total_score;
+                                    if (liveScoreEl) liveScoreEl.innerText = item.total_score.toFixed(1);
+                                    
+                                // TRƯỜNG HỢP 3: Sao đỏ ĐANG CÓ BẢN NHÁP (Vừa gõ chữ hoặc bấm Thẻ chạm nhanh)
+                                } else {
+                                    // Nếu Admin trên Web vừa có thay đổi dữ liệu Ghi chú (new != old)
+                                    if (newServerNote !== oldServerNote) {
+                                        // Tách phần chữ nháp mà SĐ vừa gõ
+                                        let draftText = currentInput;
+                                        if (oldServerNote !== "" && currentInput.includes(oldServerNote)) {
+                                            draftText = currentInput.replace(oldServerNote, "").trim();
+                                            // Dọn dẹp dấu phẩy thừa do tách chuỗi
+                                            if (draftText.startsWith(";") || draftText.startsWith(",")) {
+                                                draftText = draftText.substring(1).trim();
+                                            }
+                                        }
+                                        
+                                        // Nối nháp của SĐ vào đuôi dữ liệu mới của Admin để không làm mất chữ
+                                        noteInputEl.value = newServerNote ? `${newServerNote} ; ${draftText}` : draftText;
+                                        
+                                        // Bơm mốc điểm mới của Admin vào
+                                        oldNoteEl.value = newServerNote;
+                                    }
+                                    
+                                    // Kích hoạt tính toán lại nếu Admin trên máy tính có thay đổi Điểm (để Điểm Dự Kiến trên app khớp mốc mới)
+                                    if (oldTotalScoreEl.value != item.total_score) {
+                                        oldTotalScoreEl.value = item.total_score;
+                                        noteInputEl.dispatchEvent(new Event('input', { bubbles: true }));
+                                    }
+                                }
+                            }
 
-							// 2. Cập nhật trực tiếp lên Giao diện hiển thị
-							let noteInputEl = document.getElementById(`detailNote_${branchId}`);
-							let liveScoreEl = document.getElementById(`live_total_score_${branchId}`);
-							
-							if (noteInputEl && document.activeElement !== noteInputEl) {
-								if (noteInputEl.value !== item.note) noteInputEl.value = item.note;
-								if (liveScoreEl) liveScoreEl.innerText = item.total_score.toFixed(1);
-							}
+                            // ========================================================
+                            // CHIẾN DỊCH BÀN TAY SẮT: ĐÓNG BĂNG TOÀN DIỆN KHI KHÓA SỔ
+                            // ========================================================
+                            let formEl = document.getElementById(`form_submit_${branchId}`);
+                            if (formEl) {
+                                let btnSubmit = formEl.querySelector('.btn-submit');
+                                // Quét tìm TẤT CẢ ô nhập, dropdown, nút bấm trong lớp này (ngoại trừ nút "Xem ảnh đã gửi" màu xanh)
+                                let allInputs = formEl.querySelectorAll('input, select, textarea, button:not(.btn-info)');
+                                let quickTags = formEl.querySelectorAll('.quick-tag'); // Các thẻ chạm nhanh
 
-							// 3. CHIẾN DỊCH BÀN TAY SẮT: ĐÓNG BĂNG TOÀN DIỆN
-							let formEl = document.getElementById(`form_submit_${branchId}`);
-							if (formEl) {
-								let btnSubmit = formEl.querySelector('.btn-submit');
-								// Quét tìm TẤT CẢ ô nhập, dropdown, nút bấm trong lớp này (ngoại trừ nút "Xem ảnh đã gửi" màu xanh)
-								let allInputs = formEl.querySelectorAll('input, select, textarea, button:not(.btn-info)');
-								let quickTags = formEl.querySelectorAll('.quick-tag'); // Các thẻ chạm nhanh
+                                if (item.is_locked) {
+                                    // KHÓA SỔ: Tê liệt mọi thao tác
+                                    allInputs.forEach(el => el.disabled = true);
+                                    quickTags.forEach(tag => tag.style.pointerEvents = 'none'); // Vô hiệu hóa thẻ chạm
+                                    
+                                    if (btnSubmit) {
+                                        btnSubmit.classList.remove('btn-primary');
+                                        btnSubmit.classList.add('btn-secondary');
+                                        btnSubmit.innerHTML = '<i class="fa-solid fa-lock me-2"></i> ĐÃ KHÓA SỔ (CHỐT ĐIỂM)';
+                                    }
+                                } else {
+                                    // MỞ SỔ: Khôi phục hoạt động
+                                    allInputs.forEach(el => el.disabled = false);
+                                    quickTags.forEach(tag => tag.style.pointerEvents = 'auto');
+                                    
+                                    if (btnSubmit) {
+                                        btnSubmit.classList.remove('btn-secondary');
+                                        btnSubmit.classList.add('btn-primary');
+                                        btnSubmit.innerHTML = '<i class="fa-solid fa-floppy-disk me-2"></i> CHUYỂN LÊN HỆ THỐNG';
+                                    }
+                                }
+                            }
+                        });
+                    }
+                } catch (err) {
+                    // Tạm ẩn log để tối ưu RAM điện thoại
+                }
+            }, 4000); // Tốc độ quét: 4 giây/lần
+        }
 
-								if (item.is_locked) {
-									// KHÓA SỔ: Tê liệt mọi thao tác
-									allInputs.forEach(el => el.disabled = true);
-									quickTags.forEach(tag => tag.style.pointerEvents = 'none'); // Vô hiệu hóa thẻ chạm
-									
-									if (btnSubmit) {
-										btnSubmit.classList.remove('btn-primary');
-										btnSubmit.classList.add('btn-secondary');
-										btnSubmit.innerHTML = '<i class="fa-solid fa-lock me-2"></i> ĐÃ KHÓA SỔ (CHỐT ĐIỂM)';
-									}
-								} else {
-									// MỞ SỔ: Khôi phục hoạt động
-									allInputs.forEach(el => el.disabled = false);
-									quickTags.forEach(tag => tag.style.pointerEvents = 'auto');
-									
-									if (btnSubmit) {
-										btnSubmit.classList.remove('btn-secondary');
-										btnSubmit.classList.add('btn-primary');
-										btnSubmit.innerHTML = '<i class="fa-solid fa-floppy-disk me-2"></i> CHUYỂN LÊN HỆ THỐNG';
-									}
-								}
-							}
-						});
-					}
-				} catch (err) {
-					// Tạm ẩn log để tối ưu RAM điện thoại
-				}
-			}, 3000); // Tốc độ quét cực nhanh: 3 giây/lần
-		}
-
-		// Kích hoạt ngay khi mở App
-		document.addEventListener("DOMContentLoaded", () => {
-			const currentWeek = "{{ current_week }}"; 
-			if (currentWeek) {
-				startAutoSyncSaoDo(currentWeek);
-			}
-		});
-	</script>
+        // Kích hoạt ngay khi mở App
+        document.addEventListener("DOMContentLoaded", () => {
+            const currentWeek = "{{ current_week }}"; 
+            if (currentWeek) {
+                startAutoSyncSaoDo(currentWeek);
+            }
+        });
+    </script>
 	<!-- ========================================================================= -->
     <!-- [NÂNG CẤP]: KHUNG XEM ẢNH MINH CHỨNG CÓ CHỨC NĂNG VUỐT / CHUYỂN TRANG -->
     <!-- ========================================================================= -->
