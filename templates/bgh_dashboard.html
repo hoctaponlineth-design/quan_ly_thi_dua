@@ -55,7 +55,6 @@
 
         .kpi-card { border-radius: 12px; border: none; box-shadow: 0 4px 6px rgba(0,0,0,0.04); transition: transform 0.2s; background: var(--surface); }
         .kpi-card:hover { transform: translateY(-3px); }
-        .ai-box { background: linear-gradient(135deg, #eff6ff, #dbeafe); border-left: 5px solid #2563eb; border-radius: 12px; }
 
         /* =========================================
            MOBILE RESPONSIVE (TỰ ĐỘNG CO GIÃN MÀN HÌNH)
@@ -180,20 +179,27 @@
             </div>
         </div>
 
-        <!-- TRỢ LÝ AI PHÂN TÍCH -->
-        <div class="card border-0 shadow-sm p-3 p-md-4 mb-4 ai-box">
-            <div class="d-flex align-items-start gap-3">
-                <div class="bg-primary text-white rounded-circle d-flex align-items-center justify-content-center flex-shrink-0 shadow-sm" style="width: 42px; height: 42px; font-size: 18px;">
-                    <i class="fa-solid fa-robot"></i>
-                </div>
-                <div>
-                    <div class="d-flex align-items-center gap-2 mb-1">
-                        <h6 class="fw-bold text-primary m-0">Trợ Lý AI Phân Tích & Gợi Ý Quyết Định</h6>
-                        <span class="badge bg-primary bg-opacity-10 text-primary" style="font-size: 10px;">Executive Summary</span>
+		<!-- TRỢ LÝ AI PHÂN TÍCH (ĐÃ CỐ ĐỊNH VÀ LÀM SẠCH GIAO DIỆN) -->
+        <div class="card border-0 shadow-sm mb-4" style="border-radius: 14px; border-left: 5px solid #2563eb !important; background: #ffffff; position: sticky; top: 15px; z-index: 99;">
+            <div class="card-body p-4">
+                <div class="d-flex align-items-center justify-content-between mb-3 pb-2 border-bottom">
+                    <div class="d-flex align-items-center gap-2">
+                        <div class="bg-primary text-white rounded-circle d-flex align-items-center justify-content-center shadow-sm" style="width: 38px; height: 38px;">
+                            <i class="fa-solid fa-brain fs-5"></i>
+                        </div>
+                        <div>
+                            <h5 class="fw-bold text-primary m-0" style="font-size: 16px;">Trợ Lý AI Phân Tích & Gợi Ý Quyết Định</h5>
+                            <span class="text-muted" style="font-size: 12px;">Góc nhìn quản lý giáo dục & Đề xuất chỉ đạo</span>
+                        </div>
                     </div>
-                    <p class="text-dark mb-0 fw-medium" style="line-height: 1.5; font-size: 14px;">
-                        {{ ai_summary }}
-                    </p>
+                    <span class="badge bg-primary bg-opacity-10 text-primary px-3 py-1.5 rounded-pill fw-bold" style="font-size: 11px;">
+                        <i class="fa-solid fa-shield-halved me-1"></i> Executive Summary
+                    </span>
+                </div>
+                
+                <!-- HIỂN THỊ NỘI DUNG AI DẠNG HTML ĐÃ BỎ HẾT DẤU SAO -->
+                <div class="ai-report-content" style="font-size: 14.5px; color: #1e293b;">
+                    {{ ai_summary | safe }}
                 </div>
             </div>
         </div>
