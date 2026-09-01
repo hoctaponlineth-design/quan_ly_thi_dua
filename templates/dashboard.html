@@ -103,13 +103,19 @@
                         </tr>
                     </thead>
                     <tbody>
-                        {% for p in pending_appeals %}
+						{% for p in pending_appeals %}
                         <tr>
                             <td class="text-center fw-bold text-primary">{{ p.branch_name }}</td>
                             <td class="text-center fw-bold text-dark">{{ p.week }}</td>
                             <td class="fst-italic text-secondary px-3">"{{ p.reason }}"</td>
                             <td class="text-center">
-                                <button class="btn btn-sm btn-danger fw-bold shadow-sm" onclick="openResolveModal({{ p.score_id }}, '{{ p.branch_name }}', '{{ p.week }}')">
+                                <!-- Nút trả lời sử dụng Data Attributes (An toàn tuyệt đối với mọi ký tự) -->
+                                <button class="btn btn-sm btn-danger fw-bold shadow-sm" 
+                                        onclick="openResolveModal(this)"
+                                        data-score-id="{{ p.score_id }}"
+                                        data-branch-name="{{ p.branch_name }}"
+                                        data-week="{{ p.week }}"
+                                        data-reason="{{ p.reason }}">
                                     <i class="fa-solid fa-reply"></i> Trả lời
                                 </button>
                             </td>
@@ -188,31 +194,53 @@
         </div>
     </div>
 
-    <!-- MODAL BCH TRẢ LỜI PHÚC KHẢO (Chỉ sinh ra khi có đơn) -->
+	<!-- MODAL BCH TRẢ LỜI PHÚC KHẢO (ĐÃ NÂNG CẤP LUỒNG TICKETING) -->
     {% if pending_appeals and pending_appeals|length > 0 %}
     <div class="modal fade" id="resolveModal" tabindex="-1" aria-hidden="true">
-        <div class="modal-dialog">
-            <div class="modal-content">
-                <div class="modal-header bg-danger text-white">
-                    <h5 class="modal-title fw-bold"><i class="fa-solid fa-reply"></i> Phản hồi Đơn Phúc khảo</h5>
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content border-0 shadow-lg">
+                <div class="modal-header bg-primary text-white border-0">
+                    <h5 class="modal-title fw-bold"><i class="fa-solid fa-scale-balanced me-2"></i> Xử lý Phán quyết Phúc khảo</h5>
                     <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
                 </div>
                 <form action="/resolve_appeal" method="POST">
-                    <div class="modal-body">
+                    <div class="modal-body p-4">
                         <input type="hidden" name="score_id" id="resolveScoreId">
-                        <div class="mb-3">
-                            <label class="form-label fw-bold">Chi đoàn đang khiếu nại:</label>
-                            <input type="text" class="form-control fw-bold bg-light text-primary" id="resolveBranch" readonly>
+                        
+                        <div class="mb-4">
+                            <label class="form-label fw-bold text-dark">Chi đoàn đang khiếu nại:</label>
+                            <input type="text" class="form-control fw-bold bg-light text-primary border-0" id="resolveBranch" readonly>
                         </div>
-                        <div class="mb-3">
-                            <label class="form-label fw-bold">Quyết định giải quyết của Đoàn trường:</label>
-                            <textarea class="form-control border-danger" name="response_text" rows="4" placeholder="Nhập nội dung trả lời vào đây....." required></textarea>
-                            <small class="text-muted mt-1 d-block">GVCN sẽ nhìn thấy ngay phản hồi này trên trang Hồ sơ lớp của họ.</small>
+
+                        <!-- LÝ DO GVCN -->
+                        <div class="mb-4">
+                            <label class="form-label fw-bold text-dark">Nội dung khiếu nại của GVCN:</label>
+                            <div class="p-3 bg-light border border-secondary border-opacity-25 rounded-3 text-danger fst-italic shadow-sm" id="resolveReason">
+                                <!-- JS sẽ đẩy nội dung vào đây -->
+                            </div>
+                        </div>
+
+                        <!-- Ô NHẬP ĐIỂM HOÀN LẠI (TỰ ĐỘNG) -->
+                        <div class="mb-4 p-3 bg-primary bg-opacity-10 border border-primary border-opacity-50 rounded-3">
+                            <label class="form-label fw-bold text-primary"><i class="fa-solid fa-rotate-left me-1"></i> Số điểm hoàn lại (Chỉ nhập nếu Duyệt):</label>
+                            <input type="number" step="0.5" min="0" class="form-control border-primary fw-bold fs-5 text-primary" name="refund_points" value="0" placeholder="VD: 2.0">
+                            <small class="text-muted mt-2 d-block"><i class="fa-solid fa-circle-info me-1"></i> Hệ thống sẽ tự động cộng số điểm này vào tổng điểm của lớp và làm mới bảng xếp hạng toàn trường ngay lập tức.</small>
+                        </div>
+
+                        <div class="mb-2">
+                            <label class="form-label fw-bold text-dark">Phán quyết & Phản hồi từ Đoàn trường:</label>
+                            <textarea class="form-control border-secondary" name="response_text" rows="3" placeholder="Ghi rõ lý do tại sao duyệt hoặc từ chối để GVCN nắm rõ..." required></textarea>
                         </div>
                     </div>
-                    <div class="modal-footer bg-light">
-                        <button type="button" class="btn btn-secondary fw-bold" data-bs-dismiss="modal">Hủy</button>
-                        <button type="submit" class="btn btn-danger fw-bold"><i class="fa-solid fa-paper-plane"></i> Gửi Quyết Định</button>
+                    <div class="modal-footer bg-light border-0 p-3 d-flex gap-2">
+                        <!-- NÚT TỪ CHỐI -->
+                        <button type="submit" name="action" value="reject" class="btn btn-danger fw-bold px-4 shadow-sm flex-grow-1 py-2">
+                            <i class="fa-solid fa-ban me-1"></i> Từ chối Phúc khảo
+                        </button>
+                        <!-- NÚT ĐỒNG Ý -->
+                        <button type="submit" name="action" value="approve" class="btn btn-success fw-bold px-4 shadow-sm flex-grow-1 py-2">
+                            <i class="fa-solid fa-check-double me-1"></i> Duyệt & Hoàn Điểm
+                        </button>
                     </div>
                 </form>
             </div>
@@ -220,9 +248,12 @@
     </div>
     
     <script>
-        function openResolveModal(scoreId, branchName, weekName) {
-            document.getElementById('resolveScoreId').value = scoreId;
-            document.getElementById('resolveBranch').value = branchName + " (" + weekName + ")";
+        // JS MỚI: Nhận dữ liệu thông minh qua Data Attributes để chống lỗi ký tự nháy
+        function openResolveModal(btn) {
+            document.getElementById('resolveScoreId').value = btn.getAttribute('data-score-id');
+            document.getElementById('resolveBranch').value = "Lớp " + btn.getAttribute('data-branch-name') + " (" + btn.getAttribute('data-week') + ")";
+            document.getElementById('resolveReason').innerText = '"' + btn.getAttribute('data-reason') + '"';
+            
             var myModal = new bootstrap.Modal(document.getElementById('resolveModal'));
             myModal.show();
         }

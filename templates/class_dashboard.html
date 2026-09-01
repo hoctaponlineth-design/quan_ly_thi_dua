@@ -345,6 +345,22 @@
                 padding-bottom: 85px !important; /* Đẩy nội dung lên để không bị menu che khuất */
             }
         }
+		/* =========================================
+           HIỆU ỨNG SKELETON LOADING (KHUNG XƯƠNG)
+           ========================================= */
+        .skeleton {
+            background: #e2e8f0;
+            background: linear-gradient(110deg, #e2e8f0 8%, #f1f5f9 18%, #e2e8f0 33%);
+            background-size: 200% 100%;
+            animation: 1.5s shimmer linear infinite;
+            border-radius: 6px;
+        }
+        .skeleton-text { height: 16px; margin: 4px 0; }
+        .skeleton-badge { height: 26px; width: 60px; border-radius: 12px; }
+        
+        @keyframes shimmer {
+            to { background-position-x: -200%; }
+        }
     </style>
 </head>
 <body>
@@ -584,23 +600,51 @@
                                         </div>
                                         {% endif %}
                                         
-                                        <!-- HIỂN THỊ LỊCH SỬ PHÚC KHẢO -->
+										<!-- HIỂN THỊ LỊCH SỬ PHÚC KHẢO -->
                                         {% if sc.appeal_reason %}
                                             <div class="p-3 bg-warning bg-opacity-10 border border-warning border-opacity-25 rounded-3 mt-2 mb-2">
                                                 <div class="widget-label text-dark mb-1"><i class="fa-solid fa-scale-balanced text-warning"></i> Lịch sử khiếu nại:</div>
-                                                <!-- Sử dụng bộ lọc replace để ngắt dòng các lần khiếu nại của nhiều ngày khác nhau -->
                                                 <div class="fst-italic text-secondary mb-3" style="font-size: 13.5px; line-height: 1.6;">
                                                     {{ sc.appeal_reason | replace(' | ', '<br>') | safe }}
                                                 </div>
                                                 
                                                 {% if sc.appeal_response %}
-                                                    <div class="widget-label text-success mb-1"><i class="fa-solid fa-check-double text-success"></i> BCH phản hồi:</div>
-                                                    <div class="fw-bold" style="color: #166534; font-size: 14px;">"{{ sc.appeal_response }}"</div>
+                                                    <!-- [NÂNG CẤP LÕI]: HIỂN THỊ TRẠNG THÁI TICKET -->
+                                                    {% if "[ĐÃ DUYỆT]" in sc.appeal_response %}
+                                                        <div class="alert alert-success mt-2 py-2 px-3 border-0 shadow-sm d-flex gap-2 align-items-start mb-0">
+                                                            <i class="fa-solid fa-circle-check fs-5 mt-1 text-success"></i>
+                                                            <div>
+                                                                <strong class="d-block mb-1 text-success">Khiếu nại đã được giải quyết!</strong>
+                                                                {{ sc.appeal_response }}
+                                                            </div>
+                                                        </div>
+                                                    {% elif "[TỪ CHỐI]" in sc.appeal_response %}
+                                                        <div class="alert alert-danger mt-2 py-2 px-3 border-0 shadow-sm d-flex gap-2 align-items-start mb-0">
+                                                            <i class="fa-solid fa-circle-xmark fs-5 mt-1 text-danger"></i>
+                                                            <div>
+                                                                <strong class="d-block mb-1 text-danger">Khiếu nại không hợp lệ!</strong>
+                                                                {{ sc.appeal_response }}
+                                                            </div>
+                                                        </div>
+                                                    {% else %}
+                                                        <!-- Dành cho các phản hồi cũ -->
+                                                        <div class="alert alert-info mt-2 py-2 px-3 border-0 shadow-sm d-flex gap-2 align-items-start mb-0">
+                                                            <i class="fa-solid fa-circle-info fs-5 mt-1"></i>
+                                                            <div>
+                                                                <strong class="d-block mb-1">Phản hồi từ Đoàn trường:</strong>
+                                                                {{ sc.appeal_response }}
+                                                            </div>
+                                                        </div>
+                                                    {% endif %}
                                                 {% else %}
-                                                    <div class="badge-soft badge-secondary w-100 justify-content-center mb-2">Đang chờ giải quyết...</div>
+                                                    <div class="badge-soft badge-secondary w-100 justify-content-center mb-2">Đang chờ Đoàn trường xem xét...</div>
                                                     {% if not is_gvcn %}
-                                                        <button class="btn-modern btn-modern-primary mt-2 w-100 p-2" onclick="openResolveModal({{ sc.score_id }}, '{{ selected_branch.name }}', '{{ sc.week }}')">
-                                                            <i class="fa-solid fa-reply"></i> Bấm trả lời ngay
+                                                        <button class="btn-modern btn-modern-primary mt-2 w-100 p-2" onclick="openResolveModal(this)"
+                                                                data-score-id="{{ sc.score_id }}"
+                                                                data-branch-name="{{ selected_branch.name }}"
+                                                                data-week="{{ sc.week }}"
+                                                                data-reason="{{ sc.appeal_reason }}">
+                                                            <i class="fa-solid fa-reply"></i> Bấm xử lý Ticket ngay
                                                         </button>
                                                     {% endif %}
                                                 {% endif %}
@@ -618,8 +662,12 @@
                                                     <i class="fa-solid fa-lock me-1"></i> Hôm nay đã gửi. Xin đợi ngày mai!
                                                 </div>
                                             {% else %}
-                                                <button class="btn-modern btn-modern-warning mt-2 py-2 px-3 w-100" style="background: transparent; color: #d97706; border: 1px dashed #f59e0b;" onclick="openAppealModal({{ sc.score_id }}, '{{ sc.week }}')">
-                                                    <i class="fa-solid fa-hand-paper"></i> {% if sc.appeal_reason %}Gửi bổ sung phúc khảo{% else %}Xin phúc khảo{% endif %}
+                                                <button class="btn-modern btn-modern-warning mt-2 py-2 px-3 w-100" style="background: transparent; color: #d97706; border: 1px dashed #f59e0b;" 
+                                                        onclick="openAppealModal(this)"
+                                                        data-score-id="{{ sc.score_id }}"
+                                                        data-week="{{ sc.week }}"
+                                                        data-note="{{ sc.note | e }}">
+                                                    <i class="fa-solid fa-hand-paper"></i> {% if sc.appeal_reason %}Gửi bổ sung phúc khảo{% else %}Xin phúc khảo điểm{% endif %}
                                                 </button>
                                             {% endif %}
                                         {% endif %}
@@ -885,56 +933,86 @@
         </div>
         {% endif %}
     </div>
-
-	<!-- MODAL GỬI PHÚC KHẢO -->
     <div class="modal fade" id="appealModal" tabindex="-1" aria-hidden="true">
-        <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-dialog modal-dialog-centered modal-lg">
             <div class="modal-content" style="border-radius: 20px; border: none; box-shadow: 0 20px 40px rgba(0,0,0,0.2);">
                 <div class="modal-header border-0 pb-0" style="padding: 24px 24px 10px 24px;">
-                    <h5 class="modal-title fw-bold text-main fs-5"><i class="fa-solid fa-hand-paper text-warning me-2"></i> Yêu Cầu Phúc Khảo</h5>
+                    <h5 class="modal-title fw-bold text-main fs-5"><i class="fa-solid fa-hand-paper text-warning me-2"></i> Yêu Cầu Phúc Khảo Điểm</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                 </div>
-                <form action="/submit_appeal" method="POST">
-                    <div class="modal-body px-4 pb-4">
+                <form action="/submit_appeal" method="POST" id="appealForm">
+                    <div class="modal-body px-4 pb-4 mt-3">
                         <input type="hidden" name="score_id" id="appealScoreId">
+                        <input type="hidden" name="reason" id="finalReason"> <!-- Ẩn: Biến này sẽ chứa dữ liệu tổng hợp gửi về Server -->
                         
-                        <div class="widget-label mb-2">Đang phúc khảo cho:</div>
+                        <div class="widget-label mb-2 text-muted">Đang khiếu nại cho:</div>
                         <input type="text" class="form-control fw-bold text-primary bg-primary bg-opacity-10 border-0 mb-4" id="appealWeekName" readonly style="font-size: 15px; padding: 12px 16px; border-radius: 12px;">
                         
-                        <div class="widget-label mb-2">Nội dung phúc khảo:</div>
-                        <textarea class="form-control" name="reason" rows="4" placeholder="Nhập lý do..." required style="border-radius: 12px; resize: none; padding: 16px; font-size: 14px; background: #f8fafc; border: 1px solid var(--border);"></textarea>
+                        <!-- KHU VỰC CHỌN LỖI CỤ THỂ SẼ ĐƯỢC JAVASCRIPT SINH RA -->
+                        <div class="widget-label mb-2 text-danger" id="appealViolationsLabel" style="display:none;"><i class="fa-solid fa-list-check me-1"></i> Tích chọn các lỗi bị ghi nhận sai (Nếu có):</div>
+                        <div id="appealViolationsContainer" class="mb-4 d-flex flex-column gap-2" style="max-height: 250px; overflow-y: auto; overflow-x: hidden;">
+                            <!-- Checkbox lỗi sẽ nạp vào đây -->
+                        </div>
+
+                        <div class="widget-label mb-2 text-muted"><i class="fa-solid fa-pen-to-square me-1"></i> Nội dung/ Minh chứng bổ sung:</div>
+                        <textarea class="form-control shadow-sm" id="appealReasonText" rows="3" placeholder="Ghi rõ lý do tại sao các lỗi trên bị chấm sai..." required style="border-radius: 12px; resize: none; padding: 16px; font-size: 14px; background: #ffffff; border: 1px solid var(--border);"></textarea>
                     </div>
-                    <div class="modal-footer border-0 px-4 pb-4 pt-0">
-                        <button type="button" class="btn-modern btn-light fw-bold flex-grow-1" style="background: #f1f5f9; color: var(--text-main);" data-bs-dismiss="modal">Hủy</button>
-                        <button type="submit" class="btn-modern btn-modern-warning fw-bold flex-grow-1"><i class="fa-solid fa-paper-plane me-1"></i> Gửi Yêu Cầu</button>
+                    <div class="modal-footer border-0 px-4 pb-4 pt-0 d-flex gap-2">
+                        <button type="button" class="btn-modern btn-light fw-bold px-4 py-2" style="background: #f1f5f9; color: var(--text-main);" data-bs-dismiss="modal">Hủy</button>
+                        <button type="submit" class="btn-modern btn-modern-warning fw-bold flex-grow-1 shadow-sm py-2"><i class="fa-solid fa-paper-plane me-1"></i> Gửi Yêu Cầu Cho Đoàn Trường</button>
                     </div>
                 </form>
             </div>
         </div>
     </div>
     
-    <!-- MODAL TRẢ LỜI PHÚC KHẢO (BCH) -->
+	<!-- MODAL TRẢ LỜI PHÚC KHẢO (BCH) ĐÃ NÂNG CẤP LUỒNG TICKETING -->
     {% if not is_gvcn %}
     <div class="modal fade" id="resolveModal" tabindex="-1" aria-hidden="true">
-        <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-dialog modal-dialog-centered modal-lg">
             <div class="modal-content" style="border-radius: 20px; border: none; box-shadow: 0 20px 40px rgba(0,0,0,0.2);">
-                <div class="modal-header border-0 pb-0" style="padding: 24px 24px 10px 24px;">
-                    <h5 class="modal-title fw-bold text-main fs-5"><i class="fa-solid fa-reply text-success me-2"></i> Quyết Định Phúc Khảo</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                <div class="modal-header bg-primary text-white border-0 pb-3" style="padding: 24px 24px 15px 24px;">
+                    <h5 class="modal-title fw-bold fs-5"><i class="fa-solid fa-scale-balanced me-2"></i> Xử lý Phán quyết Phúc khảo</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
                 </div>
                 <form action="/resolve_appeal" method="POST">
-                    <div class="modal-body px-4 pb-4">
+                    <div class="modal-body px-4 pb-4 mt-3">
                         <input type="hidden" name="score_id" id="resolveScoreId">
                         
-                        <div class="widget-label mb-2">Lớp khiếu nại:</div>
-                        <input type="text" class="form-control fw-bold text-primary bg-primary bg-opacity-10 border-0 mb-4" id="resolveBranch" readonly style="font-size: 15px; padding: 12px 16px; border-radius: 12px;">
+                        <div class="mb-4">
+                            <label class="widget-label text-dark mb-2">Lớp khiếu nại:</label>
+                            <input type="text" class="form-control fw-bold text-primary bg-light border-0" id="resolveBranch" readonly style="font-size: 15px; padding: 12px 16px; border-radius: 12px;">
+                        </div>
+
+                        <!-- LÝ DO GVCN -->
+                        <div class="mb-4">
+                            <label class="widget-label text-dark mb-2">Nội dung khiếu nại của GVCN:</label>
+                            <div class="p-3 bg-light border border-secondary border-opacity-25 rounded-3 text-danger fst-italic shadow-sm" id="resolveReason" style="border-radius: 12px; font-size: 14px;">
+                                <!-- JS sẽ đẩy nội dung vào đây -->
+                            </div>
+                        </div>
+
+                        <!-- Ô NHẬP ĐIỂM HOÀN LẠI (TỰ ĐỘNG) -->
+                        <div class="mb-4 p-3 bg-primary bg-opacity-10 border border-primary border-opacity-50 rounded-3" style="border-radius: 12px;">
+                            <label class="widget-label text-primary mb-2"><i class="fa-solid fa-rotate-left me-1"></i> Số điểm hoàn lại (Chỉ nhập nếu Duyệt):</label>
+                            <input type="number" step="0.5" min="0" class="form-control border-primary fw-bold fs-5 text-primary" name="refund_points" value="0" placeholder="VD: 2.0" style="border-radius: 12px;">
+                            <small class="text-muted mt-2 d-block"><i class="fa-solid fa-circle-info me-1"></i> Hệ thống tự động cộng số điểm này vào điểm của lớp và xóa lỗi khỏi Sổ đen.</small>
+                        </div>
                         
-                        <div class="widget-label mb-2">Nội dung phản hồi từ Đoàn trường:</div>
-                        <textarea class="form-control" name="response_text" rows="4" placeholder="Ghi rõ quyết định giải quyết..." required style="border-radius: 12px; resize: none; padding: 16px; font-size: 14px; background: #f8fafc; border: 1px solid var(--border);"></textarea>
+                        <div class="mb-2">
+                            <label class="widget-label text-dark mb-2">Phán quyết & Phản hồi từ Đoàn trường:</label>
+                            <textarea class="form-control border-secondary" name="response_text" rows="3" placeholder="Ghi rõ lý do tại sao duyệt hoặc từ chối để GVCN nắm rõ..." required style="border-radius: 12px; resize: none; padding: 16px; font-size: 14px; background: #f8fafc; border: 1px solid var(--border);"></textarea>
+                        </div>
                     </div>
-                    <div class="modal-footer border-0 px-4 pb-4 pt-0">
-                        <button type="button" class="btn-modern btn-light fw-bold flex-grow-1" style="background: #f1f5f9; color: var(--text-main);" data-bs-dismiss="modal">Hủy</button>
-                        <button type="submit" class="btn-modern btn-modern-primary fw-bold flex-grow-1"><i class="fa-solid fa-check me-1"></i> Chốt Quyết Định</button>
+                    <div class="modal-footer border-0 px-4 pb-4 pt-0 d-flex gap-2">
+                        <!-- NÚT TỪ CHỐI -->
+                        <button type="submit" name="action" value="reject" class="btn-modern btn-danger fw-bold flex-grow-1" style="background: #ef4444; color: white;">
+                            <i class="fa-solid fa-ban me-1"></i> Từ chối
+                        </button>
+                        <!-- NÚT ĐỒNG Ý -->
+                        <button type="submit" name="action" value="approve" class="btn-modern btn-success fw-bold flex-grow-1" style="background: #22c55e; color: white;">
+                            <i class="fa-solid fa-check-double me-1"></i> Duyệt & Hoàn Điểm
+                        </button>
                     </div>
                 </form>
             </div>
@@ -1326,16 +1404,92 @@
             }
         }
 
-        function openAppealModal(scoreId, weekName) {
+		// XỬ LÝ MỞ MODAL PHÚC KHẢO VÀ NẠP DANH SÁCH LỖI
+        function openAppealModal(btn) {
+            let scoreId = btn.getAttribute('data-score-id');
+            let weekName = btn.getAttribute('data-week');
+            let noteText = btn.getAttribute('data-note');
+
             document.getElementById('appealScoreId').value = scoreId;
             document.getElementById('appealWeekName').value = weekName;
+            
+            let container = document.getElementById('appealViolationsContainer');
+            let label = document.getElementById('appealViolationsLabel');
+            container.innerHTML = ''; // Reset rổ chứa lỗi
+            
+            // Cắt chuỗi ghi chú bằng dấu chấm phẩy và sinh ra các Checkbox
+            if (noteText && noteText.trim() !== '' && noteText.trim() !== 'Không có vi phạm' && noteText.trim() !== 'Không có') {
+                label.style.display = 'block';
+                let violations = noteText.split(';');
+                violations.forEach((v, index) => {
+                    let vClean = v.trim();
+                    if(vClean) {
+                        // SỬA: Tạo thẻ Label bao bọc toàn bộ khối để bấm vào đâu cũng chọn được lỗi
+                        let labelNode = document.createElement('label');
+                        labelNode.className = 'd-flex align-items-start p-3 bg-white border rounded-3 shadow-sm w-100';
+                        labelNode.style.cursor = 'pointer';
+                        labelNode.style.borderColor = '#fca5a5';
+                        labelNode.style.transition = 'all 0.2s ease';
+                        
+                        // Thêm hiệu ứng Đổi màu khi di chuột qua (Hover)
+                        labelNode.onmouseenter = function() { this.style.backgroundColor = '#fef2f2'; this.style.borderColor = '#ef4444'; };
+                        labelNode.onmouseleave = function() { this.style.backgroundColor = '#ffffff'; this.style.borderColor = '#fca5a5'; };
+
+                        // Cấu trúc lại: Đẩy Checkbox lên trên cùng (start) để khớp với dòng chữ nhiều dòng
+                        labelNode.innerHTML = `
+                            <input class="form-check-input m-0 me-3 shadow-none flex-shrink-0" type="checkbox" value="${vClean}" id="viol_app_${index}" style="width: 18px; height: 18px; margin-top: 2px !important; cursor: pointer; border-color: #ef4444;">
+                            <div class="fw-bold text-danger w-100" style="font-size: 14.5px; line-height: 1.5;">
+                                ${vClean}
+                            </div>
+                        `;
+                        container.appendChild(labelNode);
+                    }
+                });
+            } else {
+                label.style.display = 'none';
+            }
+            
+            document.getElementById('appealReasonText').value = ''; // Reset ô nhập chữ
             var myModal = new bootstrap.Modal(document.getElementById('appealModal'));
             myModal.show();
         }
+
+        // THUẬT TOÁN ĐÓNG GÓI DỮ LIỆU KHI BẤM NÚT "GỬI YÊU CẦU"
+        document.getElementById('appealForm').addEventListener('submit', function(e) {
+            let selected = [];
+            let container = document.getElementById('appealViolationsContainer');
+            let checkboxes = container.querySelectorAll('input[type="checkbox"]:checked');
+            
+            // Gom tất cả các lỗi được tích chọn
+            checkboxes.forEach(cb => {
+                selected.push(cb.value);
+            });
+            
+            let textReason = document.getElementById('appealReasonText').value;
+            let finalReason = "";
+            
+            // Định dạng lại thành 1 đoạn text chuẩn để gửi cho Backend
+            if(selected.length > 0) {
+                finalReason = "Phúc khảo các lỗi: [" + selected.join("] & [") + "] | Giải trình: " + textReason;
+            } else {
+                finalReason = textReason;
+            }
+            
+            // Đổ dữ liệu đã gộp vào thẻ Input Ẩn để Flask nhận diện
+            document.getElementById('finalReason').value = finalReason;
+        });
         
-        function openResolveModal(scoreId, branchName, weekName) {
-            document.getElementById('resolveScoreId').value = scoreId;
-            document.getElementById('resolveBranch').value = branchName + " (" + weekName + ")";
+        function openResolveModal(btn) {
+            document.getElementById('resolveScoreId').value = btn.getAttribute('data-score-id');
+            document.getElementById('resolveBranch').value = "Lớp " + btn.getAttribute('data-branch-name') + " (" + btn.getAttribute('data-week') + ")";
+            
+            let reasonText = btn.getAttribute('data-reason');
+            let reasonDiv = document.getElementById('resolveReason');
+            if (reasonDiv) {
+                // Xử lý xuống dòng cho các lỗi gửi trong nhiều ngày khác nhau
+                reasonDiv.innerHTML = '"' + reasonText.replace(/ \| /g, '<br>') + '"';
+            }
+            
             var myModal = new bootstrap.Modal(document.getElementById('resolveModal'));
             myModal.show();
         }
@@ -1411,10 +1565,16 @@
             const weekName = selector ? selector.value : "Tuần 1";
 
             if (!body1 || !body2) return;
-
-            const loadingHtml = `<tr><td colspan="4" class="text-center py-4 text-muted">
-                <i class="fa-solid fa-spinner fa-spin me-2"></i> Đang tải dữ liệu ${weekName}...
-            </td></tr>`;
+            const loadingHtml = `
+            <tr>
+                <td class="text-center"><div class="skeleton skeleton-badge mx-auto"></div></td>
+                <td>
+                    <div class="skeleton skeleton-text" style="width: 80%;"></div>
+                    <div class="skeleton skeleton-text" style="width: 50%; height: 10px; margin-top: 8px;"></div>
+                </td>
+                <td class="text-center"><div class="skeleton skeleton-badge mx-auto"></div></td>
+                <td class="text-end pe-4"><div class="skeleton skeleton-text ms-auto" style="width: 50px; height: 20px;"></div></td>
+            </tr>`.repeat(4); // Lặp lại 4 dòng ảo
             body1.innerHTML = loadingHtml;
             body2.innerHTML = loadingHtml;
 
@@ -1665,6 +1825,45 @@
                     
                 });
             });
+        });
+    </script>
+	<!-- THƯ VIỆN HIỆU ỨNG PHÁO HOA (GAMIFICATION) -->
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+    <script>
+        document.addEventListener("DOMContentLoaded", function() {
+            // Kiểm tra xem lớp có đang đạt Top 1 trong tuần mới nhất không
+            {% if weekly_scores and weekly_scores[0].rank == 1 %}
+                
+                // Trì hoãn 0.5s để giao diện load xong rồi mới bắn pháo hoa
+                setTimeout(function() {
+                    var duration = 4 * 1000; // Bắn liên tục trong 4 giây
+                    var animationEnd = Date.now() + duration;
+                    var defaults = { startVelocity: 30, spread: 360, ticks: 60, zIndex: 9999 };
+
+                    function randomInRange(min, max) {
+                      return Math.random() * (max - min) + min;
+                    }
+
+                    var interval = setInterval(function() {
+                      var timeLeft = animationEnd - Date.now();
+
+                      if (timeLeft <= 0) {
+                        return clearInterval(interval);
+                      }
+
+                      var particleCount = 50 * (timeLeft / duration);
+                      
+                      // Bắn từ 2 mép màn hình
+                      confetti(Object.assign({}, defaults, { particleCount,
+                        origin: { x: randomInRange(0.1, 0.3), y: Math.random() - 0.2 }
+                      }));
+                      confetti(Object.assign({}, defaults, { particleCount,
+                        origin: { x: randomInRange(0.7, 0.9), y: Math.random() - 0.2 }
+                      }));
+                    }, 250);
+                    
+                }, 500);
+            {% endif %}
         });
     </script>
 </body>
