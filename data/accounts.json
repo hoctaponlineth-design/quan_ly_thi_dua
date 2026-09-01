@@ -112,9 +112,240 @@
         "is_active": true
     },
     {
+        "username": "bithu",
+        "full_name": "Bí thư Đoàn trường",
+        "password": "123456",
+        "role": "Ban Chấp Hành",
+        "is_active": true
+    },
+    {
+        "username": "admin",
+        "full_name": "Nguyễn Đức Anh",
+        "password": "123456",
+        "role": "Quản trị viên",
+        "is_active": true
+    },
+    {
+        "username": "10A1",
+        "full_name": "Đoàn Ngọc Hoàng",
+        "password": "123",
+        "role": "Giáo viên chủ nhiệm",
+        "is_active": true
+    },
+    {
+        "username": "10A2",
+        "full_name": "Nguyễn Văn Toàn",
+        "password": "10A2",
+        "role": "Giáo viên chủ nhiệm",
+        "is_active": true
+    },
+    {
+        "username": "10A3",
+        "full_name": "Nguyễn Tiến Dương",
+        "password": "10A3",
+        "role": "Giáo viên chủ nhiệm",
+        "is_active": true
+    },
+    {
+        "username": "10A4",
+        "full_name": "Nguyễn Duy Thinh",
+        "password": "10A4",
+        "role": "Giáo viên chủ nhiệm",
+        "is_active": true
+    },
+    {
+        "username": "10A5",
+        "full_name": "Nguyễn Thị Thu",
+        "password": "10A5",
+        "role": "Giáo viên chủ nhiệm",
+        "is_active": true
+    },
+    {
+        "username": "10A6",
+        "full_name": "Ngô Văn Lĩnh",
+        "password": "10A6",
+        "role": "Giáo viên chủ nhiệm",
+        "is_active": true
+    },
+    {
+        "username": "10A7",
+        "full_name": "Lưu Quốc Tuấn",
+        "password": "10A7",
+        "role": "Giáo viên chủ nhiệm",
+        "is_active": true
+    },
+    {
+        "username": "10A8",
+        "full_name": "Trần Xuân Hà",
+        "password": "10A8",
+        "role": "Giáo viên chủ nhiệm",
+        "is_active": true
+    },
+    {
+        "username": "10A9",
+        "full_name": "Đỗ Thị Thoa",
+        "password": "10A9",
+        "role": "Giáo viên chủ nhiệm",
+        "is_active": true
+    },
+    {
+        "username": "10A10",
+        "full_name": "Trần Thị Hoàn",
+        "password": "10A10",
+        "role": "Giáo viên chủ nhiệm",
+        "is_active": true
+    },
+    {
+        "username": "11TN1",
+        "full_name": "Phạm Yên",
+        "password": "11TN1",
+        "role": "Giáo viên chủ nhiệm",
+        "is_active": true
+    },
+    {
+        "username": "11TN2",
+        "full_name": "Nguyễn Thị Thúy",
+        "password": "11TN2",
+        "role": "Giáo viên chủ nhiệm",
+        "is_active": true
+    },
+    {
+        "username": "11TN3",
+        "full_name": "Lê Văn Công",
+        "password": "11TN3",
+        "role": "Giáo viên chủ nhiệm",
+        "is_active": true
+    },
+    {
+        "username": "11TN4",
+        "full_name": "Phan Vinh Quang",
+        "password": "11TN4",
+        "role": "Giáo viên chủ nhiệm",
+        "is_active": true
+    },
+    {
+        "username": "11TN5",
+        "full_name": "Nguyễn Thị Thanh Thủy",
+        "password": "11TN5",
+        "role": "Giáo viên chủ nhiệm",
+        "is_active": true
+    },
+    {
+        "username": "11XH1",
+        "full_name": "Kim Thị Út Mười",
+        "password": "11XH1",
+        "role": "Giáo viên chủ nhiệm",
+        "is_active": true
+    },
+    {
+        "username": "11XH2",
+        "full_name": "Phan Nữ Thùy Tiên",
+        "password": "11XH2",
+        "role": "Giáo viên chủ nhiệm",
+        "is_active": true
+    },
+    {
+        "username": "11XH3",
+        "full_name": "Đỗ Thị Thanh",
+        "password": "11XH3",
+        "role": "Giáo viên chủ nhiệm",
+        "is_active": true
+    },
+    {
+        "username": "11XH4",
+        "full_name": "Phạm Phan Thị Như Huyền",
+        "password": "11XH4",
+        "role": "Giáo viên chủ nhiệm",
+        "is_active": true
+    },
+    {
+        "username": "11XH5",
+        "full_name": "Ngô Thị Trung Kiên",
+        "password": "11XH5",
+        "role": "Giáo viên chủ nhiệm",
+        "is_active": true
+    },
+    {
+        "username": "12TN1",
+        "full_name": "Trương Thị Phượng",
+        "password": "12TN1",
+        "role": "Giáo viên chủ nhiệm",
+        "is_active": true
+    },
+    {
+        "username": "12TN2",
+        "full_name": "Đinh Thế Tài",
+        "password": "12TN2",
+        "role": "Giáo viên chủ nhiệm",
+        "is_active": true
+    },
+    {
+        "username": "12TN3",
+        "full_name": "Trương Minh Khánh",
+        "password": "12TN3",
+        "role": "Giáo viên chủ nhiệm",
+        "is_active": true
+    },
+    {
+        "username": "12TN4",
+        "full_name": "Trần Ngọc Tuấn",
+        "password": "12TN4",
+        "role": "Giáo viên chủ nhiệm",
+        "is_active": true
+    },
+    {
+        "username": "12TN5",
+        "full_name": "Cao Văn Ty",
+        "password": "12TN5",
+        "role": "Giáo viên chủ nhiệm",
+        "is_active": true
+    },
+    {
+        "username": "12TN6",
+        "full_name": "Đỗ Thị Mỹ Nhi",
+        "password": "12TN6",
+        "role": "Giáo viên chủ nhiệm",
+        "is_active": true
+    },
+    {
+        "username": "12XH1",
+        "full_name": "Cáp Thị Liên",
+        "password": "12XH1",
+        "role": "Giáo viên chủ nhiệm",
+        "is_active": true
+    },
+    {
+        "username": "12XH2",
+        "full_name": "Nguyễn Thị Oanh",
+        "password": "12XH2",
+        "role": "Giáo viên chủ nhiệm",
+        "is_active": true
+    },
+    {
+        "username": "12XH3",
+        "full_name": "Nguyễn Đình Danh",
+        "password": "12XH3",
+        "role": "Giáo viên chủ nhiệm",
+        "is_active": true
+    },
+    {
+        "username": "12XH4",
+        "full_name": "Phan Thị Mỹ Hằng",
+        "password": "12XH4",
+        "role": "Giáo viên chủ nhiệm",
+        "is_active": true
+    },
+    {
+        "username": "12XH5",
+        "full_name": "Bùi Minh Tân",
+        "password": "12XH5",
+        "role": "Giáo viên chủ nhiệm",
+        "is_active": true
+    },
+    {
         "username": "SD1",
         "full_name": "SĐ: Lâm Phương Bảo Uyên",
-        "password": "123",
+        "password": "123456",
         "role": "Sao đỏ",
         "is_active": true
     },
@@ -270,244 +501,6 @@
         "full_name": "SĐ: Lường Thị Như Quỳnh",
         "password": "123456",
         "role": "Sao đỏ",
-        "is_active": true
-    },
-    {
-        "username": "bithu",
-        "full_name": "Bí thư Đoàn trường",
-        "password": "123456",
-        "role": "Ban Chấp Hành",
-        "is_active": true
-    },
-    {
-        "username": "admin",
-        "full_name": "Nguyễn Đức Anh",
-        "password": "123456",
-        "role": "Quản trị viên",
-        "is_active": true
-    },
-    {
-        "username": "10A1",
-        "full_name": "Đoàn Ngọc Hoàng",
-        "password": "10A1",
-        "role": "Giáo viên chủ nhiệm",
-        "is_active": true
-    },
-    {
-        "username": "10A2",
-        "full_name": "Nguyễn Văn Toàn",
-        "password": "10A2",
-        "role": "Giáo viên chủ nhiệm",
-        "is_active": true
-    },
-    {
-        "username": "10A3",
-        "full_name": "Nguyễn Tiến Dương",
-        "password": "10A3",
-        "role": "Giáo viên chủ nhiệm",
-        "is_active": true
-    },
-    {
-        "username": "10A4",
-        "full_name": "Nguyễn Duy Thinh",
-        "password": "10A4",
-        "role": "Giáo viên chủ nhiệm",
-        "is_active": true
-    },
-    {
-        "username": "10A5",
-        "full_name": "Nguyễn Thị Thu",
-        "password": "10A5",
-        "role": "Giáo viên chủ nhiệm",
-        "is_active": true
-    },
-    {
-        "username": "10A6",
-        "full_name": "Ngô Văn Lĩnh",
-        "password": "10A6",
-        "role": "Giáo viên chủ nhiệm",
-        "is_active": true
-    },
-    {
-        "username": "10A7",
-        "full_name": "Lưu Quốc Tuấn",
-        "password": "10A7",
-        "role": "Giáo viên chủ nhiệm",
-        "is_active": true
-    },
-    {
-        "username": "10A8",
-        "full_name": "Trần Xuân Hà",
-        "password": "10A8",
-        "role": "Giáo viên chủ nhiệm",
-        "is_active": true
-    },
-    {
-        "username": "10A9",
-        "full_name": "Đỗ Thị Thoa",
-        "password": "10A9",
-        "role": "Giáo viên chủ nhiệm",
-        "is_active": true
-    },
-    {
-        "username": "10A10",
-        "full_name": "Trần Thị Hoàn",
-        "password": "10A10",
-        "role": "Giáo viên chủ nhiệm",
-        "is_active": true
-    },
-    {
-        "username": "11TN1",
-        "full_name": "Phạm Yên",
-        "password": "11TN1",
-        "role": "Giáo viên chủ nhiệm",
-        "is_active": true
-    },
-    {
-        "username": "11TN2",
-        "full_name": "Nguyễn Thị Thúy",
-        "password": "11TN2",
-        "role": "Giáo viên chủ nhiệm",
-        "is_active": true
-    },
-    {
-        "username": "11TN3",
-        "full_name": "Lê Văn Công",
-        "password": "11TN3",
-        "role": "Giáo viên chủ nhiệm",
-        "is_active": true
-    },
-    {
-        "username": "11TN4",
-        "full_name": "Phan Vinh Quang",
-        "password": "11TN4",
-        "role": "Giáo viên chủ nhiệm",
-        "is_active": true
-    },
-    {
-        "username": "11TN5",
-        "full_name": "Nguyễn Thị Thanh Thủy",
-        "password": "11TN5",
-        "role": "Giáo viên chủ nhiệm",
-        "is_active": true
-    },
-    {
-        "username": "11XH1",
-        "full_name": "Kim Thị Út Mười",
-        "password": "11XH1",
-        "role": "Giáo viên chủ nhiệm",
-        "is_active": true
-    },
-    {
-        "username": "11XH2",
-        "full_name": "Phan Nữ Thùy Tiên",
-        "password": "11XH2",
-        "role": "Giáo viên chủ nhiệm",
-        "is_active": true
-    },
-    {
-        "username": "11XH3",
-        "full_name": "Đỗ Thị Thanh",
-        "password": "11XH3",
-        "role": "Giáo viên chủ nhiệm",
-        "is_active": true
-    },
-    {
-        "username": "11XH4",
-        "full_name": "Phạm Phan Thị Như Huyền",
-        "password": "11XH4",
-        "role": "Giáo viên chủ nhiệm",
-        "is_active": true
-    },
-    {
-        "username": "11XH5",
-        "full_name": "Ngô Thị Trung Kiên",
-        "password": "11XH5",
-        "role": "Giáo viên chủ nhiệm",
-        "is_active": true
-    },
-    {
-        "username": "12TN1",
-        "full_name": "Trương Thị Phượng",
-        "password": "12TN1",
-        "role": "Giáo viên chủ nhiệm",
-        "is_active": true
-    },
-    {
-        "username": "12TN2",
-        "full_name": "Đinh Thế Tài",
-        "password": "12TN2",
-        "role": "Giáo viên chủ nhiệm",
-        "is_active": true
-    },
-    {
-        "username": "12TN3",
-        "full_name": "Phan Nữ Thùy Tiên",
-        "password": "12TN3",
-        "role": "Giáo viên chủ nhiệm",
-        "is_active": true
-    },
-    {
-        "username": "12TN4",
-        "full_name": "Trần Ngọc Tuấn",
-        "password": "12TN4",
-        "role": "Giáo viên chủ nhiệm",
-        "is_active": true
-    },
-    {
-        "username": "12TN5",
-        "full_name": "Cao Văn Ty",
-        "password": "12TN5",
-        "role": "Giáo viên chủ nhiệm",
-        "is_active": true
-    },
-    {
-        "username": "12TN6",
-        "full_name": "Đỗ Thị Mỹ Nhi",
-        "password": "12TN6",
-        "role": "Giáo viên chủ nhiệm",
-        "is_active": true
-    },
-    {
-        "username": "12XH1",
-        "full_name": "Cáp Thị Liên",
-        "password": "12XH1",
-        "role": "Giáo viên chủ nhiệm",
-        "is_active": true
-    },
-    {
-        "username": "12XH2",
-        "full_name": "Nguyễn Thị Oanh",
-        "password": "12XH2",
-        "role": "Giáo viên chủ nhiệm",
-        "is_active": true
-    },
-    {
-        "username": "12XH3",
-        "full_name": "Nguyễn Đình Danh",
-        "password": "12XH3",
-        "role": "Giáo viên chủ nhiệm",
-        "is_active": true
-    },
-    {
-        "username": "12XH4",
-        "full_name": "Phan Thị Mỹ Hằng",
-        "password": "12XH4",
-        "role": "Giáo viên chủ nhiệm",
-        "is_active": true
-    },
-    {
-        "username": "12XH5",
-        "full_name": "Bùi Minh Tân",
-        "password": "12XH5",
-        "role": "Giáo viên chủ nhiệm",
-        "is_active": true
-    },
-    {
-        "username": "bangiamhieu",
-        "full_name": "Dương Thanh Viết",
-        "password": "123456",
-        "role": "Ban Giám hiệu",
         "is_active": true
     }
 ]
