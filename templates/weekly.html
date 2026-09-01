@@ -395,8 +395,7 @@
                             
 							<!-- [GIẢI PHÁP TỐI THƯỢNG]: Ô NHẬP LỖI CÓ CHỨA NÚT XEM ẢNH -->
                             <td style="position: relative;">
-                                <input type="text" class="input-erp text-red" style="text-align: left; padding-right: 35px;" name="note_{{ b.id }}" value="{{ sc.note if sc else '' }}" placeholder="Nhập lỗi ở đây...">
-                                
+                                <input type="text" class="input-erp text-red note-tooltip-target" style="text-align: left; padding-right: 35px;" name="note_{{ b.id }}" value="{{ sc.note if sc else '' }}" placeholder="Nhập lỗi ở đây..." oninput="this.title = formatTooltipByError(this.value)">
                                 {% if sc and sc.evidence_image %}
                                 <button type="button" class="btn btn-sm shadow-sm" title="Xem ảnh minh chứng từ Sao đỏ"
                                         style="position: absolute; right: 5px; top: 50%; transform: translateY(-50%); background: #fee2e2; color: #dc2626; border: 1px solid #f87171; border-radius: 6px; padding: 2px 6px;"
@@ -984,7 +983,49 @@
         });
 
         const violationBank = JSON.parse('{{ categories_json | safe | default("[]") }}');
+		// Hàm phân tích và gom nhóm lỗi hiển thị cho Tooltip
+        function formatTooltipByError(noteString) {
+            if (!noteString || noteString.trim() === '') return 'Chưa có lỗi vi phạm';
+            let parts = noteString.split(' ; ');
+            let grouped = {};
+            let others = [];
+            
+            // Ép sắp xếp tên lỗi từ dài đến ngắn để AI không nhận diện nhầm
+            let sortedBank = [...violationBank].sort((a, b) => b.name.length - a.name.length);
 
+            parts.forEach(part => {
+                let pClean = part.trim();
+                if (!pClean) return;
+                let matchedCat = null;
+                
+                for (let i = 0; i < sortedBank.length; i++) {
+                    if (pClean.toLowerCase().includes(sortedBank[i].name.toLowerCase())) {
+                        matchedCat = sortedBank[i].name;
+                        break;
+                    }
+                }
+                
+                if (matchedCat) {
+                    if (!grouped[matchedCat]) grouped[matchedCat] = [];
+                    grouped[matchedCat].push(pClean);
+                } else {
+                    others.push(pClean);
+                }
+            });
+
+            let result = [];
+            for (let cat in grouped) {
+                result.push(`📌 ${cat.toUpperCase()}:`);
+                grouped[cat].forEach(err => result.push(`   • ${err}`));
+            }
+            if (others.length > 0) {
+                if(result.length > 0) result.push(''); // Thêm dòng trống cách ly
+                result.push(`📌 LỖI KHÁC:`);
+                others.forEach(err => result.push(`   • ${err}`));
+            }
+            
+            return result.join('\n');
+        }
         document.addEventListener('DOMContentLoaded', function() {
             const tagsContainer = document.getElementById('quickErrorTags');
             if (tagsContainer && violationBank) {
@@ -1261,9 +1302,10 @@
             if(congMain) congMain.value = document.getElementById('detailBonus').value;
             if(truMain) truMain.value = document.getElementById('detailPenalty').value;
             
-            const noteVal = document.getElementById('detailNote').value;
+			const noteVal = document.getElementById('detailNote').value;
             if(noteMain) {
                 noteMain.value = noteVal;
+                noteMain.title = formatTooltipByError(noteVal); // Gom nhóm lỗi khi bấm Lưu
                 noteMain.dispatchEvent(new Event('input', { bubbles: true }));
             }
 
@@ -1348,15 +1390,22 @@
                                     autoUpdateRatingText(item.branch_id, item.total_score);
                                 }
                             }
-                            if (noteInput && document.activeElement !== noteInput) noteInput.value = item.note;
+							if (noteInput && document.activeElement !== noteInput) {
+                                noteInput.value = item.note;
+                                noteInput.title = formatTooltipByError(item.note); // Gom nhóm lỗi khi nhận Live
+                            }
                         });
                     }
                 } catch (err) {}
             }, 10000); 
         }
-        document.addEventListener("DOMContentLoaded", () => {
+		document.addEventListener("DOMContentLoaded", () => {
             startAutoPollingForWeekly();
-        });	
+            // Tự động gom nhóm lỗi cho toàn bộ bảng ngay khi vừa tải trang
+            document.querySelectorAll('.note-tooltip-target').forEach(input => {
+                input.title = formatTooltipByError(input.value);
+            });
+        });
 
         async function uploadMultipleSDB(inputElement) {
             let files = inputElement.files;
