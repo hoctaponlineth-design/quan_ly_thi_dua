@@ -547,32 +547,41 @@
         </div>
     </div>
 
-    <!-- MODAL FORM NHẬP CHI TIẾT -->
+	<!-- MODAL FORM NHẬP CHI TIẾT (ĐÃ TỐI ƯU UI/UX & CHỐNG TRÀN MÀN HÌNH) -->
     <div class="modal fade" id="detailModal" tabindex="-1" aria-hidden="true" data-bs-backdrop="static">
-        <div class="modal-dialog modal-xl modal-dialog-centered">
-            <div class="modal-content border-0 shadow-lg" style="border-radius: 20px;">
-                <div class="modal-header border-0" style="background-color: #eff6ff; padding: 20px 24px; border-radius: 20px 20px 0 0;">
-                    <h5 class="modal-title fw-bold text-primary w-100 text-center" id="detailModalTitle" style="letter-spacing: 0.5px;">
+        <!-- [NÂNG CẤP 1]: Thêm 'modal-dialog-scrollable' để cố định Header và Footer -->
+        <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
+            <div class="modal-content border-0 shadow-lg" style="border-radius: 16px; max-height: 95vh;">
+                
+                <!-- HEADER CỐ ĐỊNH -->
+                <div class="modal-header border-0" style="background-color: #eff6ff; padding: 16px 24px; border-radius: 16px 16px 0 0; z-index: 10; box-shadow: 0 2px 10px rgba(0,0,0,0.02);">
+                    <h5 class="modal-title fw-bold text-primary w-100 text-center" id="detailModalTitle" style="letter-spacing: 0.5px; font-size: 18px;">
                         ĐANG THAO TÁC: CHI ĐOÀN ...
                     </h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                 </div>
-                <div class="modal-body p-4" style="background-color: #f8fafc;">
-                    <div class="row g-4">
+                
+                <!-- BODY CÓ THANH CUỘN ĐỘC LẬP -->
+                <div class="modal-body p-3" style="background-color: #f8fafc; overflow-x: hidden;">
+                    <!-- [NÂNG CẤP 2]: Giảm khoảng cách (gap) từ g-4 xuống g-3 -->
+                    <div class="row g-3">
+                        
+                        <!-- CỘT TRÁI: SỔ ĐẦU BÀI -->
                         <div class="col-md-7">
-                            <div class="card h-100 border-0 shadow-sm" style="border-radius: 16px;">
-                                <div class="card-header text-white fw-bold py-3 border-0" style="background-color: var(--primary-blue); border-radius: 16px 16px 0 0;">
+                            <div class="card h-100 border-0 shadow-sm" style="border-radius: 12px;">
+                                <div class="card-header text-white fw-bold py-2 border-0" style="background-color: var(--primary-blue); border-radius: 12px 12px 0 0; font-size: 14px;">
                                     <i class="fa-solid fa-book me-2"></i> Điểm Học Tập (Theo sổ đầu bài)
                                 </div>
-                                <div class="card-body p-3">
-                                    <div class="table-responsive mb-3" style="max-height: 250px; border-radius: 8px; border: 1px solid var(--border-color);">
+                                <div class="card-body p-2 p-md-3">
+                                    <!-- [NÂNG CẤP 3]: Giảm chiều cao bảng môn học còn 190px -->
+                                    <div class="table-responsive mb-2" style="max-height: 190px; border-radius: 8px; border: 1px solid var(--border-color);">
                                         <table class="table table-sm table-borderless table-striped text-center align-middle m-0" id="subjectsTable">
                                             <thead class="table-light sticky-top" style="border-bottom: 2px solid var(--border-color);">
                                                 <tr>
-                                                    <th class="py-2 text-muted fw-bold">Môn học</th>
-                                                    <th class="py-2 text-muted fw-bold" style="width: 20%;">SL Điểm 10</th>
-                                                    <th class="py-2 text-muted fw-bold" style="width: 20%;">SL Điểm 9</th>
-                                                    <th class="py-2 text-muted fw-bold" style="width: 20%;">SL Điểm 8</th>
+                                                    <th class="py-2 text-muted fw-bold" style="font-size: 12px;">Môn học</th>
+                                                    <th class="py-2 text-muted fw-bold" style="width: 18%; font-size: 12px;">SL Điểm 10</th>
+                                                    <th class="py-2 text-muted fw-bold" style="width: 18%; font-size: 12px;">SL Điểm 9</th>
+                                                    <th class="py-2 text-muted fw-bold" style="width: 18%; font-size: 12px;">SL Điểm 8</th>
                                                     <th class="py-2 text-muted fw-bold" style="width: 8%;">Xóa</th>
                                                 </tr>
                                             </thead>
@@ -580,89 +589,95 @@
                                             </tbody>
                                         </table>
                                     </div>
-                                    <button class="btn btn-sm w-100 fw-bold mb-3 rounded-3 py-2" style="background-color: #eff6ff; color: var(--primary-blue); border: 1px dashed #bfdbfe;" onclick="addSubjectRow()">
+                                    <button class="btn btn-sm w-100 fw-bold mb-2 rounded-3 py-1" style="background-color: #eff6ff; color: var(--primary-blue); border: 1px dashed #bfdbfe;" onclick="addSubjectRow()">
                                         <i class="fa-solid fa-plus me-1"></i> Thêm môn học
                                     </button>
-                                    <div class="alert bg-success bg-opacity-10 text-success text-center fw-bold py-2 m-0 border-0" id="liveCounter" style="border-radius: 8px;">
+                                    <div class="alert bg-success bg-opacity-10 text-success text-center fw-bold py-1 m-0 border-0" id="liveCounter" style="border-radius: 8px; font-size: 13px;">
                                         Tổng số con điểm Tốt: 0 / 14
                                     </div>
                                 </div>
                             </div>
                         </div>
                         
+                        <!-- CỘT PHẢI: ĐIỂM NỀN -->
                         <div class="col-md-5">
-                            <div class="card h-100 border-0 shadow-sm" style="border-radius: 16px;">
-                                <div class="card-header text-white fw-bold py-3 border-0" style="background-color: #f59e0b; border-radius: 16px 16px 0 0;">
+                            <div class="card h-100 border-0 shadow-sm" style="border-radius: 12px;">
+                                <div class="card-header text-white fw-bold py-2 border-0" style="background-color: #f59e0b; border-radius: 12px 12px 0 0; font-size: 14px;">
                                     <i class="fa-solid fa-scale-balanced me-2"></i> Điểm Nền & Biến Động
                                 </div>
-                                <div class="card-body p-4">
-                                    <div class="mb-3 d-flex align-items-center bg-light p-2 rounded-3 border">
-                                        <label class="form-label fw-bold small text-secondary w-50 m-0 ps-2">Xếp loại Tuần:</label>
-                                        <select class="form-select border-0 bg-transparent fw-bold text-danger w-50 shadow-none" id="detailRating">
+                                <div class="card-body p-3">
+                                    <div class="mb-2 d-flex align-items-center bg-light p-2 rounded-3 border">
+                                        <label class="form-label fw-bold text-secondary w-50 m-0 ps-2" style="font-size: 13px;">Xếp loại Tuần:</label>
+                                        <select class="form-select form-select-sm border-0 bg-transparent fw-bold text-danger w-50 shadow-none" id="detailRating">
                                             <option value="Bình thường">Bình thường</option>
                                             <option value="Tuần Khá">Tuần Khá</option>
                                             <option value="Tuần Tốt">Tuần Tốt</option>
                                         </select>
                                     </div>
-                                    <div class="mb-4 d-flex align-items-center bg-light p-2 rounded-3 border">
-                                        <label class="form-label fw-bold small text-secondary w-50 m-0 ps-2">Điểm mặc định:</label>
-                                        <input type="number" class="form-control border-0 bg-transparent text-center fw-bold w-50 shadow-none text-muted" id="detailBase" value="100" readonly>
+                                    <div class="mb-3 d-flex align-items-center bg-light p-2 rounded-3 border">
+                                        <label class="form-label fw-bold text-secondary w-50 m-0 ps-2" style="font-size: 13px;">Điểm mặc định:</label>
+                                        <input type="number" class="form-control form-control-sm border-0 bg-transparent text-center fw-bold w-50 shadow-none text-muted" id="detailBase" value="100" readonly>
                                     </div>
-                                    <div class="row g-2 mb-3">
+                                    <div class="row g-2 mb-2">
                                         <div class="col-4">
-                                            <label class="form-label fw-bold small text-success">Cộng (+):</label>
-                                            <input type="number" step="0.5" class="form-control text-center fw-bold text-success bg-light border-success border-opacity-25" id="detailBonus" value="0">
+                                            <label class="form-label fw-bold text-success" style="font-size: 12px;">Cộng (+):</label>
+                                            <input type="number" step="0.5" class="form-control form-control-sm text-center fw-bold text-success bg-light border-success border-opacity-25" id="detailBonus" value="0">
                                         </div>
                                         <div class="col-8">
-                                            <label class="form-label fw-bold small text-secondary">Lý do cộng:</label>
-                                            <input type="text" class="form-control bg-light border-0" id="detailBonusNote" placeholder="Ghi chú...">
+                                            <label class="form-label fw-bold text-secondary" style="font-size: 12px;">Lý do cộng:</label>
+                                            <input type="text" class="form-control form-control-sm bg-light border-0" id="detailBonusNote" placeholder="Ghi chú...">
                                         </div>
                                     </div>
                                     <div class="row g-2">
                                         <div class="col-4">
-                                            <label class="form-label fw-bold small text-danger">Trừ (-):</label>
-                                            <input type="number" step="0.5" class="form-control text-center fw-bold text-danger bg-light border-danger border-opacity-25" id="detailPenalty" value="0">
+                                            <label class="form-label fw-bold text-danger" style="font-size: 12px;">Trừ (-):</label>
+                                            <input type="number" step="0.5" class="form-control form-control-sm text-center fw-bold text-danger bg-light border-danger border-opacity-25" id="detailPenalty" value="0">
                                         </div>
                                         <div class="col-8">
-                                            <label class="form-label fw-bold small text-secondary">Lý do trừ:</label>
-                                            <input type="text" class="form-control bg-light border-0" id="detailPenaltyNote" placeholder="Ghi chú...">
+                                            <label class="form-label fw-bold text-secondary" style="font-size: 12px;">Lý do trừ:</label>
+                                            <input type="text" class="form-control form-control-sm bg-light border-0" id="detailPenaltyNote" placeholder="Ghi chú...">
                                         </div>
                                     </div>
                                 </div>
                             </div>
                         </div>
 
-						<div class="col-12">
-                            <div class="card border-0 shadow-sm" style="border-radius: 16px;">
-                                <div class="card-header text-white fw-bold py-3 d-flex justify-content-between align-items-center border-0" style="background-color: #ef4444; border-radius: 16px 16px 0 0;">
+                        <!-- KHỐI DƯỚI: QUÉT LỖI (SỔ ĐEN) -->
+                        <div class="col-12 mt-3">
+                            <div class="card border-0 shadow-sm" style="border-radius: 12px;">
+                                <div class="card-header text-white fw-bold py-2 d-flex justify-content-between align-items-center border-0" style="background-color: #ef4444; border-radius: 12px 12px 0 0; font-size: 14px;">
                                     <span><i class="fa-solid fa-robot me-2"></i> Hệ Thống Quét Lỗi Tự Động</span>
-                                    <span class="badge bg-white text-danger px-3 py-2 rounded-pill shadow-sm" id="autoPenaltyPreview">Đang trừ tự động: 0đ</span>
+                                    <span class="badge bg-white text-danger px-2 py-1 rounded-pill shadow-sm" id="autoPenaltyPreview" style="font-size: 11px;">Đang trừ tự động: 0đ</span>
                                 </div>
-                                <div class="card-body p-4">
+                                <div class="card-body p-3">
                                     <div style="position: relative;">
-                                        <textarea class="form-control border-2 fw-bold text-danger mb-3 rounded-3 p-3" id="detailNote" rows="3" placeholder="Gõ tên lỗi (Ví dụ: vắng, muộn...) hệ thống sẽ tự gợi ý..." style="resize: vertical; font-size: 15px; line-height: 1.6;"></textarea>
+                                        <!-- [NÂNG CẤP TỐI ƯU]: Tăng textarea lên 4 dòng, mở khóa kéo giãn dọc -->
+                                        <textarea class="form-control border-2 fw-bold text-danger mb-2 rounded-3 p-2" id="detailNote" rows="4" placeholder="Gõ tên lỗi (Ví dụ: vắng, muộn...) hệ thống sẽ tự gợi ý..." style="resize: vertical; font-size: 14px; line-height: 1.5; min-height: 100px;"></textarea>
                                         
-                                        <div id="suggestion-box" class="list-group" style="position: absolute; top: 100%; left: 0; z-index: 1000; width: 100%; display: none; max-height: 200px; overflow-y: auto; box-shadow: 0 10px 25px rgba(0,0,0,0.1); border-radius: 12px; border: 1px solid var(--border-color);"></div>
+                                        <div id="suggestion-box" class="list-group" style="position: absolute; bottom: 100%; left: 0; z-index: 1000; width: 100%; display: none; max-height: 180px; overflow-y: auto; box-shadow: 0 -5px 20px rgba(0,0,0,0.15); border-radius: 12px; border: 1px solid var(--border-color);"></div>
                                     </div>
                                     
-                                    <div class="p-3 bg-light rounded-3 border" style="border-color: #fca5a5 !important;">
-                                        <div class="d-flex align-items-center mb-2 pb-2 border-bottom" style="border-color: #fca5a5 !important;">
-                                            <span class="badge bg-danger bg-opacity-10 text-danger border-0 px-3 py-1 rounded-pill" style="font-size: 12px;">
+                                    <div class="p-2 bg-light rounded-3 border" style="border-color: #fca5a5 !important;">
+                                        <div class="d-flex align-items-center mb-2 pb-1 border-bottom" style="border-color: #fca5a5 !important;">
+                                            <span class="badge bg-danger bg-opacity-10 text-danger border-0 px-2 py-1 rounded-pill" style="font-size: 11px;">
                                                 <i class="fa-solid fa-tags me-1"></i> Thẻ chọn nhanh
                                             </span>
-                                            <span class="ms-2 text-muted" style="font-size: 11px; font-style: italic;">(Cuộn xuống để xem thêm lỗi)</span>
+                                            <span class="ms-2 text-muted" style="font-size: 10px; font-style: italic;">(Cuộn xuống để xem thêm lỗi)</span>
                                         </div>
                                         
-                                        <div class="d-flex flex-wrap gap-2" id="quickErrorTags" style="max-height: 110px; overflow-y: auto; padding-right: 5px;">
+                                        <div class="d-flex flex-wrap gap-1" id="quickErrorTags" style="max-height: 85px; overflow-y: auto; padding-right: 5px;">
                                         </div>
                                     </div>
                                 </div>
                             </div>
                         </div>
+                    </div>
                 </div>
-                <div class="modal-footer bg-white border-0 p-4 rounded-bottom-4">
-                    <button type="button" class="btn btn-light text-secondary" data-bs-dismiss="modal">Hủy bỏ (Esc)</button>
-                    <button type="button" class="btn btn-primary px-4" onclick="saveDetailModal()"><i class="fa-solid fa-floppy-disk me-2"></i> Lưu dữ liệu xuống bảng chính (Enter)</button>
+                
+                <!-- FOOTER CỐ ĐỊNH -->
+                <div class="modal-footer bg-white p-3 rounded-bottom-4" style="border-top: 1px solid var(--border-color); z-index: 10;">
+                    <button type="button" class="btn btn-light text-secondary fw-bold px-4" data-bs-dismiss="modal">Hủy bỏ</button>
+                    <button type="button" class="btn btn-primary fw-bold px-4 shadow-sm" onclick="saveDetailModal()"><i class="fa-solid fa-floppy-disk me-2"></i> Lưu dữ liệu</button>
                 </div>
             </div>
         </div>
