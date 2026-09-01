@@ -6080,7 +6080,7 @@ def mobile_sao_do():
 
 
 # ==========================================
-# MODULE: TRỢ LÝ AI PHÂN TÍCH VÀ VIẾT BÁO CÁO TUẦN
+# MODULE: TRỢ LÝ AI PHÂN TÍCH VÀ VIẾT BÁO CÁO TUẦN (ĐÃ NÂNG CẤP CHUẨN QUẢN LÝ)
 # ==========================================
 @app.route('/api/ai_weekly_report/<week_name>')
 def api_ai_weekly_report(week_name):
@@ -6100,8 +6100,14 @@ def api_ai_weekly_report(week_name):
                 
             # 2. Tổng hợp dữ liệu thô để đưa cho AI
             total_classes = len(scores)
+            avg_school_score = sum([float(sc.total_score or 0) for sc in scores]) / total_classes if total_classes > 0 else 0
+            total_penalty_school = sum([float(sc.score_tru or 0) for sc in scores])
+            
             top_classes = sorted(scores, key=lambda x: float(x.total_score or 0), reverse=True)[:3]
             bottom_classes = sorted(scores, key=lambda x: float(x.total_score or 0))[:3]
+            
+            # Tìm lớp bị trừ điểm nhiều nhất (Điểm nóng)
+            worst_class_score = min(scores, key=lambda x: float(x.total_score or 0))
             
             summary_lines = []
             for sc in scores:
@@ -6124,7 +6130,7 @@ def api_ai_weekly_report(week_name):
             if not api_key:
                 return {"error": "Chưa cấu hình Groq API Key trong hệ thống!"}
                 
-            # 4. Gọi API Groq AI (Sử dụng thư viện requests chuẩn Python)
+            # 4. Gọi API Groq AI với Prompt chuẩn phong cách Nhà quản lý giáo dục
             import requests
             url = "https://api.groq.com/openai/v1/chat/completions"
             headers = {
@@ -6133,18 +6139,23 @@ def api_ai_weekly_report(week_name):
             }
             
             prompt = f"""
-            Bạn là một Trợ lý hành chính Đoàn trường THPT Thanh Hòa. Dựa trên dữ liệu tổng kết nề nếp và thi đua của {week_name} dưới đây, hãy viết một bản báo cáo sơ kết tuần ngắn gọn, trang trọng, mang văn phong nhà trường để gửi Ban Giám hiệu hoặc đăng nhóm Zalo giáo viên:
+            Bạn là một Chuyên gia Quản lý Giáo dục và Cố vấn Cấp cao cho Ban Giám hiệu trường THPT Thanh Hòa. Dựa trên dữ liệu tổng kết nề nếp của {week_name} dưới đây, hãy đưa ra bản phân tích mang tầm nhìn chiến lược, khách quan, sắc sảo và mang tính xây dựng cao:
             
             DỮ LIỆU THI ĐUA:
+            - Tổng số lớp tham gia: {total_classes}
+            - Điểm trung bình toàn trường: {avg_school_score:.1f} điểm
+            - Tổng mức điểm trừ kỷ luật toàn trường: {total_penalty_school}đ
+            - Lớp thấp điểm nhất (Điểm nóng): Lớp {worst_class_score.branch.name} (GVCN: {worst_class_score.branch.gvcn or 'Chưa cập nhật'}, Tổng điểm: {worst_class_score.total_score}, Lỗi: {worst_class_score.note})
+            
+            CHI TIẾT CÁC LỚP:
             {data_context}
             
-            YÊU CẦU BÁO CÁO:
-            1. Tiêu đề trang trọng.
-            2. Đánh giá chung về tình hình nề nếp toàn trường trong tuần.
-            3. Tuyên dương cụ thể các lớp dẫn đầu có thành tích xuất sắc.
-            4. Nhắc nhở, rút kinh nghiệm đối với các lớp còn nhiều lỗi vi phạm (đi học muộn, vắng, v.v.).
-            5. Định hướng nề nếp cho tuần tiếp theo.
-            Trình bày bằng các gạch đầu dòng rõ ràng, lịch sự, chuyên nghiệp.
+            YÊU CẦU TRÌNH BÀY (BẮT BUỘC TRẢ VỀ ĐỊNH DẠNG HTML SẠCH SẼ):
+            Hãy chia nội dung thành đúng 3 phần với các thẻ HTML sau (tuyệt đối không dùng dấu ** hay ký tự Markdown thô):
+            
+            1. Phần Bức tranh tổng quan (Tiêu đề dùng icon fa-chart-line): Nhận xét khái quát về biên độ điểm số, ý thức kỷ luật chung của học sinh toàn trường trong tuần.
+            2. Phần Điểm nóng cần lưu ý (Tiêu đề dùng icon fa-triangle-exclamation): Chỉ ra tập thể lớp đang gặp vấn đề trầm trọng về nề nếp (ví dụ lớp {worst_class_score.branch.name}), phân tích nguyên nhân sơ bộ từ dữ liệu lỗi.
+            3. Phần Đề xuất hướng giải quyết (Tiêu đề dùng icon fa-circle-check): Đưa ra các mốc giải pháp cụ thể dành cho Ban Giám hiệu, Đoàn trường phối hợp với Giáo viên chủ nhiệm để chấn chỉnh kỷ kỷ luật và duy trì phong trào.
             """
             
             payload = {
@@ -6157,7 +6168,27 @@ def api_ai_weekly_report(week_name):
             if response.status_code == 200:
                 res_json = response.json()
                 ai_text = res_json['choices'][0]['message']['content']
-                return {"success": True, "report": ai_text}
+                
+                # [THUẬT TOÁN LỌC VÀ XÓA DẤU SAO]: 
+                import re
+                # 1. Chuyển đổi định dạng **chữ đậm** thành thẻ <strong> của HTML
+                ai_text = re.sub(r'\*\*(.*?)\*\*', r'<strong style="color: #0f172a;">\1</strong>', ai_text)
+                # 2. Xóa bỏ hoàn toàn bất kỳ dấu sao đơn lẻ nào còn sót lại
+                ai_text = ai_text.replace('*', '')
+                
+                # Xử lý ký tự xuống dòng an toàn tránh lỗi backslash
+                replaced_text = ai_text.replace('\n', '<br>')
+                
+                if not ai_text.startswith("<div"):
+                    formatted_html = f"""
+                    <div style="font-family: 'Inter', sans-serif; color: #1e293b; line-height: 1.6;">
+                        <div style="font-size: 14.5px; text-align: justify;">{replaced_text}</div>
+                    </div>
+                    """
+                else:
+                    formatted_html = ai_text
+                
+                return {"success": True, "report": formatted_html}
             else:
                 return {"error": f"Lỗi kết nối AI API: {response.text}"}
                 
