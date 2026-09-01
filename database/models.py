@@ -138,6 +138,7 @@ class WeeklyScore(Base):
     note_cong = Column(String, nullable=True)
     note_tru = Column(String, nullable=True)
     
+    evidence_image = Column(String(255), nullable=True)
     # [NÂNG CẤP LÕI]: Cột lưu mốc thời gian chấm điểm để giới hạn 3 ngày phúc khảo
     created_at = Column(DateTime, default=datetime.utcnow)
     # -----------------------------------------------------
