@@ -647,7 +647,7 @@ def logout():
     session.clear() 
     return redirect(url_for('login'))
 
-# [NÂNG CẤP LÕI]: API XỬ LÝ PHÚC KHẢO DÀNH CHO BCH / ADMIN
+# [NÂNG CẤP LÕI]: API XỬ LÝ PHÚC KHẢO TÍCH HỢP AUTO-CORRECTION & AUTO-CLEAN (TỰ ĐỘNG XÓA SỔ ĐEN)
 @app.route('/resolve_appeal', methods=['POST'])
 def resolve_appeal():
     # Chống GVCN can thiệp
@@ -655,21 +655,87 @@ def resolve_appeal():
         return redirect(url_for('login'))
         
     score_id = request.form.get('score_id', type=int)
+    action = request.form.get('action') 
     response_text = request.form.get('response_text', '').strip()
+    refund_points = request.form.get('refund_points', type=float, default=0.0)
     
     if not score_id or not response_text:
-        flash("Vui lòng nhập nội dung phản hồi!", "error")
+        flash("Vui lòng nhập nội dung phản hồi phán quyết!", "error")
         return redirect(request.referrer or url_for('dashboard'))
         
     try:
         with session_scope() as db_session:
             score = db_session.query(WeeklyScore).filter_by(id=score_id).first()
             if score:
-                score.appeal_response = response_text
-                log_system_action("XỬ LÝ PHÚC KHẢO", f"Đã phản hồi khiếu nại của lớp {score.branch.name} Tuần {score.week}.")
-                flash(f"✅ Đã gửi phản hồi thành công cho lớp {score.branch.name}!", "success")
+                # =======================================================
+                # TRƯỜNG HỢP 1: ĐỒNG Ý PHÚC KHẢO & HOÀN ĐIỂM
+                # =======================================================
+                if action == 'approve':
+                    # 1. Tự động hoàn điểm
+                    score.total_score = float(score.total_score or 0) + refund_points
+                    score.score_tru = max(0.0, float(score.score_tru or 0) - refund_points)
+                    
+                    # 2. TỰ ĐỘNG ĐỊNH VỊ VÀ XÓA LỖI KHỎI SỔ ĐEN (LÀM SẠCH GHI CHÚ)
+                    if score.appeal_reason and "Phúc khảo các lỗi: [" in score.appeal_reason:
+                        try:
+                            import re
+                            # Trích xuất danh sách lỗi mà GVCN đã tích Checkbox gửi lên
+                            match = re.search(r'Phúc khảo các lỗi:\s*\[(.*?)\]\s*\|\s*Giải trình', score.appeal_reason)
+                            if match:
+                                errors_str = match.group(1)
+                                appealed_errors = [e.strip() for e in errors_str.split("] & [")]
+                                
+                                # Lấy danh sách lỗi hiện tại đang có của lớp
+                                current_notes = [n.strip() for n in (score.note or "").split(";") if n.strip()]
+                                remaining_notes = []
+                                
+                                # Quét và loại bỏ những lỗi trùng khớp với đơn phúc khảo
+                                for n in current_notes:
+                                    if n not in appealed_errors:
+                                        remaining_notes.append(n)
+                                        
+                                # Ghi đè lại ghi chú sạch sẽ vào Database
+                                score.note = " ; ".join(remaining_notes)
+                                
+                                # 3. ĐỒNG BỘ LÀM SẠCH "SỔ ĐEN TOÀN TRƯỜNG" (Bảng WeeklyViolation)
+                                db_session.query(WeeklyViolation).filter_by(weekly_score_id=score.id).delete()
+                                
+                                # Quét lại ghi chú mới và nạp lại vào Sổ đen những lỗi còn tồn tại
+                                all_categories = db_session.query(ViolationCategory).filter_by(school_year_id=score.branch.school_year_id).all()
+                                sorted_cats = sorted(all_categories, key=lambda x: len(x.name), reverse=True)
+                                
+                                for part in remaining_notes:
+                                    match_day = re.search(r'\[(T[2-7]|CN)\]', part)
+                                    day_pfx = match_day.group(0) if match_day else ""
+                                    text_to_parse = part.replace(day_pfx, "").strip() if day_pfx else part
+                                    
+                                    match_stu = re.search(r'\[(.*?)\]', text_to_parse)
+                                    stu_display = match_stu.group(1).strip() if match_stu else None
+                                    
+                                    for cat in sorted_cats:
+                                        if cat.name.lower() in text_to_parse.lower():
+                                            match_qty = re.search(r'(?:x|:|-)\s*(\d+)', text_to_parse.lower())
+                                            qty = int(match_qty.group(1)) if match_qty else 1
+                                            db_session.add(WeeklyViolation(weekly_score_id=score.id, violation_id=cat.id, quantity=qty, student_name=stu_display))
+                                            break
+                        except Exception as e:
+                            print(f"Lỗi tự động xóa Sổ đen: {e}")
+                    
+                    score.appeal_response = f"[ĐÃ DUYỆT] Hoàn lại {refund_points}đ. Phản hồi: {response_text}"
+                    log_system_action("XỬ LÝ PHÚC KHẢO", f"Đã DUYỆT khiếu nại lớp {score.branch.name} Tuần {score.week}. Tự động hoàn {refund_points}đ và xóa lỗi.")
+                    flash(f"✅ Đã duyệt khiếu nại, hoàn {refund_points}đ và tự động xóa lỗi khỏi Sổ đen của lớp {score.branch.name}!", "success")
+                
+                # =======================================================
+                # TRƯỜNG HỢP 2: TỪ CHỐI PHÚC KHẢO
+                # =======================================================
+                elif action == 'reject':
+                    score.appeal_response = f"[TỪ CHỐI] Phản hồi: {response_text}"
+                    log_system_action("XỬ LÝ PHÚC KHẢO", f"TỪ CHỐI khiếu nại lớp {score.branch.name} Tuần {score.week}: {response_text}")
+                    flash(f"Đã đóng Ticket và từ chối khiếu nại của lớp {score.branch.name}.", "warning")
+                    
     except Exception as e:
-        flash(f"Lỗi: {e}", "error")
+        import traceback; traceback.print_exc()
+        flash(f"Lỗi xử lý phúc khảo: {e}", "error")
         
     return redirect(request.referrer or url_for('dashboard'))
 
