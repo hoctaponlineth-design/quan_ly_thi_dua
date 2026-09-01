@@ -669,43 +669,85 @@
         </div>
     </div>
 
-	<!-- ========================================================================= -->
-    <!-- [GIẢI PHÁP TỐI THƯỢNG]: KHUNG XEM ẢNH ĐỘC LẬP (MIỄN NHIỄM VỚI LỖI TIỆN ÍCH) -->
     <!-- ========================================================================= -->
-    <div id="customEvidenceOverlay" style="display: none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0,0,0,0.85); z-index: 999999; align-items: center; justify-content: center; flex-direction: column;">
-        <div style="position: absolute; top: 20px; right: 30px; color: white; font-size: 45px; cursor: pointer; font-weight: bold; z-index: 9999999; text-shadow: 0 2px 5px rgba(0,0,0,0.5);" onclick="closeEvidenceSafe()">&times;</div>
+    <!-- [NÂNG CẤP]: KHUNG XEM ẢNH MINH CHỨNG CÓ CHỨC NĂNG VUỐT / CHUYỂN TRANG -->
+    <!-- ========================================================================= -->
+    <div id="customEvidenceOverlay" style="display: none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0,0,0,0.95); z-index: 999999; align-items: center; justify-content: center; flex-direction: column;">
+        <div style="position: absolute; top: 15px; right: 25px; color: white; font-size: 40px; cursor: pointer; font-weight: bold; z-index: 9999999;" onclick="closeEvidenceSafe()">&times;</div>
         
-        <h4 id="customEvidenceTitle" style="color: white; margin-bottom: 20px; font-weight: bold; font-family: 'Inter', sans-serif;"><i class="fa-regular fa-image me-2"></i>Ảnh Minh Chứng</h4>
+        <h4 id="customEvidenceTitle" style="color: white; margin-bottom: 15px; font-weight: bold; font-family: 'Inter', sans-serif;"><i class="fa-regular fa-images me-2"></i>Ảnh Minh Chứng</h4>
         
-        <!-- Khung chứa ảnh sẽ có thanh cuộn nếu nhiều ảnh -->
-        <div id="customEvidenceImgContainer" style="overflow-y: auto; max-height: 80vh; width: 100%; text-align: center; padding: 0 10px;">
-            <!-- JS tự động chèn các thẻ <img> vào đây -->
+        <!-- Khung Slider Bootstrap -->
+        <div id="evidenceCarousel" class="carousel slide" data-bs-ride="false" style="width: 100%; max-width: 700px; padding: 0 15px;">
+            <div class="carousel-indicators" id="carouselIndicators" style="bottom: -40px;"></div>
+            <div class="carousel-inner" id="customEvidenceImgContainer" style="border-radius: 12px; overflow: hidden; box-shadow: 0 10px 30px rgba(0,0,0,0.5);">
+            </div>
+            <button class="carousel-control-prev" type="button" data-bs-target="#evidenceCarousel" data-bs-slide="prev" id="carouselPrevBtn">
+                <span class="carousel-control-prev-icon" aria-hidden="true" style="width: 3rem; height: 3rem; filter: drop-shadow(0 0 5px rgba(0,0,0,0.8));"></span>
+                <span class="visually-hidden">Trước</span>
+            </button>
+            <button class="carousel-control-next" type="button" data-bs-target="#evidenceCarousel" data-bs-slide="next" id="carouselNextBtn">
+                <span class="carousel-control-next-icon" aria-hidden="true" style="width: 3rem; height: 3rem; filter: drop-shadow(0 0 5px rgba(0,0,0,0.8));"></span>
+                <span class="visually-hidden">Sau</span>
+            </button>
         </div>
+        
+        <!-- Bộ đếm số lượng ảnh -->
+        <div id="mobileImageCounter" class="text-white fw-bold mt-4" style="font-size: 16px; letter-spacing: 1px;"></div>
     </div>
 
     <script>
         function viewEvidenceSafe(event, imagePaths, weekName) {
-            // Chặn click lây lan
             if(event) { event.preventDefault(); event.stopPropagation(); }
             
-            // Tách chuỗi ảnh (Bằng dấu |)
-            let paths = imagePaths.split('|');
+            // Tách chuỗi nhiều ảnh và lọc các chuỗi rỗng
+            let paths = imagePaths.split('|').filter(p => p.trim() !== '');
+            if(paths.length === 0) return;
+
             let imgHtml = '';
+            let indHtml = '';
             
-            paths.forEach(p => {
-                if(p.trim()) {
-                    imgHtml += `<img src="${p.trim()}" style="max-width: 100%; height: auto; display: block; margin: 0 auto 15px auto; border-radius: 12px; box-shadow: 0 10px 30px rgba(0,0,0,0.5);">`;
-                }
+            // Tạo các trang ảnh trong Slider
+            paths.forEach((p, index) => {
+                let activeClass = index === 0 ? 'active' : '';
+                
+                indHtml += `<button type="button" data-bs-target="#evidenceCarousel" data-bs-slide-to="${index}" class="${activeClass}" aria-current="${index === 0 ? 'true' : 'false'}"></button>`;
+                
+                imgHtml += `
+                <div class="carousel-item ${activeClass}">
+                    <img src="${p.trim()}" class="d-block w-100" style="max-height: 75vh; object-fit: contain; background: transparent;">
+                </div>`;
             });
             
+            document.getElementById('carouselIndicators').innerHTML = indHtml;
             document.getElementById('customEvidenceImgContainer').innerHTML = imgHtml;
-            document.getElementById('customEvidenceTitle').innerHTML = '<i class="fa-regular fa-image me-2"></i>Ảnh Minh Chứng - ' + weekName;
+            document.getElementById('customEvidenceTitle').innerHTML = `<i class="fa-regular fa-images me-2"></i>Minh Chứng - ${weekName}`;
+            
+            let counterEl = document.getElementById('mobileImageCounter');
+            if(counterEl) counterEl.innerHTML = `Ảnh 1 / ${paths.length}`;
+            
+            let myCarousel = document.getElementById('evidenceCarousel');
+            myCarousel.addEventListener('slide.bs.carousel', function (e) {
+                if(counterEl) counterEl.innerHTML = `Ảnh ${e.to + 1} / ${paths.length}`;
+            });
+
+            if(paths.length <= 1) {
+                document.getElementById('carouselPrevBtn').style.display = 'none';
+                document.getElementById('carouselNextBtn').style.display = 'none';
+                document.getElementById('carouselIndicators').style.display = 'none';
+            } else {
+                document.getElementById('carouselPrevBtn').style.display = 'flex';
+                document.getElementById('carouselNextBtn').style.display = 'flex';
+                document.getElementById('carouselIndicators').style.display = 'flex';
+            }
+
             document.getElementById('customEvidenceOverlay').style.display = 'flex';
         }
 
         function closeEvidenceSafe() {
             document.getElementById('customEvidenceOverlay').style.display = 'none';
             document.getElementById('customEvidenceImgContainer').innerHTML = '';
+            document.getElementById('carouselIndicators').innerHTML = '';
         }
     </script>
 

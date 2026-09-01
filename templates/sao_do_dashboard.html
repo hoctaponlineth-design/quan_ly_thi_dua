@@ -294,7 +294,7 @@
                                     <span><i class="fa-solid fa-scale-balanced"></i> Đánh giá Tuần</span>
                                 </div>
                                 <div class="bg-white p-2">
-                                    <select class="form-select fw-bold text-danger border-warning bg-light" name="rating" onchange="calculateFinalScore('{{ b.id }}', '{{ b.group }}')">
+                                    <select class="form-select fw-bold text-danger border-warning bg-light" name="rating" onchange="calculateFinalScore('{{ b.id }}', '{{ b.group }}')" {% if sc and sc.is_locked %}disabled{% endif %}>
                                         <option value="Bình thường" {% if not sc or sc.week_rating == 'Bình thường' %}selected{% endif %}>⚪ Bình thường</option>
                                         <option value="Tuần Khá" {% if sc and sc.week_rating == 'Tuần Khá' %}selected{% endif %}>🟡 Đạt loại: Tuần Khá</option>
                                         <option value="Tuần Tốt" {% if sc and sc.week_rating == 'Tuần Tốt' %}selected{% endif %}>🟢 Đạt loại: Tuần Tốt</option>
@@ -310,7 +310,7 @@
                                     <i class="fa-solid fa-circle-info text-primary"></i> Gõ lỗi cần THÊM MỚI hoặc bấm thẻ nhanh. Để ghi tên học sinh vào Sổ đen, hãy đặt trong ngoặc vuông, ví dụ: <code class="text-danger">Đi học muộn [Nguyễn Văn A]</code>
                                 </div>
                                 <div style="position: relative;">
-                                    <textarea class="form-control border-2 border-danger border-opacity-50 fw-bold text-danger mb-2" id="detailNote_{{ b.id }}" rows="3" placeholder="Gõ thêm lỗi mới kèm tên học sinh (nếu có)..." oninput="handleNoteInput('{{ b.id }}', '{{ b.group }}')"></textarea>
+                                    <textarea class="form-control border-2 border-danger border-opacity-50 fw-bold text-danger mb-2" id="detailNote_{{ b.id }}" rows="3" placeholder="Gõ thêm lỗi mới kèm tên học sinh (nếu có)..." oninput="handleNoteInput('{{ b.id }}', '{{ b.group }}')" {% if sc and sc.is_locked %}disabled{% endif %}></textarea>
                                     <div id="suggestionBox_{{ b.id }}" class="list-group" style="position: absolute; top: 100%; left: 0; z-index: 1000; width: 100%; display: none; max-height: 150px; overflow-y: auto; box-shadow: 0 4px 10px rgba(0,0,0,0.15);"></div>
                                 </div>
                              
@@ -362,9 +362,16 @@
                                 </div>
                             </div>
 
-                            <button type="button" class="btn btn-primary w-100 btn-submit text-white mt-1" style="background-color: #0d6efd;" onclick="submitFormSafe(this, '{{ b.id }}', '{{ b.name }}', '{{ b.group }}')">
-                                <i class="fa-solid fa-floppy-disk me-2"></i> CHUYỂN LÊN HỆ THỐNG
-                            </button>
+							<!-- [BẢN VÁ LỖI]: KIỂM TRA KHÓA SỔ NGAY TỪ LÚC RENDER HTML -->
+                            {% if sc and sc.is_locked %}
+                                <button type="button" class="btn btn-secondary w-100 btn-submit text-white mt-1" disabled>
+                                    <i class="fa-solid fa-lock me-2"></i> ĐÃ KHÓA SỔ (CHỐT ĐIỂM)
+                                </button>
+                            {% else %}
+                                <button type="button" class="btn btn-primary w-100 btn-submit text-white mt-1" style="background-color: #0d6efd;" onclick="submitFormSafe(this, '{{ b.id }}', '{{ b.name }}', '{{ b.group }}')">
+                                    <i class="fa-solid fa-floppy-disk me-2"></i> CHUYỂN LÊN HỆ THỐNG
+                                </button>
+                            {% endif %}
                         </form>
                         
                     </div>
@@ -844,23 +851,15 @@
                 else if (ratingSelect.value === "Tuần Khá") currentRatingScore = BAREM.kha;
             }
 
-            let oldC10 = parseInt(document.getElementById(`old_c10_${branchId}`).value) || 0;
+			let oldC10 = parseInt(document.getElementById(`old_c10_${branchId}`).value) || 0;
             let oldC9 = parseInt(document.getElementById(`old_c9_${branchId}`).value) || 0;
             let oldC8 = parseInt(document.getElementById(`old_c8_${branchId}`).value) || 0;
             if (branchGroup.includes("1")) oldC8 = 0;
 
-            let ok10 = Math.min(oldC10, BAREM.maxMon);
-            let ok9 = Math.min(oldC9, BAREM.maxMon - ok10);
-            let ok8 = Math.min(oldC8, BAREM.maxMon - ok10 - ok9);
-            
-            let oldSum = ok10 + ok9 + ok8;
-            if (oldSum > BAREM.maxTot) {
-                let excess = oldSum - BAREM.maxTot;
-                let cut8 = Math.min(ok8, excess); ok8 -= cut8; excess -= cut8;
-                if (excess > 0) { let cut9 = Math.min(ok9, excess); ok9 -= cut9; excess -= cut9; }
-                if (excess > 0) { ok10 -= excess; }
-            }
-            let oldHocTap = (ok10 * BAREM.d10) + (ok9 * BAREM.d9) + (ok8 * BAREM.d8);
+            // --- [BẢN VÁ LỖI 1]: KHÔNG XÉN TRẦN LẠI ĐIỂM CŨ ---
+            // Dữ liệu cũ từ Database tải lên đã là tổng chuẩn xác, tính thẳng ra điểm gốc luôn!
+            let oldHocTap = (oldC10 * BAREM.d10) + (oldC9 * BAREM.d9) + (oldC8 * BAREM.d8);
+            // --------------------------------------------------
 
             let oldRatingVal = document.getElementById(`old_rating_${branchId}`).value;
             let oldRatingScore = 0;
@@ -1412,6 +1411,162 @@
         }
 
         setInterval(autoSyncOfflineData, 10000); 
+    </script>
+	<script>
+		// Hàm tự động đồng bộ dữ liệu và ĐÓNG BĂNG GIAO DIỆN từ Bảng tuần ra App Sao Đỏ
+		function startAutoSyncSaoDo(weekName) {
+			setInterval(async () => {
+				try {
+					let response = await fetch(`/api/weekly_scores_json/${encodeURIComponent(weekName)}`);
+					if (response.status === 401) return; // Bỏ qua nếu mất phiên đăng nhập
+					
+					let result = await response.json();
+					if (result.success && result.data) {
+						result.data.forEach(item => {
+							let branchId = item.branch_id;
+							
+							// 1. Luôn cập nhật các trường ẩn làm "Mỏ neo" tính toán
+							let oldNoteEl = document.getElementById(`old_note_${branchId}`);
+							if (oldNoteEl) oldNoteEl.value = item.note;
+							
+							let oldTotalScoreEl = document.getElementById(`old_total_score_${branchId}`);
+							if (oldTotalScoreEl) oldTotalScoreEl.value = item.total_score;
+
+							// 2. Cập nhật trực tiếp lên Giao diện hiển thị
+							let noteInputEl = document.getElementById(`detailNote_${branchId}`);
+							let liveScoreEl = document.getElementById(`live_total_score_${branchId}`);
+							
+							if (noteInputEl && document.activeElement !== noteInputEl) {
+								if (noteInputEl.value !== item.note) noteInputEl.value = item.note;
+								if (liveScoreEl) liveScoreEl.innerText = item.total_score.toFixed(1);
+							}
+
+							// 3. CHIẾN DỊCH BÀN TAY SẮT: ĐÓNG BĂNG TOÀN DIỆN
+							let formEl = document.getElementById(`form_submit_${branchId}`);
+							if (formEl) {
+								let btnSubmit = formEl.querySelector('.btn-submit');
+								// Quét tìm TẤT CẢ ô nhập, dropdown, nút bấm trong lớp này (ngoại trừ nút "Xem ảnh đã gửi" màu xanh)
+								let allInputs = formEl.querySelectorAll('input, select, textarea, button:not(.btn-info)');
+								let quickTags = formEl.querySelectorAll('.quick-tag'); // Các thẻ chạm nhanh
+
+								if (item.is_locked) {
+									// KHÓA SỔ: Tê liệt mọi thao tác
+									allInputs.forEach(el => el.disabled = true);
+									quickTags.forEach(tag => tag.style.pointerEvents = 'none'); // Vô hiệu hóa thẻ chạm
+									
+									if (btnSubmit) {
+										btnSubmit.classList.remove('btn-primary');
+										btnSubmit.classList.add('btn-secondary');
+										btnSubmit.innerHTML = '<i class="fa-solid fa-lock me-2"></i> ĐÃ KHÓA SỔ (CHỐT ĐIỂM)';
+									}
+								} else {
+									// MỞ SỔ: Khôi phục hoạt động
+									allInputs.forEach(el => el.disabled = false);
+									quickTags.forEach(tag => tag.style.pointerEvents = 'auto');
+									
+									if (btnSubmit) {
+										btnSubmit.classList.remove('btn-secondary');
+										btnSubmit.classList.add('btn-primary');
+										btnSubmit.innerHTML = '<i class="fa-solid fa-floppy-disk me-2"></i> CHUYỂN LÊN HỆ THỐNG';
+									}
+								}
+							}
+						});
+					}
+				} catch (err) {
+					// Tạm ẩn log để tối ưu RAM điện thoại
+				}
+			}, 3000); // Tốc độ quét cực nhanh: 3 giây/lần
+		}
+
+		// Kích hoạt ngay khi mở App
+		document.addEventListener("DOMContentLoaded", () => {
+			const currentWeek = "{{ current_week }}"; 
+			if (currentWeek) {
+				startAutoSyncSaoDo(currentWeek);
+			}
+		});
+	</script>
+	<!-- ========================================================================= -->
+    <!-- [NÂNG CẤP]: KHUNG XEM ẢNH MINH CHỨNG CÓ CHỨC NĂNG VUỐT / CHUYỂN TRANG -->
+    <!-- ========================================================================= -->
+    <div id="customEvidenceOverlay" style="display: none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0,0,0,0.95); z-index: 999999; align-items: center; justify-content: center; flex-direction: column;">
+        <div style="position: absolute; top: 15px; right: 25px; color: white; font-size: 40px; cursor: pointer; font-weight: bold; z-index: 9999999;" onclick="closeEvidenceSafe()">&times;</div>
+        
+        <h4 id="customEvidenceTitle" style="color: white; margin-bottom: 15px; font-weight: bold; font-family: 'Inter', sans-serif;"><i class="fa-regular fa-images me-2"></i>Ảnh Minh Chứng</h4>
+        
+        <!-- Khung Slider Bootstrap -->
+        <div id="evidenceCarousel" class="carousel slide" data-bs-ride="false" style="width: 100%; max-width: 700px; padding: 0 15px;">
+            <div class="carousel-indicators" id="carouselIndicators" style="bottom: -40px;"></div>
+            <div class="carousel-inner" id="customEvidenceImgContainer" style="border-radius: 12px; overflow: hidden; box-shadow: 0 10px 30px rgba(0,0,0,0.5);">
+            </div>
+            <button class="carousel-control-prev" type="button" data-bs-target="#evidenceCarousel" data-bs-slide="prev" id="carouselPrevBtn">
+                <span class="carousel-control-prev-icon" aria-hidden="true" style="width: 3rem; height: 3rem; filter: drop-shadow(0 0 5px rgba(0,0,0,0.8));"></span>
+                <span class="visually-hidden">Trước</span>
+            </button>
+            <button class="carousel-control-next" type="button" data-bs-target="#evidenceCarousel" data-bs-slide="next" id="carouselNextBtn">
+                <span class="carousel-control-next-icon" aria-hidden="true" style="width: 3rem; height: 3rem; filter: drop-shadow(0 0 5px rgba(0,0,0,0.8));"></span>
+                <span class="visually-hidden">Sau</span>
+            </button>
+        </div>
+        
+        <!-- Bộ đếm số lượng ảnh -->
+        <div id="mobileImageCounter" class="text-white fw-bold mt-4" style="font-size: 16px; letter-spacing: 1px;"></div>
+    </div>
+
+    <script>
+        function viewEvidenceSafe(event, imagePaths, weekName) {
+            if(event) { event.preventDefault(); event.stopPropagation(); }
+            
+            // Tách chuỗi nhiều ảnh và lọc các chuỗi rỗng
+            let paths = imagePaths.split('|').filter(p => p.trim() !== '');
+            if(paths.length === 0) return;
+
+            let imgHtml = '';
+            let indHtml = '';
+            
+            // Tạo các trang ảnh trong Slider
+            paths.forEach((p, index) => {
+                let activeClass = index === 0 ? 'active' : '';
+                
+                indHtml += `<button type="button" data-bs-target="#evidenceCarousel" data-bs-slide-to="${index}" class="${activeClass}" aria-current="${index === 0 ? 'true' : 'false'}"></button>`;
+                
+                imgHtml += `
+                <div class="carousel-item ${activeClass}">
+                    <img src="${p.trim()}" class="d-block w-100" style="max-height: 75vh; object-fit: contain; background: transparent;">
+                </div>`;
+            });
+            
+            document.getElementById('carouselIndicators').innerHTML = indHtml;
+            document.getElementById('customEvidenceImgContainer').innerHTML = imgHtml;
+            document.getElementById('customEvidenceTitle').innerHTML = `<i class="fa-regular fa-images me-2"></i>Minh Chứng - ${weekName}`;
+            
+            let counterEl = document.getElementById('mobileImageCounter');
+            if(counterEl) counterEl.innerHTML = `Ảnh 1 / ${paths.length}`;
+            
+            let myCarousel = document.getElementById('evidenceCarousel');
+            myCarousel.addEventListener('slide.bs.carousel', function (e) {
+                if(counterEl) counterEl.innerHTML = `Ảnh ${e.to + 1} / ${paths.length}`;
+            });
+
+            if(paths.length <= 1) {
+                document.getElementById('carouselPrevBtn').style.display = 'none';
+                document.getElementById('carouselNextBtn').style.display = 'none';
+                document.getElementById('carouselIndicators').style.display = 'none';
+            } else {
+                document.getElementById('carouselPrevBtn').style.display = 'flex';
+                document.getElementById('carouselNextBtn').style.display = 'flex';
+                document.getElementById('carouselIndicators').style.display = 'flex';
+            }
+
+            document.getElementById('customEvidenceOverlay').style.display = 'flex';
+        }
+
+        function closeEvidenceSafe() {
+            document.getElementById('customEvidenceOverlay').style.display = 'none';
+            document.getElementById('customEvidenceImgContainer').innerHTML = '';
+            document.getElementById('carouselIndicators').innerHTML = '';
+        }
     </script>
 </body>
 </html>

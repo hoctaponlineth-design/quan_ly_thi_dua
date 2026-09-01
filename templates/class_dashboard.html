@@ -146,21 +146,22 @@
         .badge-danger { background: #fee2e2; color: #991b1b; }
         .badge-secondary { background: #f1f5f9; color: #475569; }
 
-        /* =========================================
+		/* =========================================
            BANNER ĐỎ DÀNH CHO APP MOBILE (TỐI ƯU KHÔNG GIAN)
            ========================================= */
         .mobile-red-banner {
             background: linear-gradient(135deg, #e11d48, #be123c);
             color: white;
-            border-radius: 0 0 24px 24px; /* Chỉ bo tròn 2 góc dưới, ốp sát trần */
+            border-radius: 0 0 24px 24px;
             padding: 12px 20px;
-            padding-top: max(15px, env(safe-area-inset-top)); /* Chừa chỗ cho camera (Tai thỏ) */
+            padding-top: max(15px, env(safe-area-inset-top));
             box-shadow: 0 6px 15px rgba(225, 29, 72, 0.3);
-            display: none; /* Ẩn trên máy tính */
-            flex-direction: row; /* Dàn hàng ngang thay vì dọc */
+            display: none;
+            flex-direction: row;
             align-items: center;
-            justify-content: space-between; /* Đẩy chữ và nút menu ra 2 mép */
+            justify-content: center; /* [SỬA Ở ĐÂY]: Đẩy toàn bộ cụm Logo + Chữ vào chính giữa màn hình */
             width: 100%;
+            position: relative; /* [SỬA Ở ĐÂY]: Tạo điểm neo để ghim nút Menu */
         }
         
         .mobile-red-banner .banner-title-wrapper {
@@ -168,28 +169,35 @@
             align-items: center;
             gap: 12px;
         }
+
+        /* [SỬA Ở ĐÂY]: ÉP các dòng chữ căn giữa với nhau (Dòng trên và dòng dưới đối xứng) */
+        .mobile-red-banner .banner-title-wrapper div {
+            text-align: center; 
+        }
         
         .mobile-red-banner i.fa-shield-halved {
-            font-size: 28px; /* Thu nhỏ icon lại một chút */
+            font-size: 28px;
         }
         
         .mobile-red-banner h2 {
-            font-size: 18px; /* Thu nhỏ tiêu đề chính */
+            font-size: 18px;
             font-weight: 800;
             margin: 0;
             letter-spacing: 0.5px;
         }
         
         .mobile-red-banner p {
-            font-size: 12px; /* Thu nhỏ phụ đề */
+            font-size: 12px;
             font-weight: 500;
             margin: 0;
             opacity: 0.9;
         }
 
         .mobile-red-banner .btn-menu {
+            position: absolute; /* [SỬA Ở ĐÂY]: Ghim chặt nút menu vào lề phải */
+            right: 20px;
             color: white;
-            background: rgba(255,255,255,0.15); /* Tạo viền mờ cho nút bấm */
+            background: rgba(255,255,255,0.15);
             border: none;
             border-radius: 10px;
             width: 40px;
@@ -566,10 +574,11 @@
                                     
 									<td data-label="Ghi Chú Lỗi" class="col-details">
                                         <div class="text-main fw-bold mb-2 auto-color-note" style="line-height: 1.5;">{{ sc.note }}</div>
-										<!-- [BỔ SUNG]: NÚT XEM ẢNH MINH CHỨNG SỐ -->
+										
+                                        <!-- [BẢN VÁ LỖI TỐI THƯỢNG]: NÚT XEM ẢNH GỌI ĐÚNG HÀM SLIDER -->
                                         {% if sc.evidence_image %}
                                         <div class="mb-2 mt-1">
-                                            <button class="btn btn-sm fw-bold shadow-sm" style="color: #dc3545; border: 1px solid #dc3545; background: #fff5f5; border-radius: 8px;" onclick="viewEvidence('{{ sc.evidence_image }}', '{{ sc.week }}')">
+                                            <button type="button" class="btn btn-sm fw-bold shadow-sm" style="color: #dc3545; border: 1px solid #dc3545; background: #fff5f5; border-radius: 8px;" onclick="viewEvidenceSafe(event, '{{ sc.evidence_image }}', '{{ sc.week }}')">
                                                 <i class="fa-regular fa-image me-1"></i> Xem ảnh minh chứng
                                             </button>
                                         </div>
@@ -1121,77 +1130,101 @@
             </div>
         </div>
     </div>
-	<!-- [BỔ SUNG]: MODAL XEM ẢNH MINH CHỨNG (ĐÃ VÁ LỖI HIỂN THỊ ĐA ẢNH) -->
-    <div class="modal fade" id="evidenceModal" tabindex="-1" aria-hidden="true">
-        <div class="modal-dialog modal-dialog-centered modal-lg">
-            <div class="modal-content" style="border-radius: 20px; border: none; overflow: hidden; box-shadow: 0 20px 40px rgba(0,0,0,0.2);">
-                <div class="modal-header text-white" style="background: var(--primary);">
-                    <h5 class="modal-title fw-bold"><i class="fa-regular fa-image me-2"></i> Ảnh Minh Chứng - <span id="evidenceWeek"></span></h5>
-                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
-                </div>
-                <!-- Container rỗng để JS tự động bơm ảnh vào -->
-                <div class="modal-body p-0 bg-light" id="evidenceImageContainer" style="max-height: 75vh; overflow-y: auto; padding: 20px !important;">
-                </div>
-                <div class="modal-footer border-0 p-3 bg-white justify-content-center">
-                    <button type="button" class="btn-modern btn-light fw-bold w-50" style="background: #f1f5f9; color: var(--text-main);" data-bs-dismiss="modal">Đóng</button>
-                </div>
+
+    <!-- ========================================================================= -->
+    <!-- [NÂNG CẤP]: KHUNG XEM ẢNH MINH CHỨNG CÓ CHỨC NĂNG VUỐT / CHUYỂN TRANG -->
+    <!-- ========================================================================= -->
+    <div id="customEvidenceOverlay" style="display: none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0,0,0,0.95); z-index: 999999; align-items: center; justify-content: center; flex-direction: column;">
+        <div style="position: absolute; top: 15px; right: 25px; color: white; font-size: 40px; cursor: pointer; font-weight: bold; z-index: 9999999;" onclick="closeEvidenceSafe()">&times;</div>
+        
+        <h4 id="customEvidenceTitle" style="color: white; margin-bottom: 15px; font-weight: bold; font-family: 'Inter', sans-serif;"><i class="fa-regular fa-images me-2"></i>Ảnh Minh Chứng</h4>
+        
+        <!-- Khung Slider Bootstrap -->
+        <div id="evidenceCarousel" class="carousel slide" data-bs-ride="false" style="width: 100%; max-width: 700px; padding: 0 15px;">
+            <div class="carousel-indicators" id="carouselIndicators" style="bottom: -40px;"></div>
+            <div class="carousel-inner" id="customEvidenceImgContainer" style="border-radius: 12px; overflow: hidden; box-shadow: 0 10px 30px rgba(0,0,0,0.5);">
             </div>
+            <button class="carousel-control-prev" type="button" data-bs-target="#evidenceCarousel" data-bs-slide="prev" id="carouselPrevBtn">
+                <span class="carousel-control-prev-icon" aria-hidden="true" style="width: 3rem; height: 3rem; filter: drop-shadow(0 0 5px rgba(0,0,0,0.8));"></span>
+                <span class="visually-hidden">Trước</span>
+            </button>
+            <button class="carousel-control-next" type="button" data-bs-target="#evidenceCarousel" data-bs-slide="next" id="carouselNextBtn">
+                <span class="carousel-control-next-icon" aria-hidden="true" style="width: 3rem; height: 3rem; filter: drop-shadow(0 0 5px rgba(0,0,0,0.8));"></span>
+                <span class="visually-hidden">Sau</span>
+            </button>
         </div>
+        
+        <!-- Bộ đếm số lượng ảnh -->
+        <div id="mobileImageCounter" class="text-white fw-bold mt-4" style="font-size: 16px; letter-spacing: 1px;"></div>
     </div>
 
-    <!-- Script điều khiển mở Modal (Đã đồng bộ thuật toán chia mảng Base64) -->
     <script>
-        function viewEvidence(imagePaths, weekName) {
-            // 1. Cập nhật tiêu đề Tuần
-            document.getElementById('evidenceWeek').innerText = weekName;
+        function viewEvidenceSafe(event, imagePaths, weekName) {
+            if(event) { event.preventDefault(); event.stopPropagation(); }
             
-            // 2. Tách chuỗi đường dẫn ảnh (Bằng dấu |)
-            let paths = imagePaths.split('|');
+            // Tách chuỗi nhiều ảnh và lọc các chuỗi rỗng
+            let paths = imagePaths.split('|').filter(p => p.trim() !== '');
+            if(paths.length === 0) {
+                alert("Không tìm thấy dữ liệu ảnh minh chứng!");
+                return;
+            }
+
             let imgHtml = '';
+            let indHtml = '';
             
-            // 3. Quét từng đường dẫn và tạo thẻ <img> tương ứng
-            paths.forEach(p => {
-                if(p.trim()) {
-                    imgHtml += `<img src="${p.trim()}" alt="Ảnh minh chứng" style="max-width: 100%; height: auto; display: block; margin: 0 auto 15px auto; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.15);">`;
-                }
+            // Tạo các trang ảnh trong Slider
+            paths.forEach((p, index) => {
+                let activeClass = index === 0 ? 'active' : '';
+                
+                indHtml += `<button type="button" data-bs-target="#evidenceCarousel" data-bs-slide-to="${index}" class="${activeClass}" aria-current="${index === 0 ? 'true' : 'false'}"></button>`;
+                
+                imgHtml += `
+                <div class="carousel-item ${activeClass}">
+                    <img src="${p.trim()}" class="d-block w-100" style="max-height: 75vh; object-fit: contain; background: transparent;">
+                </div>`;
             });
             
-            // 4. Bơm danh sách ảnh vào container
-            document.getElementById('evidenceImageContainer').innerHTML = imgHtml;
+            document.getElementById('carouselIndicators').innerHTML = indHtml;
+            document.getElementById('customEvidenceImgContainer').innerHTML = imgHtml;
+            document.getElementById('customEvidenceTitle').innerHTML = `<i class="fa-regular fa-images me-2"></i>Minh Chứng - ${weekName}`;
             
-            // 5. Hiển thị Modal
-            var modalEl = document.getElementById('evidenceModal');
-            var evidenceModal = bootstrap.Modal.getInstance(modalEl) || new bootstrap.Modal(modalEl);
-            evidenceModal.show();
+            let counterEl = document.getElementById('mobileImageCounter');
+            if(counterEl) counterEl.innerHTML = `Ảnh 1 / ${paths.length}`;
+            
+            let myCarousel = document.getElementById('evidenceCarousel');
+            // Cần khởi tạo lại Carousel để tránh kẹt trạng thái cũ
+            let bsCarousel = bootstrap.Carousel.getInstance(myCarousel);
+            if (bsCarousel) {
+                bsCarousel.dispose();
+            }
+            new bootstrap.Carousel(myCarousel, {
+                interval: false // Tắt tự động chạy
+            });
+
+            myCarousel.addEventListener('slide.bs.carousel', function (e) {
+                if(counterEl) counterEl.innerHTML = `Ảnh ${e.to + 1} / ${paths.length}`;
+            });
+
+            if(paths.length <= 1) {
+                document.getElementById('carouselPrevBtn').style.display = 'none';
+                document.getElementById('carouselNextBtn').style.display = 'none';
+                document.getElementById('carouselIndicators').style.display = 'none';
+            } else {
+                document.getElementById('carouselPrevBtn').style.display = 'flex';
+                document.getElementById('carouselNextBtn').style.display = 'flex';
+                document.getElementById('carouselIndicators').style.display = 'flex';
+            }
+
+            document.getElementById('customEvidenceOverlay').style.display = 'flex';
+        }
+
+        function closeEvidenceSafe() {
+            document.getElementById('customEvidenceOverlay').style.display = 'none';
+            document.getElementById('customEvidenceImgContainer').innerHTML = '';
+            document.getElementById('carouselIndicators').innerHTML = '';
         }
     </script>
 
-	<!-- Script điều khiển mở Modal -->
-	<script>
-		function viewEvidence(imagePaths, weekName) {
-			// 1. Cập nhật tiêu đề Tuần
-			document.getElementById('evidenceWeek').innerText = weekName;
-			
-			// 2. Tách chuỗi đường dẫn ảnh (Bằng dấu |)
-			let paths = imagePaths.split('|');
-			let imgHtml = '';
-			
-			// 3. Quét từng đường dẫn và tạo thẻ <img> tương ứng
-			paths.forEach(p => {
-				if(p.trim()) {
-					imgHtml += `<img src="${p.trim()}" alt="Ảnh minh chứng" style="max-width: 100%; height: auto; display: block; margin: 0 auto 15px auto; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.15);">`;
-				}
-			});
-			
-			// 4. Bơm danh sách ảnh vào container
-			document.getElementById('evidenceImageContainer').innerHTML = imgHtml;
-			
-			// 5. Hiển thị Modal
-			var modalEl = document.getElementById('evidenceModal');
-			var evidenceModal = bootstrap.Modal.getInstance(modalEl) || new bootstrap.Modal(modalEl);
-			evidenceModal.show();
-		}
-	</script>
 	<!-- =========================================
          THANH ĐIỀU HƯỚNG DƯỚI ĐÁY (BOTTOM NAV) - BẢN NATIVE API
          ========================================= -->
