@@ -9,7 +9,21 @@ import re
 import base64
 import os
 import time
+# [BỔ SUNG THƯ VIỆN WEB PUSH]
+from pywebpush import webpush, WebPushException
 
+# Cấu hình Khóa VAPID (Thay bằng chuỗi thầy/cô vừa copy ở Bước 1)
+VAPID_PUBLIC_KEY = "BGL6lcaXMAK5VhqdjWBO9IZ0ECiKYu47oE_RQE7rCpRinW2Je0IyrnNQi35glDiMPAMzIh0ynLUHxu4aZFCIWSs"
+VAPID_PRIVATE_KEY = "eLemgBn1ETfOsv0iT8bA4DfgFH-6poMgySRXaghXohI"
+VAPID_CLAIMS = {
+    "sub": "mailto:nguyenhoanganh.computer@gmail.com" # Email quản trị của trường
+}
+
+# (Tùy chọn) Thầy/cô có thể tạo thêm bảng `PushSubscription` trong Models 
+# để lưu thông tin đăng ký của từng GVCN. Tạm thời chúng ta dùng Session/Dict để test.
+global_subscriptions = {}
+
+    
 def process_and_save_evidence(base64_string, branch_id, week_name):
     """Hàm hứng mảng Base64, giải mã thành nhiều ảnh và lưu nối tiếp bằng dấu |"""
     if not base64_string or base64_string.strip() in ["", "[]"]:
@@ -68,7 +82,37 @@ from database.account_manager import verify_external_login, sync_account_to_json
 app = Flask(__name__)
 # Thiết lập khóa bí mật để sử dụng Flash messages báo lỗi
 app.secret_key = "doan_truong_thanh_hoa_secret_key" 
+# [BỔ SUNG]: API LƯU KHÓA ĐĂNG KÝ VÀ HÀM PHÁT SÓNG
+@app.route('/api/save_subscription', methods=['POST'])
+def save_subscription():
+    """Lưu mã đăng ký nhận thông báo của thiết bị"""
+    sub_info = request.get_json()
+    username = session.get('username')
+    
+    if not username or not sub_info:
+        return {"success": False, "error": "Lỗi dữ liệu"}, 400
+        
+    global_subscriptions[username] = sub_info
+    return {"success": True, "message": "Đã kết nối luồng thông báo đẩy!"}
 
+def send_web_push(username, title, body):
+    """Hàm lõi gọi để bắn thông báo tới 1 user cụ thể"""
+    sub_info = global_subscriptions.get(username)
+    if not sub_info:
+        return False
+        
+    try:
+        webpush(
+            subscription_info=sub_info,
+            data=json.dumps({"title": title, "body": body}),
+            vapid_private_key=VAPID_PRIVATE_KEY,
+            vapid_claims=VAPID_CLAIMS
+        )
+        return True
+    except WebPushException as ex:
+        print("Lỗi gửi Push:", repr(ex))
+        return False
+    
 from flask import g
 
 # ==========================================
@@ -647,7 +691,7 @@ def logout():
     session.clear() 
     return redirect(url_for('login'))
 
-# [NÂNG CẤP LÕI]: API XỬ LÝ PHÚC KHẢO TÍCH HỢP AUTO-CORRECTION & AUTO-CLEAN (TỰ ĐỘNG XÓA SỔ ĐEN)
+# [NÂNG CẤP LÕI]: API XỬ LÝ PHÚC KHẢO TÍCH HỢP AUTO-CORRECTION, AUTO-CLEAN & PUSH NOTIFICATION
 @app.route('/resolve_appeal', methods=['POST'])
 def resolve_appeal():
     # Chống GVCN can thiệp
@@ -667,6 +711,9 @@ def resolve_appeal():
         with session_scope() as db_session:
             score = db_session.query(WeeklyScore).filter_by(id=score_id).first()
             if score:
+                branch_name = score.branch.name.strip().upper() # Tên lớp dùng làm username nhận thông báo
+                week_num = score.week
+
                 # =======================================================
                 # TRƯỜNG HỢP 1: ĐỒNG Ý PHÚC KHẢO & HOÀN ĐIỂM
                 # =======================================================
@@ -724,6 +771,14 @@ def resolve_appeal():
                     score.appeal_response = f"[ĐÃ DUYỆT] Hoàn lại {refund_points}đ. Phản hồi: {response_text}"
                     log_system_action("XỬ LÝ PHÚC KHẢO", f"Đã DUYỆT khiếu nại lớp {score.branch.name} Tuần {score.week}. Tự động hoàn {refund_points}đ và xóa lỗi.")
                     flash(f"✅ Đã duyệt khiếu nại, hoàn {refund_points}đ và tự động xóa lỗi khỏi Sổ đen của lớp {score.branch.name}!", "success")
+                    
+                    # [NÂNG CẤP]: BẮN THÔNG BÁO ĐẨY CHO GVCN KHI ĐƯỢC DUYỆT PHÚC KHẢO
+                    try:
+                        push_title = f"🎉 Phúc khảo {week_num} đã được DUYỆT!"
+                        push_body = f"Được hoàn {refund_points}đ. Phản hồi: {response_text[:40]}..."
+                        send_web_push(branch_name, push_title, push_body)
+                    except Exception as err:
+                        print(f"Lỗi gửi Push thông báo duyệt phúc khảo: {err}")
                 
                 # =======================================================
                 # TRƯỜNG HỢP 2: TỪ CHỐI PHÚC KHẢO
@@ -732,6 +787,14 @@ def resolve_appeal():
                     score.appeal_response = f"[TỪ CHỐI] Phản hồi: {response_text}"
                     log_system_action("XỬ LÝ PHÚC KHẢO", f"TỪ CHỐI khiếu nại lớp {score.branch.name} Tuần {score.week}: {response_text}")
                     flash(f"Đã đóng Ticket và từ chối khiếu nại của lớp {score.branch.name}.", "warning")
+                    
+                    # [NÂNG CẤP]: BẮN THÔNG BÁO ĐẨY CHO GVCN KHI BỊ TỪ CHỐI PHÚC KHẢO
+                    try:
+                        push_title = f"📢 Phản hồi phúc khảo {week_num}"
+                        push_body = f"Yêu cầu chưa được chấp thuận. Phản hồi: {response_text[:40]}..."
+                        send_web_push(branch_name, push_title, push_body)
+                    except Exception as err:
+                        print(f"Lỗi gửi Push thông báo từ chối phúc khảo: {err}")
                     
     except Exception as e:
         import traceback; traceback.print_exc()
@@ -6697,14 +6760,32 @@ def sao_do_quick_submit_form():
             for (cat_name, stu_display, day_pfx), qty in capped_bad_counts.items():
                 cat_id = next((c.id for c in sorted_cats if c.name == cat_name), None)
                 if cat_id: db_session.add(WeeklyViolation(weekly_score_id=score.id, violation_id=cat_id, quantity=qty, student_name=stu_display if stu_display else None))
+            
             for cat_name, stu_display, qty, day_pfx in other_errors:
                 if cat_name != "MANUAL":
                     cat_id = next((c.id for c in sorted_cats if c.name == cat_name), None)
                     if cat_id: db_session.add(WeeklyViolation(weekly_score_id=score.id, violation_id=cat_id, quantity=qty, student_name=stu_display if stu_display else None))
 
             log_system_action("MOBILE TRỰC CỔNG", f"SD{session.get('username')} ghi nhận nhanh {branch.name}: {violation.name}")
+            
+            # =========================================================
+            # [NÂNG CẤP]: BẮN THÔNG BÁO ĐẨY CHO GVCN NGAY KHI TRỰC CỔNG
+            # =========================================================
+            try:
+                if note_add:
+                    # Giả định tài khoản GVCN có định dạng "gvcn_10A1" 
+                    # (Thầy/cô có thể sửa lại cho khớp với quy tắc đặt tên username GVCN của trường)
+                    gvcn_username = branch.name.strip().upper() 
+                    push_title = f"⚠️ Lớp {branch.name} vừa bị trừ điểm!"
+                    push_body = f"Sao đỏ ghi nhận: {note_add[:50]}... \nBấm vào đây để xem chi tiết."
+                    send_web_push(gvcn_username, push_title, push_body)
+            except Exception as push_err:
+                print(f"Lỗi gửi Push cho GVCN {branch.name}: {push_err}")
+            # =========================================================
+
             flash(f"⚡ Đã ghi nhận lỗi của {branch.name} vào Sổ đen thành công!", "success")
             return redirect(url_for('mobile_sao_do'))
+        
     except Exception as e:
         import traceback; traceback.print_exc()
         flash(f"Lỗi hệ thống: {e}", "error")
@@ -6721,11 +6802,13 @@ def submit_mobile_sao_do():
             
             branch = db_session.query(Branch).filter_by(id=branch_id).first()
             score = db_session.query(WeeklyScore).filter_by(branch_id=branch.id, week=current_week).first()
-            # --- [BẢN VÁ LỖI 2]: KIỂM TRA KHÓA SỔ ---
+            
+            # --- KIỂM TRA KHÓA SỔ ---
             if score and getattr(score, 'is_locked', False):
                 flash(f"⛔ Tuần {current_week} đã khóa sổ! Không thể sửa điểm của lớp {branch.name}.", "error")
                 return redirect(url_for('mobile_sao_do'))
             # ----------------------------------------
+            
             evidence_base64 = request.form.get('evidence_base64')
             
             settings = db_session.query(ScoreSettings).filter_by(school_year_id=active_year.id).first()
@@ -6798,7 +6881,6 @@ def submit_mobile_sao_do():
                     for part in smart_split_note(diff_note):
                         p_clean = part.strip()
                         if p_clean:
-                            # Nếu trong ô gõ tay người dùng đã tự gõ tag ngày thì giữ nguyên, ngược lại thêm tag hôm nay
                             if not re.search(r'\[(T[2-7]|CN)\]', p_clean):
                                 manual_parts.append(f"{today_pfx} {p_clean}")
                             else:
@@ -6889,7 +6971,7 @@ def submit_mobile_sao_do():
 
             final_note = " ; ".join(final_note_parts)
 
-            # 5. TÍNH TỔNG ĐIỂM DỰ KIẾN (CÔNG THỨC CHUẨN BẢNG TUẦN)
+            # 5. TÍNH TỔNG ĐIỂM DỰ KIẾN
             truc = float(score.score_truc) if score and score.score_truc is not None else 100.0
             cong = float(score.score_cong) if score and score.score_cong is not None else 0.0
             
@@ -6927,7 +7009,7 @@ def submit_mobile_sao_do():
                     count_8=f8, count_9=f9, count_10=f10,
                     score_truc=truc, score_cong=cong, score_tru=diem_tru_final,
                     note=final_note, total_score=total_val,
-                    evidence_image=saved_image_path  # Lưu ảnh khi tạo mới
+                    evidence_image=saved_image_path
                 )
                 db_session.add(score)
                 db_session.flush()
@@ -6943,6 +7025,25 @@ def submit_mobile_sao_do():
                     if cat_id: db_session.add(WeeklyViolation(weekly_score_id=score.id, violation_id=cat_id, quantity=qty, student_name=stu_display if stu_display else None))
 
             log_system_action("MOBILE SAO ĐỎ", f"SD{session.get('username')} đã chấm điểm và cập nhật lớp {branch.name}.")
+            
+            # =========================================================
+            # [NÂNG CẤP]: BẮN THÔNG BÁO ĐẨY CHO GVCN KHI CHỐT SỔ LỚP
+            # =========================================================
+            try:
+                new_errors = []
+                if new_checkbox_notes: new_errors.extend(new_checkbox_notes)
+                if manual_parts: new_errors.extend(manual_parts)
+                
+                if new_errors:
+                    error_summary = " ; ".join(new_errors)
+                    gvcn_username = branch.name.strip().upper()
+                    push_title = f"⚠️ Lớp {branch.name} vừa bị trừ điểm!"
+                    push_body = f"Sao đỏ ghi nhận: {error_summary[:50]}... \nBấm vào đây để xem chi tiết."
+                    send_web_push(gvcn_username, push_title, push_body)
+            except Exception as push_err:
+                print(f"Lỗi gửi Push cho GVCN {branch.name}: {push_err}")
+            # =========================================================
+
             flash(f"Đã nộp điểm và đồng bộ vào hệ thống cho lớp {branch.name} thành công!", "success")
             return redirect(url_for('mobile_sao_do'))
             

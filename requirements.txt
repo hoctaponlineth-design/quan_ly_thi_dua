@@ -4,3 +4,7 @@ Werkzeug
 gunicorn
 pandas
 openpyxl
+pywebpush
+cryptography
+requests
+webauthn
