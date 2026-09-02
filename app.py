@@ -969,8 +969,17 @@ def action_logs():
         
     try:
         import datetime as dt
+        # Lấy từ khóa tài khoản cần lọc từ URL (nếu có)
+        search_user = request.args.get('search_user', '').strip()
+        
         with session_scope() as db_session:
-            logs = db_session.query(ActionLog).order_by(ActionLog.timestamp.desc()).limit(500).all()
+            query = db_session.query(ActionLog)
+            
+            # Nếu có nhập tên tài khoản, tiến hành lọc gần đúng (case-insensitive)
+            if search_user:
+                query = query.filter(ActionLog.username.ilike(f"%{search_user}%"))
+                
+            logs = query.order_by(ActionLog.timestamp.desc()).limit(500).all()
             
             logs_data = []
             for log in logs:
@@ -983,7 +992,7 @@ def action_logs():
                     'details': log.details
                 })
                 
-        return render_template('action_logs.html', logs=logs_data)
+        return render_template('action_logs.html', logs=logs_data, search_user=search_user)
     except Exception as e:
         flash(f"Lỗi tải nhật ký: {e}", "error")
         return redirect(url_for('dashboard'))
@@ -8041,6 +8050,33 @@ def export_filtered_blacklist():
         flash(f"Lỗi xuất Excel: {e}", "error")
         return redirect(url_for('weekly'))
     
+# ==========================================
+# API: XÓA NHẬT KÝ HỆ THỐNG ĐỂ GIẢI PHÓNG TÀI NGUYÊN
+# ==========================================
+@app.route('/clear_action_logs', methods=['POST'])
+def clear_action_logs():
+    # Kiểm tra quyền bảo mật: Chỉ Quản trị viên, Admin hoặc Bí thư Đoàn trường mới được xóa
+    if session.get('role') not in ['Quản trị viên', 'Admin', 'Bí thư', 'Bí thư Đoàn trường']:
+        flash("Bạn không có quyền thực hiện thao tác này!", "error")
+        return redirect(url_for('dashboard'))
+    
+    try:
+        with session_scope() as db_session:
+            # Xóa toàn bộ dữ liệu trong bảng ActionLog
+            db_session.query(ActionLog).delete()
+            db_session.commit()
+            
+        # Ghi nhận log mới cho thao tác dọn dẹp hệ thống vừa thực hiện
+        log_system_action("DỌN DẸP HỆ THỐNG", f"Tài khoản {session.get('username')} đã dọn dẹp sạch toàn bộ lịch sử nhật ký.")
+        
+        flash("✅ Đã dọn dẹp sạch nhật ký hệ thống để giải phóng tài nguyên!", "success")
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        flash(f"Lỗi khi xóa nhật ký: {str(e)}", "error")
+        
+    return redirect(url_for('action_logs'))
+
 if __name__ == "__main__":
     auto_init_accounts()
     init_db()
