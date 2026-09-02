@@ -7515,49 +7515,14 @@ def school_monthly_analysis():
         import traceback; traceback.print_exc()
         flash(f"Lỗi tải trang báo cáo toàn trường: {e}", "error")
         return redirect(url_for('dashboard'))
-# ==========================================
-# API: LẤY DANH SÁCH THÁNG ĐỘNG CHO APP GVCN
-# ==========================================
-@app.route('/api/gvcn/get_months', methods=['GET'])
-def api_gvcn_get_months():
-    if session.get('role') not in ['Giáo viên chủ nhiệm', 'Quản trị viên', 'Admin', 'Bí thư Đoàn trường', 'Bí thư']:
-        return {"success": False, "error": "Không có quyền truy cập."}, 401
-    
-    try:
-        with session_scope() as db_session:
-            active_year = db_session.query(SchoolYear).filter_by(is_active=True).first()
-            if not active_year:
-                latest_year = db_session.query(SchoolYear).order_by(SchoolYear.id.desc()).first()
-                school_year_id = latest_year.id if latest_year else None
-            else:
-                school_year_id = active_year.id
-
-            if not school_year_id:
-                return {"success": True, "months": []}, 200
-
-            # Lấy danh sách các tháng đã được ghi nhận/tạo trong MonthlyRecord của năm học
-            months_query = db_session.query(MonthlyRecord.month_name).filter_by(school_year_id=school_year_id).distinct().all()
-            months = [m[0] for m in months_query if m[0]]
-
-            # Nếu chưa có bản ghi nào, trả về danh sách tháng mặc định để phòng hờ
-            if not months:
-                months = ["Tháng 9", "Tháng 10", "Tháng 11", "Tháng 12", "Tháng 1", "Tháng 2", "Tháng 3", "Tháng 4", "Tháng 5"]
-
-            return {"success": True, "months": months}, 200
-    except Exception as e:
-        return {"success": False, "error": str(e)}, 500
-
 # =====================================================================
 # API: XEM BẢNG XẾP HẠNG TOÀN TRƯỜNG (HỖ TRỢ TUẦN, THÁNG, HỌC KỲ KÈM CHI TIẾT)
 # =====================================================================
-@app.route('/api/gvcn/leaderboard', methods=['GET'])  # Bổ sung route không cần tham số
-@app.route('/api/gvcn/leaderboard/<path:week_name>', methods=['GET'])
-def api_gvcn_leaderboard(week_name=None):  # Gán giá trị mặc định là None
+@app.route('/api/gvcn/leaderboard', methods=['GET'])
+@app.route('/api/gvcn/leaderboard/<week_name>', methods=['GET'])
+def api_gvcn_leaderboard(week_name=None):
     if not session.get('role'):
-        return {
-            "success": False,
-            "error": "Phiên đăng nhập không hợp lệ hoặc bạn không có quyền xem Bảng xếp hạng."
-        }, 401
+        return {"success": False, "error": "Phiên đăng nhập không hợp lệ."}, 401
 
     try:
         week_name = (week_name or '').strip()
@@ -7571,24 +7536,19 @@ def api_gvcn_leaderboard(week_name=None):  # Gán giá trị mặc định là N
                 school_year_id = active_year.id
 
             if not school_year_id:
-                return {
-                    "success": False,
-                    "error": "Chưa có năm học nào trong hệ thống."
-                }, 200
+                return {"success": False, "error": "Chưa có năm học nào trong hệ thống."}, 200
 
-            # --- [BẢN VÁ LỖI]: TỰ ĐỘNG TÌM TUẦN MỚI NHẤT NẾU KHÔNG CÓ THAM SỐ ---
+            # --- TỰ ĐỘNG TÌM TUẦN MỚI NHẤT NẾU KHÔNG CÓ THAM SỐ ---
             if not week_name or week_name in ['undefined', 'null', 'latest']:
                 latest_score = db_session.query(WeeklyScore).join(Branch).filter(
                     Branch.school_year_id == school_year_id
                 ).order_by(WeeklyScore.id.desc()).first()
                 week_name = latest_score.week if latest_score else "Tuần 1"
-            # -------------------------------------------------------------------
 
             branches = db_session.query(Branch).filter_by(school_year_id=school_year_id).all()
             group_1_data = []
             group_2_data = []
 
-            # Thiết lập cài đặt điểm tốt tối đa nếu có
             max_tot, max_mon = 14, 4
             try:
                 settings = db_session.query(ScoreSettings).filter_by(school_year_id=school_year_id).first()
@@ -7600,7 +7560,6 @@ def api_gvcn_leaderboard(week_name=None):  # Gán giá trị mặc định là N
             branch_ids = [b.id for b in branches]
 
             if "Tháng" in week_name:
-                # --- XỬ LÝ DỮ LIỆU THÁNG ---
                 month_scores = db_session.query(MonthlyRecord).filter(
                     MonthlyRecord.month_name == week_name, 
                     MonthlyRecord.school_year_id == school_year_id
@@ -7610,10 +7569,7 @@ def api_gvcn_leaderboard(week_name=None):  # Gán giá trị mặc định là N
                 for branch in branches:
                     m_sc = next((m for m in month_scores if m.branch_id == branch.id), None)
                     grp = str(branch.group or "").strip()
-                    
-                    tong_diem_tru = 0
-                    tong_diem_cong = 0
-                    tong_diem_tot = 0
+                    tong_diem_tru = 0; tong_diem_cong = 0; tong_diem_tot = 0
                     ghi_chu_gop = []
 
                     if m_sc and getattr(m_sc, 'weeks_used', None):
@@ -7633,32 +7589,23 @@ def api_gvcn_leaderboard(week_name=None):  # Gán giá trị mặc định là N
                         "week_rating": f"Tổng hợp {week_name}",
                         "total_score": round(float(m_sc.total_score or 0), 1) if m_sc else 0.0,
                         "note": " | ".join(ghi_chu_gop) if ghi_chu_gop else "Không có vi phạm",
-                        "cong": round(tong_diem_cong, 1),
-                        "tru": round(tong_diem_tru, 1),
-                        "diem_tot": int(tong_diem_tot)
+                        "cong": round(tong_diem_cong, 1), "tru": round(tong_diem_tru, 1), "diem_tot": int(tong_diem_tot)
                     }
-
                     if "1" in grp: group_1_data.append(item)
                     else: group_2_data.append(item)
 
             elif "Học kỳ" in week_name or "Cả năm" in week_name:
-                # --- XỬ LÝ DỮ LIỆU HỌC KỲ / NĂM HỌC ---
                 if "Học kỳ 1" in week_name: target_weeks = [f"Tuần {i}" for i in range(1, 19)]
                 elif "Học kỳ 2" in week_name: target_weeks = [f"Tuần {i}" for i in range(19, 38)]
                 else: target_weeks = [f"Tuần {i}" for i in range(1, 38)]
 
-                scores = db_session.query(WeeklyScore).filter(
-                    WeeklyScore.week.in_(target_weeks), 
-                    WeeklyScore.branch_id.in_(branch_ids)
-                ).all() if target_weeks else []
-
+                scores = db_session.query(WeeklyScore).filter(WeeklyScore.week.in_(target_weeks), WeeklyScore.branch_id.in_(branch_ids)).all() if target_weeks else []
                 for branch in branches:
                     branch_scores = [sc for sc in scores if sc.branch_id == branch.id]
                     tong_diem = sum((sc.total_score or 0) for sc in branch_scores)
                     tong_diem_tru = sum((sc.score_tru or sc.score_kem or 0) for sc in branch_scores)
                     tong_diem_cong = sum((sc.score_cong or 0) for sc in branch_scores)
                     tong_diem_tot = sum(calculate_trimmed_good_points_web(db_session, w, branch.name, branch.group, max_mon, max_tot) for w in target_weeks)
-                    
                     ghi_chu_gop = [f"[{sc.week}] {sc.note.strip()}" for sc in branch_scores if sc.note and sc.note.strip() and sc.note.strip() != 'Không có vi phạm']
                     grp = str(branch.group or "").strip()
 
@@ -7668,21 +7615,13 @@ def api_gvcn_leaderboard(week_name=None):  # Gán giá trị mặc định là N
                         "week_rating": f"Tổng hợp {week_name}",
                         "total_score": round(float(tong_diem), 1),
                         "note": " | ".join(ghi_chu_gop) if ghi_chu_gop else "Không có vi phạm",
-                        "cong": round(tong_diem_cong, 1),
-                        "tru": round(tong_diem_tru, 1),
-                        "diem_tot": int(tong_diem_tot)
+                        "cong": round(tong_diem_cong, 1), "tru": round(tong_diem_tru, 1), "diem_tot": int(tong_diem_tot)
                     }
-
                     if "1" in grp: group_1_data.append(item)
                     else: group_2_data.append(item)
 
             else:
-                # --- XỬ LÝ DỮ LIỆU TUẦN (MẶC ĐỊNH) ---
-                scores = db_session.query(WeeklyScore).filter(
-                    WeeklyScore.week == week_name,
-                    WeeklyScore.branch_id.in_(branch_ids)
-                ).all()
-
+                scores = db_session.query(WeeklyScore).filter(WeeklyScore.week == week_name, WeeklyScore.branch_id.in_(branch_ids)).all()
                 score_map = {sc.branch_id: sc for sc in scores}
                 for branch in branches:
                     sc = score_map.get(branch.id)
@@ -7699,27 +7638,41 @@ def api_gvcn_leaderboard(week_name=None):  # Gán giá trị mặc định là N
                         "tru": float(sc.score_tru or sc.score_kem or 0) if sc else 0.0,
                         "diem_tot": int(diem_tot)
                     }
-
                     if "1" in grp: group_1_data.append(item)
                     else: group_2_data.append(item)
 
             group_1_data.sort(key=lambda x: x["total_score"], reverse=True)
             group_2_data.sort(key=lambda x: x["total_score"], reverse=True)
 
-            return {
-                "success": True,
-                "week_name": week_name,
-                "group_1": group_1_data,
-                "group_2": group_2_data
-            }, 200
+            return {"success": True, "week_name": week_name, "group_1": group_1_data, "group_2": group_2_data}, 200
 
     except Exception as e:
-        import traceback
-        traceback.print_exc()
-        return {
-            "success": False,
-            "error": f"{type(e).__name__}: {str(e)}"
-        }, 500
+        import traceback; traceback.print_exc()
+        return {"success": False, "error": f"{type(e).__name__}: {str(e)}"}, 500
+
+# =====================================================================
+# API: TẢI DANH SÁCH THÁNG CHO BỘ LỌC
+# =====================================================================
+@app.route('/api/gvcn/get_months')
+def api_gvcn_get_months():
+    try:
+        from database.database import session_scope
+        from database.models import SchoolYear, MonthlyRecord
+        with session_scope() as db_session:
+            active_year = db_session.query(SchoolYear).filter_by(is_active=True).first()
+            if not active_year: return {"success": False, "months": []}
+            
+            months_db = db_session.query(MonthlyRecord.month_name).filter(
+                MonthlyRecord.school_year_id == active_year.id, MonthlyRecord.month_name.like('Tháng%')
+            ).distinct().all()
+            
+            school_order = ["Tháng 9", "Tháng 10", "Tháng 11", "Tháng 12", "Tháng 1", "Tháng 2", "Tháng 3", "Tháng 4", "Tháng 5"]
+            raw_months = [m[0] for m in months_db if m[0]]
+            available_months = sorted(raw_months, key=lambda x: school_order.index(x) if x in school_order else 99)
+            return {"success": True, "months": available_months}
+    except Exception as e:
+        return {"success": False, "error": str(e)}
+    
 # =====================================================================
 # API: CẬP NHẬT THÔNG TIN LIÊN HỆ LỚP (ĐÃ VÁ LỖI JSONIFY VÀ BỌC BẢO VỆ KÉP)
 # =====================================================================
