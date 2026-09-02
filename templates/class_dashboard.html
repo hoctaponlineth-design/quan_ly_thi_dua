@@ -1345,34 +1345,33 @@
     </script>
 
 	<!-- =========================================
-         THANH ĐIỀU HƯỚNG DƯỚI ĐÁY (BOTTOM NAV) - TỰ ĐỘNG LOAD MỚI DỮ LIỆU
+         THANH ĐIỀU HƯỚNG DƯỚI ĐÁY (BOTTOM NAV) - NATIVE APP
          ========================================= -->
-    <div class="bottom-nav d-md-none" id="mobileBottomNav">
-        <!-- 1. Trang chủ (Điểm thi đua) -->
-        <a href="/class-dashboard?branch_id={{ selected_branch.id if selected_branch else '' }}#scores-pane" class="bottom-nav-item active" onclick="setTimeout(() => location.reload(), 50)">
+    <div class="bottom-nav d-md-none" id="mobileBottomNav" role="tablist">
+        <!-- 1. Trang chủ -->
+        <button class="bottom-nav-item active" data-bs-toggle="tab" data-bs-target="#scores-pane" type="button" role="tab">
             <i class="fa-solid fa-house"></i>
             <span>Trang chủ</span>
-        </a>
+        </button>
         
-        <!-- 2. Xếp hạng toàn trường -->
-        <a href="/class-dashboard?branch_id={{ selected_branch.id if selected_branch else '' }}#leaderboard-pane" class="bottom-nav-item" onclick="setTimeout(() => location.reload(), 50)">
+        <!-- 2. Xếp hạng -->
+        <button class="bottom-nav-item" data-bs-toggle="tab" data-bs-target="#leaderboard-pane" type="button" role="tab">
             <i class="fa-solid fa-trophy"></i>
             <span>Xếp hạng</span>
-        </a>
+        </button>
         
-        <!-- 3. Tra cứu ngân hàng lỗi -->
-        <a href="/class-dashboard?branch_id={{ selected_branch.id if selected_branch else '' }}#violation-bank-pane" class="bottom-nav-item" onclick="setTimeout(() => location.reload(), 50)">
+        <!-- 3. Tra cứu -->
+        <button class="bottom-nav-item" data-bs-toggle="tab" data-bs-target="#violation-bank-pane" type="button" role="tab">
             <i class="fa-solid fa-scale-balanced"></i>
             <span>Tra cứu</span>
-        </a>
+        </button>
         
-        <!-- 4. Đăng xuất hệ thống -->
-        <a href="/logout" class="bottom-nav-item">
+        <!-- 4. Đăng xuất -->
+        <button class="bottom-nav-item" type="button" onclick="window.location.href='/logout'">
             <i class="fa-solid fa-right-from-bracket"></i>
             <span>Đăng xuất</span>
-        </a>
+        </button>
     </div>
-
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script>
         // Mở Popup đánh giá
@@ -1628,19 +1627,41 @@
                     let tabInstance = new bootstrap.Tab(targetTabButton);
                     tabInstance.show();
                     
+                    // [BẢN VÁ QUAN TRỌNG]: TỰ ĐỘNG KÍCH HOẠT HÀM TẢI DỮ LIỆU NẾU LÀ TAB XẾP HẠNG
+                    if (hash === '#leaderboard-pane') {
+                        if (typeof loadSchoolLeaderboard === 'function') {
+                            loadSchoolLeaderboard();
+                        }
+                    }
+                    
                     // Đồng thời cập nhật lại class active cho thanh menu dưới
                     document.querySelectorAll('.bottom-nav .bottom-nav-item').forEach(el => el.classList.remove('active'));
-                    // Tìm nút menu có chứa link hoặc hành động tương ứng để bật sáng
+                    let activeNav = document.querySelector(`.bottom-nav-item[href*="${hash}"]`);
+                    if(activeNav) activeNav.classList.add('active');
                 }
             }
         });
 
-        // HÀM TẢI BẢNG XẾP HẠNG TOÀN TRƯỜNG CHO APP GVCN
+		// HÀM TẢI BẢNG XẾP HẠNG TOÀN TRƯỜNG CHO APP GVCN
         async function loadSchoolLeaderboard() {
             const selector = document.getElementById('bxhWeekSelector');
+            
+            // [VÁ LỖI 404]: Nếu ô chọn tuần đang trống (chưa nạp kịp options), tự động gọi hàm nạp danh sách và dừng lại
+            if (selector && selector.options.length === 0) {
+                if (typeof updateBxhTimeOptions === 'function') {
+                    updateBxhTimeOptions(); 
+                }
+                return; 
+            }
+
             const body1 = document.getElementById('leaderboardGroup1Body');
             const body2 = document.getElementById('leaderboardGroup2Body');
-            const weekName = selector ? selector.value : "Tuần 1";
+            
+            // [VÁ LỖI 404]: Bảo vệ biến weekName, nếu rỗng thì ép về "Tuần 1" để link API không bị cụt
+            let weekName = "Tuần 1";
+            if (selector && selector.value.trim() !== '') {
+                weekName = selector.value.trim();
+            }
 
             if (!body1 || !body2) return;
             const loadingHtml = `
@@ -1702,7 +1723,6 @@
                 body2.innerHTML = errorHtml;
             }
         }
-
 		function renderLeaderboardTable(tbodyId, listData) {
             let tbody = document.getElementById(tbodyId);
             if (!tbody) return;
@@ -1876,31 +1896,49 @@
         }
     </script>
 
-    <script>
+	<script>
         // ======================================================
-        // ĐỒNG BỘ HIỆU ỨNG MÀU SẮC GIỮA TAB TRÊN VÀ MENU DƯỚI
+        // THUẬT TOÁN ĐỒNG BỘ TAB & TẢI DỮ LIỆU ĐỘNG (AJAX)
         // ======================================================
         document.addEventListener("DOMContentLoaded", function() {
-            // Lắng nghe sự kiện chuyển Tab mặc định của hệ thống
+            // 1. Kiểm tra thanh địa chỉ có gắn thẻ #hash nào không để bật đúng Tab đó khi vừa vào trang
+            let hash = window.location.hash;
+            if (hash) {
+                let targetTabButton = document.querySelector(`button[data-bs-target="${hash}"]`);
+                if (targetTabButton) {
+                    let tabInstance = new bootstrap.Tab(targetTabButton);
+                    tabInstance.show();
+                }
+            }
+
+            // 2. Lắng nghe sự kiện BẤM CHUYỂN TAB (Bấm ở thanh trên hay thanh dưới đều bắt được)
             var triggerTabList = [].slice.call(document.querySelectorAll('button[data-bs-toggle="tab"]'));
             
             triggerTabList.forEach(function (tabEl) {
                 tabEl.addEventListener('shown.bs.tab', function (event) {
-                    // 1. Lấy ID của Tab vừa được mở
+                    // Lấy ID của Tab vừa được mở ra
                     var targetId = event.target.getAttribute('data-bs-target');
                     
-                    // 2. Xóa hiệu ứng active ở TẤT CẢ các nút (cả trên và dưới)
+                    // Đổi URL trên trình duyệt nhưng KHÔNG tải lại trang (Giúp người dùng F5 không bị mất Tab)
+                    history.pushState(null, null, targetId);
+                    
+                    // Tắt sáng tất cả các nút
                     document.querySelectorAll('.modern-tab, .bottom-nav-item').forEach(btn => {
-                        if (btn.getAttribute('data-bs-toggle') === 'tab') {
-                            btn.classList.remove('active');
-                        }
+                        btn.classList.remove('active');
                     });
 
-                    // 3. Bật hiệu ứng active cho ĐÚNG các nút trỏ về Tab đang mở
+                    // Bật sáng đúng các nút trỏ về Tab đang mở (Đồng bộ cả nút trên Desktop và Mobile)
                     document.querySelectorAll(`button[data-bs-target="${targetId}"]`).forEach(btn => {
                         btn.classList.add('active');
                     });
                     
+                    // [TÍNH NĂNG LÕI]: Tự động tải lại Bảng xếp hạng mới nhất từ máy chủ khi bấm vào Tab Xếp Hạng
+                    if (targetId === '#leaderboard-pane') {
+                        if (typeof loadSchoolLeaderboard === 'function') {
+                            // Gọi hàm API AJAX đã có sẵn trong file của thầy/cô
+                            loadSchoolLeaderboard(); 
+                        }
+                    }
                 });
             });
         });
