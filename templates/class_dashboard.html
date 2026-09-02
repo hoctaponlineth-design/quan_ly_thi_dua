@@ -361,6 +361,35 @@
         @keyframes shimmer {
             to { background-position-x: -200%; }
         }
+		/* Tùy chỉnh cụm 3 nút hành động GVCN bằng nhau tuyệt đối */
+    .gvcn-action-grid {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr); /* Chia đều 3 cột bằng nhau */
+        gap: 8px; /* Khoảng cách giữa các nút */
+        margin-top: 12px;
+        width: 100%;
+    }
+    .btn-gvcn-equal {
+        display: flex;
+        flex-direction: column; /* Icon ở trên, chữ ở dưới */
+        align-items: center;
+        justify-content: center;
+        width: 100%;
+        height: 75px; /* Cố định chiều cao để các nút vuông vắn bằng nhau */
+        padding: 4px;
+        border-radius: 12px;
+        border: none;
+        color: white;
+        font-weight: 700;
+        font-size: 11px; /* Cỡ chữ vừa vặn cho mobile */
+        text-align: center;
+        text-decoration: none;
+        box-shadow: 0 4px 10px rgba(0,0,0,0.08);
+        transition: transform 0.1s;
+        overflow: hidden;
+    }
+    .btn-gvcn-equal:active { transform: scale(0.95); }
+    .btn-gvcn-equal i { font-size: 16px; margin-bottom: 4px; }
     </style>
 </head>
 <body>
@@ -431,20 +460,32 @@
                         </select>
                     </div>
                     
-                    <!-- 2. CỘT NÚT BẤM (Gom 2 nút thành 1 hàng ngang trên điện thoại) -->
-                    <div class="col-12 col-md-6 px-0 ps-md-2 mt-2 mt-md-0 d-flex gap-2">
+					<!-- 2. CỘT NÚT BẤM (ĐÃ THIẾT KẾ LƯỚI 3 CỘT ĐỀU NHAU) -->
+                    <div class="col-12 px-0 mt-2">
                         {% if selected_branch %}
-                            <!-- Nút Xuất PDF -->
-                            <a href="/preview_class_dashboard/{{ selected_branch.id }}" class="btn-modern btn-modern-warning w-50 shadow-sm py-2 px-1 text-decoration-none text-center" style="font-size: 13px;">
-                                <i class="fa-solid fa-file-pdf"></i> Xuất Hồ Sơ
+                        <div class="gvcn-action-grid">
+                            <!-- 1. Nút Xuất Hồ Sơ -->
+                            <a href="/preview_class_dashboard/{{ selected_branch.id }}" class="btn-gvcn-equal" style="background: linear-gradient(135deg, #f59e0b, #d97706);" title="Xuất hồ sơ PDF">
+                                <i class="fa-solid fa-file-pdf"></i>
+                                <span>Xuất Hồ Sơ</span>
                             </a>
                             
-                            <!-- Nút Cập nhật thông tin (Đã đổi text ngắn gọn hơn) -->
+                            <!-- 2. Nút Sửa Thông Tin -->
                             {% if is_gvcn or session.get('role') in ['Quản trị viên', 'Admin', 'Bí thư Đoàn trường'] %}
-                            <button type="button" class="btn-modern btn-modern-primary w-50 shadow-sm py-2 px-1 text-center" style="font-size: 13px;" onclick="openEditBranchModal()">
-                                <i class="fa-solid fa-user-pen"></i> Sửa Thông Tin
+                            <button type="button" class="btn-gvcn-equal" style="background: linear-gradient(135deg, #2563eb, #1d4ed8);" onclick="openEditBranchModal()" title="Sửa thông tin lớp">
+                                <i class="fa-solid fa-user-pen"></i>
+                                <span>Sửa thông tin</span>
                             </button>
                             {% endif %}
+                            
+                            <!-- 3. Nút Bật/Tắt Thông Báo (Toggle) -->
+                            {% if is_gvcn %}
+                            <button type="button" class="btn-gvcn-equal" id="btnPushNotifyGVCN" style="background: linear-gradient(135deg, #0ea5e9, #0284c7);" onclick="enablePushNotifications()" title="Bật/Tắt thông báo vi phạm">
+                                <i class="fa-solid fa-bell"></i>
+                                <span>Thông Báo</span>
+                            </button>
+                            {% endif %}
+                        </div>
                         {% endif %}
                     </div>
                 </form>
@@ -1865,6 +1906,101 @@
                 }, 500);
             {% endif %}
         });
+    </script>
+	<!-- =========================================
+         THUẬT TOÁN ĐĂNG KÝ THÔNG BÁO ĐẨY (WEB PUSH) CHO GVCN
+         ========================================= -->
+	<script>
+        // Hàm chuyển đổi VAPID Key sang dạng nhị phân
+        function urlBase64ToUint8Array(base64String) {
+            const padding = '='.repeat((4 - base64String.length % 4) % 4);
+            const base64 = (base64String + padding).replace(/\-/g, '+').replace(/_/g, '/');
+            const rawData = window.atob(base64);
+            const outputArray = new Uint8Array(rawData.length);
+            for (let i = 0; i < rawData.length; ++i) { outputArray[i] = rawData.charCodeAt(i); }
+            return outputArray;
+        }
+
+        // 1. TỰ ĐỘNG KIỂM TRA TRẠNG THÁI KHI VỪA MỞ TRANG
+        document.addEventListener("DOMContentLoaded", async function() {
+            if ('serviceWorker' in navigator && 'PushManager' in window) {
+                const registration = await navigator.serviceWorker.ready;
+                const subscription = await registration.pushManager.getSubscription();
+                
+                const btn = document.getElementById('btnPushNotifyGVCN');
+                if (btn) {
+                    if (subscription) {
+                        // Nếu đã đăng ký trước đó -> Đổi nút thành trạng thái "Đang bật"
+                        btn.innerHTML = '<i class="fa-solid fa-bell-slash me-1"></i> Tắt Thông Báo';
+                        btn.style.backgroundColor = '#64748b'; // Màu xám/tím dịu
+                    } else {
+                        // Chưa đăng ký -> Trạng thái "Chưa bật"
+                        btn.innerHTML = '<i class="fa-solid fa-bell fa-shake me-1"></i> Bật Thông Báo';
+                        btn.style.backgroundColor = '#0ea5e9'; // Màu xanh dương
+                    }
+                }
+            }
+        });
+
+        // 2. HÀM XỬ LÝ BẬT / TẮT KHI BẤM VÀO NÚT (TOGGLE)
+        async function enablePushNotifications() {
+            if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
+                alert("❌ Trình duyệt của bạn không hỗ trợ Thông báo đẩy!"); return;
+            }
+
+            try {
+                const registration = await navigator.serviceWorker.register('/sw.js');
+                await navigator.serviceWorker.ready;
+                
+                // Kiểm tra xem thiết bị đã đăng ký nhận thông báo chưa
+                let subscription = await registration.pushManager.getSubscription();
+                const btn = document.getElementById('btnPushNotifyGVCN');
+
+                if (subscription) {
+                    // --- NẾU ĐÃ BẬT -> TIẾN HÀNH TẮT (UNSUBSCRIBE) ---
+                    const success = await subscription.unsubscribe();
+                    if (success) {
+                        if (btn) {
+                            btn.innerHTML = '<i class="fa-solid fa-bell fa-shake me-1"></i> Bật Thông Báo Vi Phạm';
+                            btn.style.backgroundColor = '#0ea5e9';
+                        }
+                        alert("🔕 Đã tắt thông báo thành công. Bạn sẽ không nhận được tin nhắn vi phạm nữa.");
+                    }
+                } else {
+                    // --- NẾU ĐANG TẮT -> TIẾN HÀNH BẬT (SUBSCRIBE) ---
+                    const permission = await Notification.requestPermission();
+                    if (permission !== 'granted') {
+                        alert("❌ Bạn đã từ chối nhận thông báo. Vui lòng cấp quyền trong cài đặt trình duyệt."); 
+                        return;
+                    }
+
+                    // PUBLIC KEY VAPID (Khóa thầy/cô vừa lấy từ VapidKeys.com)
+                    const publicVapidKey = "BGL6lcaXMAK5VhqdjWBO9IZ0ECiKYu47oE_RQE7rCpRinW2Je0IyrnNQi35glDiMPAMzIh0ynLUHxu4aZFCIWSs"; 
+                    
+                    subscription = await registration.pushManager.subscribe({
+                        userVisibleOnly: true,
+                        applicationServerKey: urlBase64ToUint8Array(publicVapidKey)
+                    });
+                    
+                    // Gửi mã đăng ký về Backend Flask
+                    await fetch('/api/save_subscription', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(subscription)
+                    });
+
+                    if (btn) {
+                        btn.innerHTML = '<i class="fa-solid fa-bell-slash me-1"></i> Tắt Thông Báo';
+                        btn.style.backgroundColor = '#64748b';
+                    }
+                    alert("✅ Đã bật thông báo thành công! Điện thoại của thầy/cô sẽ nhận tin nhắn thời gian thực.");
+                }
+                
+            } catch (error) {
+                console.error("Lỗi cấu hình Push:", error);
+                alert("❌ Lỗi kết nối máy chủ Push.");
+            }
+        }
     </script>
 </body>
 </html>

@@ -171,11 +171,21 @@
     <div id="homeSection">
         <div class="user-welcome">
             <!-- NÚT ĐỔI MẬT KHẨU TÍCH HỢP TRỰC TIẾP -->
-            <div class="d-flex justify-content-between align-items-start mb-3">
+			<div class="d-flex justify-content-between align-items-start mb-3">
                 <h6 class="fw-bold text-dark m-0" style="line-height: 1.5;">👤 Xin chào, SĐ:<br>{{ session.get('full_name') | replace('SĐ: ', '') }}!</h6>
-                <button class="btn btn-sm text-primary bg-primary bg-opacity-10 border-0 rounded-pill px-3 py-1 fw-bold shadow-sm" onclick="openChangePasswordModal()" style="font-size: 12px; transition: transform 0.1s;">
-                    <i class="fa-solid fa-key me-1"></i> Đổi MK
-                </button>
+                <div class="d-flex flex-column gap-2 align-items-end">
+                    <button class="btn btn-sm text-primary bg-primary bg-opacity-10 border-0 rounded-pill px-3 py-1 fw-bold shadow-sm" onclick="openChangePasswordModal()" style="font-size: 12px; transition: transform 0.1s;">
+                        <i class="fa-solid fa-key me-1"></i> Đổi MK
+                    </button>
+                    <!-- [NÂNG CẤP]: NÚT KÍCH HOẠT FACEID / VÂN TAY -->
+                    <button class="btn btn-sm text-success bg-success bg-opacity-10 border-0 rounded-pill px-3 py-1 fw-bold shadow-sm" onclick="registerBiometric()" style="font-size: 12px;">
+                        <i class="fa-solid fa-fingerprint me-1"></i> Vân tay / FaceID
+                    </button>
+                    <!-- [NÂNG CẤP]: NÚT BẬT THÔNG BÁO ĐẨY -->
+                    <button class="btn btn-sm text-info bg-info bg-opacity-10 border-0 rounded-pill px-3 py-1 fw-bold shadow-sm" id="btnPushNotify" onclick="enablePushNotifications()" style="font-size: 12px;">
+                        <i class="fa-solid fa-bell me-1"></i> Nhận Thông báo
+                    </button>
+                </div>
             </div>
             
             {% if assignment %}
@@ -1094,8 +1104,21 @@
             element.classList.add('active'); 
         }
 
+		// KHỞI TẠO SERVICE WORKER & LẮNG NGHE ĐỒNG BỘ NGẦM (OFFLINE-FIRST)
         if ('serviceWorker' in navigator) { 
-            window.addEventListener('load', () => { navigator.serviceWorker.register('/sw.js').catch(err => console.log('Lỗi PWA:', err)); }); 
+            window.addEventListener('load', () => { 
+                navigator.serviceWorker.register('/sw.js').then(registration => {
+                    console.log('✅ PWA & Offline Mode đã sẵn sàng!');
+                }).catch(err => console.log('❌ Lỗi PWA:', err)); 
+            }); 
+            
+            // Lắng nghe tín hiệu "CÓ MẠNG" từ Service Worker phát ra từ Background Sync
+            navigator.serviceWorker.addEventListener('message', event => {
+                if (event.data && event.data.type === 'NETWORK_RESTORED_FLUSH_QUEUE') {
+                    console.log("⚡ Nhận lệnh từ hệ thống ngầm: Có sóng mạng, đang tự động nộp Giỏ chờ...");
+                    autoSyncOfflineData(); // Gọi hàm xả kho dữ liệu
+                }
+            });
         }
 
         function openChangePasswordModal() {
@@ -1607,6 +1630,81 @@
             document.getElementById('customEvidenceOverlay').style.display = 'none';
             document.getElementById('customEvidenceImgContainer').innerHTML = '';
             document.getElementById('carouselIndicators').innerHTML = '';
+        }
+		// =========================================================
+        // [CƠ CHẾ 4] GIAO TIẾP VỚI CẢM BIẾN VÂN TAY / FACE ID (WEBAUTHN)
+        // =========================================================
+        async function registerBiometric() {
+            triggerHaptic(30);
+            
+            // 1. Kiểm tra phần cứng thiết bị có hỗ trợ Sinh trắc học không
+            if (!window.PublicKeyCredential) {
+                showNativeToast("Thiết bị của bạn không hỗ trợ cảm biến Sinh trắc học!", "error");
+                return;
+            }
+            
+            showNativeToast("Đang khởi động máy quét bảo mật...", "success");
+            
+            // 2. Giao diện (Frontend) đã sẵn sàng. Chờ kết nối Backend Python
+            setTimeout(() => {
+                alert("🔒 Giao diện WebAuthn đã sẵn sàng!\n\nĐể quét FaceID/Vân tay, vui lòng báo Quản trị viên cài đặt thêm thư viện 'webauthn' vào máy chủ Flask (Backend) để cấp Khóa bảo mật (Public Key).");
+            }, 800);
+        }
+
+        // =========================================================
+        // [CƠ CHẾ 5] XIN QUYỀN VÀ GỬI SUBSCRIPTION LÊN MÁY CHỦ
+        // =========================================================
+        // Hàm chuyển đổi VAPID Key sang định dạng nhị phân
+        function urlBase64ToUint8Array(base64String) {
+            const padding = '='.repeat((4 - base64String.length % 4) % 4);
+            const base64 = (base64String + padding).replace(/\-/g, '+').replace(/_/g, '/');
+            const rawData = window.atob(base64);
+            const outputArray = new Uint8Array(rawData.length);
+            for (let i = 0; i < rawData.length; ++i) { outputArray[i] = rawData.charCodeAt(i); }
+            return outputArray;
+        }
+
+        async function enablePushNotifications() {
+            triggerHaptic(30);
+            
+            if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
+                showNativeToast("Trình duyệt không hỗ trợ Web Push!", "error"); return;
+            }
+            
+            const permission = await Notification.requestPermission();
+            if (permission !== 'granted') {
+                showNativeToast("❌ Bạn đã từ chối nhận thông báo.", "error"); return;
+            }
+
+            try {
+                const registration = await navigator.serviceWorker.ready;
+                const publicVapidKey = "BGL6lcaXMAK5VhqdjWBO9IZ0ECiKYu47oE_RQE7rCpRinW2Je0IyrnNQi35glDiMPAMzIh0ynLUHxu4aZFCIWSs"; // PHẢI KHỚP VỚI KEY TRONG APP.PY
+                
+                // Đăng ký với máy chủ đẩy của Google/Apple
+                const subscription = await registration.pushManager.subscribe({
+                    userVisibleOnly: true,
+                    applicationServerKey: urlBase64ToUint8Array(publicVapidKey)
+                });
+                
+                // Gửi chìa khóa về Backend Flask
+                await fetch('/api/save_subscription', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(subscription)
+                });
+
+                const btn = document.getElementById('btnPushNotify');
+                if(btn) {
+                    btn.innerHTML = '<i class="fa-solid fa-bell-slash me-1"></i> Đã bật TB';
+                    btn.classList.replace('text-info', 'text-secondary');
+                    btn.classList.replace('bg-info', 'bg-secondary');
+                }
+                showNativeToast("✅ Đã kết nối thành công! Bạn sẽ nhận được tin nhắn thời gian thực.", "success");
+                
+            } catch (error) {
+                console.error("Lỗi đăng ký Push:", error);
+                showNativeToast("❌ Lỗi kết nối máy chủ Push.", "error");
+            }
         }
     </script>
 </body>
