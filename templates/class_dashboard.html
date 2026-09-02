@@ -1448,7 +1448,7 @@
             }
         }
 
-		// XỬ LÝ MỞ MODAL PHÚC KHẢO VÀ NẠP DANH SÁCH LỖI
+		// XỬ LÝ MỞ MODAL PHÚC KHẢO VÀ KHÓA CÁC LỖI CỦA NGÀY HÔM TRƯỚC
         function openAppealModal(btn) {
             let scoreId = btn.getAttribute('data-score-id');
             let weekName = btn.getAttribute('data-week');
@@ -1461,6 +1461,13 @@
             let label = document.getElementById('appealViolationsLabel');
             container.innerHTML = ''; // Reset rổ chứa lỗi
             
+            // XÁC ĐỊNH THỨ HỆ THỐNG HIỆN TẠI (0: Chủ nhật, 1: Thứ 2, ..., 6: Thứ 7)
+            const dayOrder = { 'CN': 0, 'T2': 1, 'T3': 2, 'T4': 3, 'T5': 4, 'T6': 5, 'T7': 6 };
+            const jsDay = new Date().getDay(); 
+            const dayMap = ['CN', 'T2', 'T3', 'T4', 'T5', 'T6', 'T7'];
+            const currentDayCode = dayMap[jsDay];
+            const currentRank = dayOrder[currentDayCode] !== undefined ? dayOrder[currentDayCode] : 99;
+
             // Cắt chuỗi ghi chú bằng dấu chấm phẩy và sinh ra các Checkbox
             if (noteText && noteText.trim() !== '' && noteText.trim() !== 'Không có vi phạm' && noteText.trim() !== 'Không có') {
                 label.style.display = 'block';
@@ -1468,22 +1475,39 @@
                 violations.forEach((v, index) => {
                     let vClean = v.trim();
                     if(vClean) {
-                        // SỬA: Tạo thẻ Label bao bọc toàn bộ khối để bấm vào đâu cũng chọn được lỗi
-                        let labelNode = document.createElement('label');
-                        labelNode.className = 'd-flex align-items-start p-3 bg-white border rounded-3 shadow-sm w-100';
-                        labelNode.style.cursor = 'pointer';
-                        labelNode.style.borderColor = '#fca5a5';
-                        labelNode.style.transition = 'all 0.2s ease';
+                        // KIỂM TRA XEM LỖI NÀY THUỘC THỨ MẤY (VD: [T2], [T3]...)
+                        let matchDay = vClean.match(/\[?(T[2-7]|CN)\]?/i);
+                        let isPastDay = false;
                         
-                        // Thêm hiệu ứng Đổi màu khi di chuột qua (Hover)
-                        labelNode.onmouseenter = function() { this.style.backgroundColor = '#fef2f2'; this.style.borderColor = '#ef4444'; };
-                        labelNode.onmouseleave = function() { this.style.backgroundColor = '#ffffff'; this.style.borderColor = '#fca5a5'; };
+                        if (matchDay && matchDay[1]) {
+                            let violationDayCode = matchDay[1].toUpperCase();
+                            let violationRank = dayOrder[violationDayCode];
+                            
+                            // Nếu thứ của lỗi đứng TRƯỚC thứ hiện tại -> Lỗi của ngày hôm trước
+                            if (violationRank !== undefined && violationRank < currentRank) {
+                                isPastDay = true;
+                            }
+                        }
 
-                        // Cấu trúc lại: Đẩy Checkbox lên trên cùng (start) để khớp với dòng chữ nhiều dòng
+                        // Tạo thẻ Label bao bọc: Nếu là ngày trước thì làm mờ và chặn click
+                        let labelNode = document.createElement('label');
+                        labelNode.className = 'd-flex align-items-start p-3 border rounded-3 shadow-sm w-100 ' + (isPastDay ? 'bg-light opacity-75' : 'bg-white');
+                        labelNode.style.cursor = isPastDay ? 'not-allowed' : 'pointer';
+                        labelNode.style.borderColor = isPastDay ? '#cbd5e1' : '#fca5a5';
+                        
+                        // Chỉ thêm hiệu ứng hover cho lỗi trong ngày hợp lệ
+                        if (!isPastDay) {
+                            labelNode.onmouseenter = function() { this.style.backgroundColor = '#fef2f2'; this.style.borderColor = '#ef4444'; };
+                            labelNode.onmouseleave = function() { this.style.backgroundColor = '#ffffff'; this.style.borderColor = '#fca5a5'; };
+                        }
+
+                        let disabledAttr = isPastDay ? 'disabled' : '';
+                        let badgePast = isPastDay ? '<span class="badge bg-secondary ms-2" style="font-size: 11px;">⚠️ Quá hạn (Lỗi ngày trước)</span>' : '';
+
                         labelNode.innerHTML = `
-                            <input class="form-check-input m-0 me-3 shadow-none flex-shrink-0" type="checkbox" value="${vClean}" id="viol_app_${index}" style="width: 18px; height: 18px; margin-top: 2px !important; cursor: pointer; border-color: #ef4444;">
-                            <div class="fw-bold text-danger w-100" style="font-size: 14.5px; line-height: 1.5;">
-                                ${vClean}
+                            <input class="form-check-input m-0 me-3 shadow-none flex-shrink-0" type="checkbox" value="${vClean}" id="viol_app_${index}" ${disabledAttr} style="width: 18px; height: 18px; margin-top: 2px !important; cursor: ${isPastDay ? 'not-allowed' : 'pointer'}; border-color: ${isPastDay ? '#94a3b8' : '#ef4444'};">
+                            <div class="fw-bold ${isPastDay ? 'text-secondary text-decoration-line-through' : 'text-danger'} w-100" style="font-size: 14.5px; line-height: 1.5;">
+                                ${vClean} ${badgePast}
                             </div>
                         `;
                         container.appendChild(labelNode);
