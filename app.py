@@ -25,44 +25,40 @@ global_subscriptions = {}
 
     
 def process_and_save_evidence(base64_string, branch_id, week_name):
-    """Hàm hứng mảng Base64, giải mã thành nhiều ảnh và lưu nối tiếp bằng dấu |"""
+    """Hàm hứng mảng Base64 và đẩy thẳng lên Đám mây Cloudinary"""
     if not base64_string or base64_string.strip() in ["", "[]"]:
         return None
         
     try:
         import json
-        import time
-        import base64
-        import os
+        import cloudinary
+        import cloudinary.uploader
         
-        # Kiểm tra xem có phải mảng JSON không (từ PWA gửi lên nhiều ảnh)
+        # [QUAN TRỌNG]: Thầy/cô sẽ đăng ký tài khoản Cloudinary miễn phí và điền 3 mã này vào
+        cloudinary.config( 
+            cloud_name = "bgjw5m03", 
+            api_key = "438871542918892", 
+            api_secret = "sVU9IhaUUby5XOrR8oNsp_8XF6Q" 
+        )
         if base64_string.startswith('['):
             base64_list = json.loads(base64_string)
         else:
             base64_list = [base64_string]
             
         saved_paths = []
-        upload_folder = os.path.join('static', 'uploads', 'evidences')
-        os.makedirs(upload_folder, exist_ok=True)
         
         for idx, b64 in enumerate(base64_list):
             if not b64: continue
-            if ',' in b64:
-                b64 = b64.split(',')[1]
-            b64 = b64 + '=' * (-len(b64) % 4)
             
-            timestamp = int(time.time())
-            filename = f"evid_{week_name}_b{branch_id}_{timestamp}_{idx}.jpg"
-            filepath = os.path.join(upload_folder, filename)
+            # API Cloudinary nhận thẳng định dạng Base64, không cần lưu file trung gian
+            upload_result = cloudinary.uploader.upload(b64, folder=f"thidua_doantruong/{week_name}")
             
-            with open(filepath, "wb") as fh:
-                fh.write(base64.b64decode(b64))
-                
-            saved_paths.append(f"/static/uploads/evidences/{filename}")
+            # Lấy đường link HTTPS tĩnh của bức ảnh trên đám mây để lưu vào CSDL
+            saved_paths.append(upload_result['secure_url'])
             
         return "|".join(saved_paths) if saved_paths else None
     except Exception as e:
-        print(f"❌ LỖI GIẢI MÃ ẢNH MINH CHỨNG: {str(e)}")
+        print(f"❌ LỖI UPLOAD ẢNH LÊN ĐÁM MÂY: {str(e)}")
         return None
     
 from flask import Flask, render_template, request, redirect, url_for, flash, session, send_file
@@ -944,7 +940,7 @@ def change_password():
                 if db_user:
                     db_user.password_hash = new_pwd
 
-            log_system_action("BẢO MẬT", f"Đã ép đổi mật khẩu cho tài khoản: {login_id}")
+            log_system_action("BẢO MẬT", f"Đã đổi mật khẩu cho tài khoản: {login_id}")
 
             flash(f"✅ Đã thay đổi mật khẩu thành công cho tài khoản: {login_id}! Vui lòng đăng nhập lại.", "success")
             session.clear() 
@@ -8035,15 +8031,29 @@ if __name__ == "__main__":
     init_db()
     create_mock_admin()
     
+    # Khởi động luồng chạy ngầm sao lưu dữ liệu tự động
     import threading
     threading.Thread(target=background_auto_backup, daemon=True).start()
     
     print("=========================================================")
-    print("🌟 BẢN CẬP NHẬT HOÀN HẢO 🌟")
+    print("🌟 BẢN CẬP NHẬT HOÀN HẢO - SẴN SÀNG THỰC CHIẾN 🌟")
     print("=========================================================")
-    print("🚀 Máy chủ Web đang chạy. Hãy mở trình duyệt và truy cập http://127.0.0.1:8080")
+    print("🚀 Máy chủ Web (Phiên bản chịu tải cao) đang khởi động...")
+    print("🌍 Sẵn sàng đón nhận 100+ kết nối cùng lúc.")
+    print("👉 Hãy mở Cloudflare Tunnel hoặc truy cập Local IP tại cổng: 8080")
     
-    # [TINH CHỈNH NHỎ]: Tự động nhận diện Port từ Render hoặc mặc định là 8080
+    # [TINH CHỈNH NHỎ]: Tự động nhận diện Port từ Server hoặc mặc định là 8080
     import os
     port = int(os.environ.get("PORT", 8080))
-    app.run(debug=False, use_reloader=False, host='0.0.0.0', port=port)
+    
+    # =========================================================
+    # [NÂNG CẤP LÕI]: SỬ DỤNG WAITRESS THAY VÌ APP.RUN ĐỂ CHỊU TẢI
+    # =========================================================
+    try:
+        from waitress import serve
+        # Mở 100 luồng (threads) để xử lý song song 100 thao tác cùng 1 mili-giây
+        serve(app, host='0.0.0.0', port=port, threads=100)
+    except ImportError:
+        print("⚠️ CẢNH BÁO: Chưa cài đặt thư viện Waitress!")
+        print("Đang chạy tạm bằng máy chủ thử nghiệm (Chậm hơn). Hãy gõ lệnh: pip install waitress")
+        app.run(debug=False, use_reloader=False, host='0.0.0.0', port=port)
