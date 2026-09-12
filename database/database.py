@@ -1,26 +1,26 @@
 import os
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker, declarative_base
-from contextlib import contextmanager # BỔ SUNG: Import thư viện quản lý context
+from contextlib import contextmanager
 
-# Đảm bảo thư mục data tồn tại
-os.makedirs('data', exist_ok=True)
+# 1. TỰ ĐỘNG LẤY LINK CƠ SỞ DỮ LIỆU ĐÁM MÂY (SUPABASE)
+# Nếu đang code trên máy tính chưa có link, nó sẽ dùng tạm file SQLite
+DB_URL = os.environ.get("DATABASE_URL", "sqlite:///data/thi_dua.db")
 
-DB_URL = "sqlite:///data/thi_dua.db"
+# Sửa lại tiền tố postgres:// thành postgresql:// để tương thích với các thư viện mới nhất
+if DB_URL.startswith("postgres://"):
+    DB_URL = DB_URL.replace("postgres://", "postgresql://", 1)
 
-# Khởi tạo engine, check_same_thread=False cần thiết cho PySide6/GUI
-engine = create_engine(DB_URL, connect_args={"check_same_thread": False}, echo=False)
+# 2. KHỞI TẠO ĐỘNG CƠ (ENGINE)
+# Không cần check_same_thread hay PRAGMA WAL vì PostgreSQL hỗ trợ concurrency mặc định
+engine = create_engine(DB_URL, echo=False)
 
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 Base = declarative_base()
 
 def get_session():
-    """Hàm cung cấp session để tương tác với DB (Giữ lại cho tương thích ngược)"""
     return SessionLocal()
 
-# ==========================================
-# BỔ SUNG MỚI: QUẢN LÝ SESSION THÔNG MINH
-# ==========================================
 @contextmanager
 def session_scope():
     """Cung cấp một scope giao dịch an toàn cho các thao tác CSDL."""
@@ -37,9 +37,7 @@ def session_scope():
 def seed_violation_categories():
     """Tự động thêm một số lỗi vi phạm mẫu nếu ngân hàng lỗi đang trống"""
     from database.models import ViolationCategory
-    
     try:
-        # ÁP DỤNG SESSION_SCOPE: Tự động quản lý commit/rollback/close
         with session_scope() as session:
             if session.query(ViolationCategory).count() == 0:
                 sample_errors = [
@@ -53,9 +51,6 @@ def seed_violation_categories():
         print(f"Lỗi mồi dữ liệu ngân hàng lỗi: {e}")
 
 def init_db():
-    """Tạo tất cả các bảng nếu chưa có"""
     from database.models import Base, ViolationCategory, WeeklyViolation 
     Base.metadata.create_all(bind=engine)
-    
-    # Gọi hàm mồi dữ liệu ngay sau khi tạo bảng
     seed_violation_categories()

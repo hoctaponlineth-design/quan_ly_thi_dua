@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, Boolean, ForeignKey, DateTime, Float, Enum, Text
+from sqlalchemy import Column, Integer, String, Boolean, ForeignKey, DateTime, Float, Enum, Text, Date, UniqueConstraint
 from sqlalchemy.orm import relationship
 from datetime import datetime, timedelta # [NÂNG CẤP]: Bổ sung timedelta để tính toán hạn chót 3 ngày
 import enum
@@ -190,6 +190,7 @@ class StarEvaluation(Base):
     
     # ĐÃ SỬA: Xóa bỏ backref="evaluations" để tránh xung đột
     red_star = relationship("RedStar")
+
 class ActionLog(Base):
     __tablename__ = "action_logs"
     id = Column(Integer, primary_key=True, autoincrement=True)
@@ -265,3 +266,23 @@ class ScoreAuditLog(Base):
     old_score = Column(Float)
     new_score = Column(Float)
     details = Column(String(255))
+
+# ==========================================
+# [NÂNG CẤP MỚI]: BẢNG ĐIỂM DANH GVCN
+# ==========================================
+class GVCNAttendance(Base):
+    __tablename__ = 'gvcn_attendances'
+    
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    branch_id = Column(Integer, ForeignKey('branches.id', ondelete='CASCADE'), nullable=False)
+    week_name = Column(String(50), nullable=False)
+    date = Column(Date, nullable=False)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+    # Liên kết ngược (relationship) để dễ dàng truy vấn từ Lớp học
+    branch = relationship('Branch', backref='attendances')
+    
+    # Ràng buộc cấp cơ sở dữ liệu: Mỗi lớp 1 ngày chỉ được ghi nhận 1 lần duy nhất
+    __table_args__ = (
+        UniqueConstraint('branch_id', 'date', name='unique_attendance_per_day'),
+    )
