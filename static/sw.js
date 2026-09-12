@@ -75,3 +75,30 @@ async function triggerFrontendSync() {
         client.postMessage({ type: 'NETWORK_RESTORED_FLUSH_QUEUE' });
     });
 }
+// ===================================================================
+// BỘ LẮNG NGHE THÔNG BÁO ĐẨY (WEB PUSH NOTIFICATIONS)
+// ===================================================================
+self.addEventListener('push', function(event) {
+    if (event.data) {
+        const payload = event.data.json();
+        const options = {
+            body: payload.body,
+            icon: '/static/icons/icon-192x192.png', // Thay bằng logo THPT Thanh Hòa
+            badge: '/static/icons/badge-icon.png',  // Icon nhỏ trên thanh trạng thái (màu trắng trong suốt)
+            vibrate: [200, 100, 200, 100, 200],     // Rung kiểu SOS gây chú ý
+            data: { url: '/class-dashboard' }       // Link mở ra khi bấm vào thông báo
+        };
+        
+        event.waitUntil(
+            self.registration.showNotification(payload.title, options)
+        );
+    }
+});
+
+// Bắt sự kiện khi người dùng bấm vào thông báo trên màn hình khóa
+self.addEventListener('notificationclick', function(event) {
+    event.notification.close();
+    event.waitUntil(
+        clients.openWindow(event.notification.data.url)
+    );
+});
