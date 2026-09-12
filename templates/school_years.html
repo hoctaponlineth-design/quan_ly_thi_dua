@@ -42,7 +42,7 @@
         <div class="row">
             <!-- FORM THÊM NĂM HỌC -->
             <div class="col-md-4">
-                <div class="card custom-card border-primary">
+                <div class="card custom-card border-primary mb-4">
                     <div class="card-header bg-primary text-white fw-bold py-3">
                         <i class="fa-solid fa-calendar-plus"></i> Tạo Năm học mới
                     </div>
@@ -54,6 +54,25 @@
                             </div>
                             <button type="submit" class="btn btn-primary w-100 fw-bold">Khởi tạo Năm học</button>
                         </form>
+                    </div>
+                </div>
+
+                <!-- ======================================================== -->
+                <!-- KHU VỰC NGUY HIỂM: RESET DỮ LIỆU HỆ THỐNG                -->
+                <!-- ======================================================== -->
+                <div class="card custom-card border-danger" style="border-top: 4px solid #dc3545 !important;">
+                    <div class="card-header bg-white py-3">
+                        <h6 class="fw-bold m-0 text-danger"><i class="fa-solid fa-triangle-exclamation me-2"></i> Thiết lập lại dữ liệu (Reset)</h6>
+                    </div>
+                    <div class="card-body">
+                        <p class="text-muted small mb-3">
+                            Đưa toàn bộ dữ liệu thi đua về trạng thái ban đầu khi chưa bắt đầu năm học.<br>
+                            <span class="text-danger fw-bold">Hệ thống sẽ xóa sạch:</span> Điểm số, Sổ đen, Phúc khảo, Lịch trực, Nhật ký và Điểm danh GVCN.<br>
+                            <span class="text-success fw-bold">Được giữ lại an toàn:</span> Danh sách Chi đoàn, Đội Sao đỏ & Tài khoản người dùng.
+                        </p>
+                        <button type="button" class="btn btn-danger w-100 fw-bold shadow-sm py-2" data-bs-toggle="modal" data-bs-target="#resetSystemModal">
+                            <i class="fa-solid fa-rotate-left me-2"></i> Reset Dữ Liệu Hệ Thống
+                        </button>
                     </div>
                 </div>
             </div>
@@ -109,6 +128,35 @@
                         </table>
                     </div>
                 </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL XÁC NHẬN MẬT KHẨU QUẢN TRỊ ĐỂ RESET -->
+    <div class="modal fade" id="resetSystemModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content border-0 shadow-lg" style="border-radius: 16px;">
+                <div class="modal-header bg-danger text-white pb-3" style="padding: 20px 24px;">
+                    <h5 class="modal-title fw-bold"><i class="fa-solid fa-triangle-exclamation me-2"></i> Xác thực Mật khẩu Quản trị</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <form action="/reset_system_data" method="POST">
+                    <div class="modal-body p-4 bg-light">
+                        <div class="alert alert-warning border-0 shadow-sm mb-3" style="font-size: 13px;">
+                            <i class="fa-solid fa-circle-exclamation me-1"></i> <strong>CẢNH BÁO NGUY HIỂM:</strong> Thao tác này sẽ xóa vĩnh viễn toàn bộ lịch sử thi đua, lịch trực và sổ đen. Vui lòng nhập mật khẩu quản trị để xác nhận.
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label fw-bold text-dark small">Mật khẩu quản trị của bạn:</label>
+                            <input type="password" class="form-control form-control-lg border-danger fw-bold text-danger" name="admin_password" placeholder="••••••••" required style="border-radius: 10px;">
+                        </div>
+                    </div>
+                    <div class="modal-footer bg-white px-4 py-3" style="border-bottom-left-radius: 16px; border-bottom-right-radius: 16px;">
+                        <button type="button" class="btn btn-secondary fw-bold px-4" data-bs-dismiss="modal">Hủy bỏ</button>
+                        <button type="submit" class="btn btn-danger fw-bold px-4 shadow-sm">
+                            <i class="fa-solid fa-skull-crossbones me-1"></i> Xác nhận Xóa & Reset
+                        </button>
+                    </div>
+                </form>
             </div>
         </div>
     </div>

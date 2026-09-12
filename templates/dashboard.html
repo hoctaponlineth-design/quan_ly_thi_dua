@@ -2,133 +2,209 @@
 <html lang="vi">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Trang chủ - Quản lý Thi đua</title>
-    <!-- Nhúng Bootstrap 5 và FontAwesome Icons -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="theme-color" content="#1e3a8a">
+    <title>Trung Tâm Điều Hành - BCH</title>
+    
+    <!-- Nhúng Bootstrap 5 và FontAwesome -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    
     <!-- Nhúng thư viện vẽ biểu đồ Chart.js -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
     <style>
-        body { font-family: 'Segoe UI', Arial, sans-serif; background-color: #f4f6f9; }
+        body { background-color: #f1f5f9; font-family: 'Inter', 'Segoe UI', sans-serif; -webkit-tap-highlight-color: transparent; }
         
-        /* Thanh điều hướng bên trái (Sidebar) */
-        .sidebar {
-            width: 260px;
-            /* height: 100vh; */
-            position: fixed;
-            top: 0;
-            left: 0;
-            background-color: #004080;
-            color: white;
-            padding-top: 20px;
-        }
+        /* SIDEBAR (Máy tính) */
+        .sidebar { width: 260px; position: fixed; top: 0; left: 0; background-color: #004080; color: white; padding-top: 20px; z-index: 1000; height: 100vh; overflow-y: auto; }
         .sidebar h4 { font-size: 18px; font-weight: bold; text-align: center; padding-bottom: 15px; border-bottom: 1px solid #0054a6; }
-        .sidebar .nav-link {
-            color: #cce6ff;
-            font-weight: 600;
-            padding: 12px 20px;
-            font-size: 14px;
-        }
-        .sidebar .nav-link:hover, .sidebar .nav-link.active {
-            background-color: #002244;
-            color: white;
-            border-left: 4px solid #4da6ff;
-        }
+        .sidebar .nav-link { color: #cce6ff; font-weight: 600; padding: 12px 20px; font-size: 14px; }
+        .sidebar .nav-link:hover, .sidebar .nav-link.active { background-color: #002244; color: white; border-left: 4px solid #4da6ff; }
         
-        /* Nội dung chính bên phải */
-        .main-content { margin-left: 260px; padding: 25px; }
-        .header-bar {
-            background-color: white;
-            padding: 15px 25px;
-            border-radius: 10px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
-            margin-bottom: 25px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-        .stat-card {
-            background-color: white;
-            border-radius: 12px;
-            padding: 20px;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.05);
-            border-left: 5px solid #0054a6;
-        }
+        /* CARD KPI (Máy tính) */
+        .stat-card { background-color: white; border-radius: 12px; padding: 20px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); border-left: 5px solid #0054a6; }
         .stat-card.green { border-left-color: #1cc88a; }
         .stat-card.yellow { border-left-color: #f6c23e; }
         .stat-title { font-size: 13px; font-weight: bold; color: #888; text-transform: uppercase; }
         .stat-value { font-size: 28px; font-weight: bold; color: #333; margin-top: 5px; }
+
+        /* HIỆU ỨNG TICKET PHÚC KHẢO (Đồng bộ PC & Mobile) */
+        .ticket-card { background: white; border: 1px solid #e2e8f0; border-radius: 16px; padding: 16px; box-shadow: 0 2px 8px rgba(0,0,0,0.04); transition: transform 0.2s ease; display: flex; flex-direction: column; }
+        .ticket-card:active { transform: scale(0.98); }
+        .ticket-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px dashed #cbd5e1; padding-bottom: 12px; margin-bottom: 12px; }
+        .ticket-action-btn { border-radius: 12px; font-weight: 700; padding: 12px; flex: 1; text-align: center; font-size: 14px; }
+        
+        /* QUY TẮC HIỂN THỊ ĐA MÀN HÌNH (RESPONSIVE) */
+        @media (max-width: 768px) {
+            .desktop-only { display: none !important; }
+            .sidebar { display: none !important; }
+            .main-content { margin-left: 0 !important; padding: 0 !important; padding-bottom: 90px !important; }
+            
+            /* Giao diện Header App Mobile */
+            .app-header { background: linear-gradient(135deg, #1e3a8a, #2563eb); color: white; padding: 25px 20px 35px; border-radius: 0 0 24px 24px; box-shadow: 0 4px 20px rgba(37, 99, 235, 0.3); display: flex !important; justify-content: space-between; align-items: flex-start; }
+            .warning-card { background: #fef2f2; border: 1.5px solid #fecaca; border-radius: 16px; padding: 16px; margin: -20px 20px 20px; position: relative; z-index: 10; box-shadow: 0 8px 15px rgba(0,0,0,0.05); display: block !important; }
+            
+            /* Bottom Nav Mobile */
+            .bottom-nav { position: fixed; bottom: 0; left: 0; width: 100%; background: white; border-top: 1px solid #e2e8f0; display: flex !important; padding: 12px 5px; padding-bottom: max(12px, env(safe-area-inset-bottom)); box-shadow: 0 -4px 20px rgba(0,0,0,0.05); z-index: 1000; border-radius: 20px 20px 0 0; }
+            .nav-item { flex: 1; text-align: center; color: #64748b; font-size: 11px; font-weight: 600; text-decoration: none; display: flex; flex-direction: column; align-items: center; gap: 5px; transition: all 0.3s ease; }
+            .nav-item i { font-size: 20px; transition: all 0.3s ease; }
+            .nav-item.active { color: #2563eb; }
+            .nav-item.active i { transform: translateY(-3px); }
+            .badge-nav { position: absolute; top: -6px; right: 22px; background: #ef4444; color: white; border-radius: 50%; width: 18px; height: 18px; font-size: 10px; font-weight: bold; display: flex; align-items: center; justify-content: center; box-shadow: 0 2px 4px rgba(239, 68, 68, 0.4); }
+        }
+
+        @media (min-width: 769px) {
+            .mobile-only { display: none !important; }
+            .main-content { margin-left: 260px; padding: 25px; }
+            .header-bar { background-color: white; padding: 15px 25px; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); margin-bottom: 25px; display: flex; justify-content: space-between; align-items: center; }
+        }
     </style>
 </head>
 <body>
 
-    <!-- SIDEBAR -->
-    {% include 'sidebar.html' %}
-    
-    <!-- MAIN CONTENT -->
+    <!-- SIDEBAR DÀNH CHO MÁY TÍNH -->
+    <div class="sidebar desktop-only">
+        {% include 'sidebar.html' %}
+    </div>
+
+    <!-- KHU VỰC NỘI DUNG CHÍNH -->
     <div class="main-content">
-        <!-- HEADER BAR -->
-        <div class="header-bar">
-            <h5 class="m-0 fw-bold text-secondary">Trang chủ / Tổng quan</h5>
+        
+        <!-- ============================================== -->
+        <!-- 1. HEADER TRUYỀN THỐNG (MÁY TÍNH) -->
+        <!-- ============================================== -->
+        <div class="header-bar desktop-only">
+            <h5 class="m-0 fw-bold text-secondary"><i class="fa-solid fa-chart-line me-2"></i>Trung tâm Điều hành</h5>
             <div class="user-info fw-bold text-primary">
                 👤 Xin chào, {{ user_fullname }} ({{ user_role }})
             </div>
         </div>
 
-        <!-- HỆ THỐNG THÔNG BÁO FLASH MESSAGES -->
-        {% with messages = get_flashed_messages(with_categories=true) %}
-            {% if messages %}
-                {% for category, message in messages %}
-                    <div class="alert alert-{{ 'success' if category == 'success' else 'danger' }} alert-dismissible fade show shadow-sm mb-4">
-                        {{ message }}
-                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-                    </div>
-                {% endfor %}
-            {% endif %}
-        {% endwith %}
-
-        <!-- CẢNH BÁO PHÚC KHẢO DÀNH CHO BCH -->
-        {% if pending_appeals and pending_appeals|length > 0 %}
-        <div class="alert alert-danger shadow-sm border-danger mb-4" style="border-left: 5px solid #dc3545;">
-            <h5 class="fw-bold mb-3 text-danger"><i class="fa-solid fa-bell fa-shake"></i> THÔNG BÁO: CÓ ĐƠN PHÚC KHẢO ĐANG CHỜ XỬ LÝ</h5>
-            <div class="table-responsive bg-white rounded">
-                <table class="table table-sm table-bordered m-0 align-middle">
-                    <thead class="table-light">
-                        <tr>
-                            <th style="width: 15%; text-align: center;">Chi đoàn</th>
-                            <th style="width: 15%; text-align: center;">Tuần</th>
-                            <th style="width: 50%;">Nội dung GVCN Phúc khảo</th>
-                            <th style="width: 20%; text-align: center;">Thao tác</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-						{% for p in pending_appeals %}
-                        <tr>
-                            <td class="text-center fw-bold text-primary">{{ p.branch_name }}</td>
-                            <td class="text-center fw-bold text-dark">{{ p.week }}</td>
-                            <td class="fst-italic text-secondary px-3">"{{ p.reason }}"</td>
-                            <td class="text-center">
-                                <!-- Nút trả lời sử dụng Data Attributes (An toàn tuyệt đối với mọi ký tự) -->
-                                <button class="btn btn-sm btn-danger fw-bold shadow-sm" 
-                                        onclick="openResolveModal(this)"
-                                        data-score-id="{{ p.score_id }}"
-                                        data-branch-name="{{ p.branch_name }}"
-                                        data-week="{{ p.week }}"
-                                        data-reason="{{ p.reason }}">
-                                    <i class="fa-solid fa-reply"></i> Trả lời
-                                </button>
-                            </td>
-                        </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
+        <!-- ============================================== -->
+        <!-- 2. HEADER APP (ĐIỆN THOẠI) -->
+        <!-- ============================================== -->
+        <div class="app-header mobile-only d-none">
+            <div>
+                <h5 class="fw-bold m-0"><i class="fa-solid fa-shield-halved me-2 text-warning"></i>ĐIỀU HÀNH</h5>
+                <p class="m-0 mt-1 opacity-90" style="font-size: 13px;">{{ user_role }}: {{ user_fullname }}</p>
             </div>
+            <a href="/logout" class="btn text-white border-0 shadow-sm rounded-circle d-flex align-items-center justify-content-center" 
+               style="width: 42px; height: 42px; background: rgba(255,255,255,0.2); backdrop-filter: blur(8px);" 
+               onclick="return confirm('Thầy/cô muốn đăng xuất khỏi hệ thống?');">
+                <i class="fa-solid fa-right-from-bracket fs-6"></i>
+            </a>
         </div>
+
+        <!-- HỆ THỐNG THÔNG BÁO FLASH -->
+        <div class="px-3 px-md-0 mt-3 mt-md-0">
+            {% with messages = get_flashed_messages(with_categories=true) %}
+                {% if messages %}
+                    {% for category, message in messages %}
+                        <div class="alert alert-{{ 'success' if category == 'success' else 'danger' }} alert-dismissible fade show shadow-sm mb-4 rounded-4">
+                            {{ message }}
+                            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                        </div>
+                    {% endfor %}
+                {% endif %}
+            {% endwith %}
+        </div>
+
+        <!-- ============================================== -->
+        <!-- 3. BÁO ĐỘNG ĐIỂM NÓNG KỶ LUẬT (GLOBAL WARNINGS) -->
+        <!-- ============================================== -->
+        {% if global_warnings %}
+            <!-- HIỂN THỊ TRÊN ĐIỆN THOẠI -->
+            <div class="mobile-only d-none mb-3">
+                {% for w in global_warnings %}
+                <div class="warning-card">
+                    <div class="d-flex gap-3 align-items-start">
+                        <div class="bg-danger text-white rounded-circle d-flex align-items-center justify-content-center shadow-sm" style="width: 45px; height: 45px; flex-shrink: 0;">
+                            <i class="fa-solid fa-triangle-exclamation fa-beat-fade fs-5"></i>
+                        </div>
+                        <div>
+                            <h6 class="fw-bold text-danger mb-1">Báo Động: Lớp {{ w.branch_name }}</h6>
+                            <p class="text-danger opacity-75 mb-2" style="font-size: 13px; line-height: 1.4;">Học sinh <b>{{ w.student_name }}</b> vi phạm đặc biệt nghiêm trọng ({{ w.count }} lỗi).</p>
+                            <a href="/blacklist?search_branch={{ w.branch_name }}" class="btn btn-sm btn-danger fw-bold rounded-pill px-3 shadow-sm"><i class="fa-solid fa-eye me-1"></i> Xem Sổ Đen ngay</a>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+
+            <!-- HIỂN THỊ TRÊN MÁY TÍNH -->
+            <div class="card border-0 shadow-sm mb-4 desktop-only" style="border-left: 6px solid #dc3545 !important; background-color: #fff5f5;">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <h5 class="fw-bold text-danger m-0">
+                            <i class="fa-solid fa-triangle-exclamation fa-beat-fade me-2"></i> Báo Động Nề Nếp Toàn Trường ({{ current_week }})
+                        </h5>
+                        <span class="badge bg-danger rounded-pill px-3 py-2">Có {{ global_warnings|length }} cá nhân vi phạm >= 3 lỗi</span>
+                    </div>
+                    <div class="row">
+                        {% for w in global_warnings %}
+                        <div class="col-md-4 mb-2">
+                            <div class="p-2 border border-danger rounded bg-white shadow-sm d-flex justify-content-between align-items-center">
+                                <div>
+                                    <span class="badge bg-danger">Lớp {{ w.branch_name }}</span>
+                                    <span class="fw-bold text-dark ms-1">{{ w.student_name }}</span>
+                                </div>
+                                <span class="text-danger fw-bold"><i class="fa-solid fa-xmark me-1"></i>{{ w.count }} lỗi</span>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
         {% endif %}
 
-        <!-- KPI CARDS -->
-        <div class="row g-3 mb-4">
+        <!-- ============================================== -->
+        <!-- 4. THẺ TICKET XỬ LÝ PHÚC KHẢO (Đồng bộ PC & Mobile) -->
+        <!-- ============================================== -->
+        {% if pending_appeals and pending_appeals|length > 0 %}
+            <div class="px-3 px-md-0 mt-3 mt-md-0 mb-3 d-flex justify-content-between align-items-center">
+                <h6 class="fw-bold text-danger m-0" style="letter-spacing: 0.5px;">
+                    <i class="fa-solid fa-scale-balanced me-1"></i> TICKET CHỜ XỬ LÝ ({{ pending_appeals|length }})
+                </h6>
+            </div>
+            
+            <div class="row px-2 px-md-0">
+                {% for p in pending_appeals %}
+                <div class="col-md-6 mb-3">
+                    <div class="ticket-card h-100">
+                        <div class="ticket-header">
+                            <span class="badge bg-primary bg-opacity-10 text-primary border border-primary border-opacity-25 px-2 py-1" style="font-size: 13px;">LỚP {{ p.branch_name }} ({{ p.week }})</span>
+                            <span class="text-warning fw-bold" style="font-size: 12px;"><i class="fa-solid fa-clock-rotate-left me-1"></i> Chờ duyệt</span>
+                        </div>
+                        <div class="mb-3 flex-grow-1">
+                            <div class="p-2 bg-light rounded-3 text-secondary border" style="font-size: 13.5px; line-height: 1.6;">
+                                <i class="fa-solid fa-quote-left text-muted opacity-50 me-1"></i> {{ p.reason | safe }}
+                            </div>
+                        </div>
+                        <div class="d-flex gap-2 mt-auto">
+                            <!-- Nút xử lý sử dụng Data Attributes để truyền chuỗi an toàn -->
+                            <button class="btn btn-light text-danger ticket-action-btn border" style="background-color: #fff5f5; border-color: #fecaca !important;" 
+                                    data-score-id="{{ p.score_id }}" data-branch-name="{{ p.branch_name }}" data-week="{{ p.week }}" data-reason="{{ p.reason }}" data-action="reject"
+                                    onclick="openResolveModal(this)">
+                                <i class="fa-solid fa-ban me-1"></i> Từ chối
+                            </button>
+                            <button class="btn btn-success ticket-action-btn shadow-sm" style="background-color: #10b981; border: none;"
+                                    data-score-id="{{ p.score_id }}" data-branch-name="{{ p.branch_name }}" data-week="{{ p.week }}" data-reason="{{ p.reason }}" data-action="approve"
+                                    onclick="openResolveModal(this)">
+                                <i class="fa-solid fa-check-double me-1"></i> Duyệt điểm
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        {% endif %}
+
+        <!-- ============================================== -->
+        <!-- 5. CHỈ SỐ KPI VÀ BIỂU ĐỒ (Dành riêng cho PC) -->
+        <!-- ============================================== -->
+        <div class="row g-3 mb-4 desktop-only">
             <div class="col-md-4">
                 <div class="stat-card">
                     <div class="stat-title">🏢 TỔNG SỐ CHI ĐOÀN</div>
@@ -149,82 +225,74 @@
             </div>
         </div>
 
-        <!-- [NÂNG CẤP MỚI]: HIỂN THỊ BÁO ĐỘNG ĐỎ NỀ NẾP TOÀN TRƯỜNG -->
-        {% if global_warnings %}
-        <div class="card border-0 shadow-sm mb-4" style="border-left: 6px solid #dc3545 !important; background-color: #fff5f5;">
-            <div class="card-body">
-                <div class="d-flex justify-content-between align-items-center mb-3">
-                    <h5 class="fw-bold text-danger m-0">
-                        <i class="fa-solid fa-triangle-exclamation fa-beat-fade me-2"></i> Báo Động Nề Nếp Toàn Trường ({{ current_week }})
-                    </h5>
-                    <span class="badge bg-danger rounded-pill px-3 py-2">Có {{ global_warnings|length }} cá nhân vi phạm >= 3 lỗi</span>
-                </div>
-                <div class="table-responsive">
-                    <table class="table table-sm table-bordered bg-white text-center align-middle mb-0">
-                        <thead class="bg-danger text-white">
-                            <tr>
-                                <th style="width: 20%;">Chi đoàn</th>
-                                <th class="text-start ps-3">Họ và Tên Học sinh cá biệt</th>
-                                <th style="width: 20%;">Số lỗi vi phạm</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {% for w in global_warnings %}
-                            <tr>
-                                <td class="fw-bold text-primary">{{ w.branch_name }}</td>
-                                <td class="text-start ps-3 fw-bold text-danger"><i class="fa-solid fa-user-xmark text-muted me-2"></i> {{ w.student_name }}</td>
-                                <td><span class="badge bg-danger fs-6 px-3 py-1 rounded-pill">{{ w.count }} lỗi</span></td>
-                            </tr>
-                            {% endfor %}
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-        </div>
-        {% endif %}
-
-        <!-- CHART AREA -->
-        <div class="card border-0 shadow-sm rounded-3">
-            <div class="card-header bg-white fw-bold text-primary py-3">
-                📈 TOP 10 CHI ĐOÀN DẪN ĐẦU - {{ current_week.upper() }}
+        <div class="card border-0 shadow-sm rounded-4 desktop-only">
+            <div class="card-header bg-white fw-bold text-primary py-3 border-0">
+                <i class="fa-solid fa-trophy text-warning me-2"></i> TOP 10 CHI ĐOÀN DẪN ĐẦU - {{ current_week.upper() }}
             </div>
             <div class="card-body">
-                <canvas id="top10Chart" height="100"></canvas>
+                <canvas id="top10Chart" height="90"></canvas>
             </div>
         </div>
     </div>
 
-	<!-- MODAL BCH TRẢ LỜI PHÚC KHẢO (ĐÃ NÂNG CẤP LUỒNG TICKETING) -->
-    {% if pending_appeals and pending_appeals|length > 0 %}
+    <!-- ============================================== -->
+    <!-- THANH MENU BOTTOM NAV (DÀNH CHO ĐIỆN THOẠI) -->
+    <!-- ============================================== -->
+    <div class="bottom-nav mobile-only d-none">
+        <a href="/dashboard" class="nav-item active position-relative">
+            {% if pending_appeals and pending_appeals|length > 0 %}
+                <div class="badge-nav">{{ pending_appeals|length }}</div>
+            {% endif %}
+            <i class="fa-solid fa-house"></i>
+            <span>Trang Chủ</span>
+        </a>
+        <a href="/weekly" class="nav-item">
+            <i class="fa-solid fa-pen-to-square"></i>
+            <span>Nhập Điểm</span>
+        </a>
+        <a href="/red-stars" class="nav-item">
+            <i class="fa-solid fa-user-shield"></i>
+            <span>Sao Đỏ</span>
+        </a>
+        <a href="/reports" class="nav-item">
+            <i class="fa-solid fa-chart-simple"></i>
+            <span>Báo cáo</span>
+        </a>
+    </div>
+
+    <!-- ============================================== -->
+    <!-- MODAL XỬ LÝ PHÚC KHẢO THÔNG MINH (Dùng chung) -->
+    <!-- ============================================== -->
     <div class="modal fade" id="resolveModal" tabindex="-1" aria-hidden="true">
-        <div class="modal-dialog modal-lg">
-            <div class="modal-content border-0 shadow-lg">
-                <div class="modal-header bg-primary text-white border-0">
-                    <h5 class="modal-title fw-bold"><i class="fa-solid fa-scale-balanced me-2"></i> Xử lý Phán quyết Phúc khảo</h5>
+        <div class="modal-dialog modal-dialog-centered modal-lg">
+            <div class="modal-content border-0 shadow-lg" style="border-radius: 20px;">
+                <div class="modal-header bg-primary text-white border-0" style="border-radius: 20px 20px 0 0;">
+                    <h5 class="modal-title fw-bold" id="modal_title"><i class="fa-solid fa-scale-balanced me-2"></i> Xử lý Phúc khảo</h5>
                     <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
                 </div>
                 <form action="/resolve_appeal" method="POST">
                     <div class="modal-body p-4">
-                        <input type="hidden" name="score_id" id="resolveScoreId">
+                        <input type="hidden" name="score_id" id="modal_score_id">
+                        <input type="hidden" name="action" id="modal_action">
                         
                         <div class="mb-4">
                             <label class="form-label fw-bold text-dark">Chi đoàn đang khiếu nại:</label>
                             <input type="text" class="form-control fw-bold bg-light text-primary border-0" id="resolveBranch" readonly>
                         </div>
 
-                        <!-- LÝ DO GVCN -->
+                        <!-- LÝ DO GVCN GỬI LÊN (Chứa HTML nên dùng div) -->
                         <div class="mb-4">
                             <label class="form-label fw-bold text-dark">Nội dung khiếu nại của GVCN:</label>
-                            <div class="p-3 bg-light border border-secondary border-opacity-25 rounded-3 text-danger fst-italic shadow-sm" id="resolveReason">
+                            <div class="p-3 bg-light border border-secondary border-opacity-25 rounded-3 text-danger fst-italic shadow-sm" id="resolveReason" style="line-height: 1.6;">
                                 <!-- JS sẽ đẩy nội dung vào đây -->
                             </div>
                         </div>
 
-                        <!-- Ô NHẬP ĐIỂM HOÀN LẠI (TỰ ĐỘNG) -->
-                        <div class="mb-4 p-3 bg-primary bg-opacity-10 border border-primary border-opacity-50 rounded-3">
+                        <!-- Ô NHẬP ĐIỂM HOÀN LẠI (Tự động ẩn/hiện) -->
+                        <div id="approve_fields" class="mb-4 p-3 bg-primary bg-opacity-10 border border-primary border-opacity-50 rounded-3" style="display: none;">
                             <label class="form-label fw-bold text-primary"><i class="fa-solid fa-rotate-left me-1"></i> Số điểm hoàn lại (Chỉ nhập nếu Duyệt):</label>
                             <input type="number" step="0.5" min="0" class="form-control border-primary fw-bold fs-5 text-primary" name="refund_points" value="0" placeholder="VD: 2.0">
-                            <small class="text-muted mt-2 d-block"><i class="fa-solid fa-circle-info me-1"></i> Hệ thống sẽ tự động cộng số điểm này vào tổng điểm của lớp và làm mới bảng xếp hạng toàn trường ngay lập tức.</small>
+                            <small class="text-muted mt-2 d-block"><i class="fa-solid fa-circle-info me-1"></i> Hệ thống sẽ tự động cộng số điểm này vào tổng điểm của lớp và làm mới bảng xếp hạng.</small>
                         </div>
 
                         <div class="mb-2">
@@ -232,60 +300,79 @@
                             <textarea class="form-control border-secondary" name="response_text" rows="3" placeholder="Ghi rõ lý do tại sao duyệt hoặc từ chối để GVCN nắm rõ..." required></textarea>
                         </div>
                     </div>
-                    <div class="modal-footer bg-light border-0 p-3 d-flex gap-2">
-                        <!-- NÚT TỪ CHỐI -->
-                        <button type="submit" name="action" value="reject" class="btn btn-danger fw-bold px-4 shadow-sm flex-grow-1 py-2">
-                            <i class="fa-solid fa-ban me-1"></i> Từ chối Phúc khảo
-                        </button>
-                        <!-- NÚT ĐỒNG Ý -->
-                        <button type="submit" name="action" value="approve" class="btn btn-success fw-bold px-4 shadow-sm flex-grow-1 py-2">
-                            <i class="fa-solid fa-check-double me-1"></i> Duyệt & Hoàn Điểm
+                    <div class="modal-footer bg-light border-0 p-3 d-flex gap-2" style="border-radius: 0 0 20px 20px;">
+                        <button type="button" class="btn btn-secondary fw-bold px-4 rounded-pill d-none d-md-block" data-bs-dismiss="modal">Hủy bỏ</button>
+                        <button type="submit" id="modal_submit_btn" class="btn btn-primary fw-bold px-4 shadow-sm flex-grow-1 py-2 rounded-pill">
+                            Xác nhận
                         </button>
                     </div>
                 </form>
             </div>
         </div>
     </div>
-    
+
+    <!-- SCRIPTS XỬ LÝ JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script>
-        // JS MỚI: Nhận dữ liệu thông minh qua Data Attributes để chống lỗi ký tự nháy
+        // JS XỬ LÝ BẬT POPUP (Tương thích hoàn hảo với thẻ Ticket Mobile)
         function openResolveModal(btn) {
-            document.getElementById('resolveScoreId').value = btn.getAttribute('data-score-id');
-            document.getElementById('resolveBranch').value = "Lớp " + btn.getAttribute('data-branch-name') + " (" + btn.getAttribute('data-week') + ")";
-            document.getElementById('resolveReason').innerText = '"' + btn.getAttribute('data-reason') + '"';
+            const scoreId = btn.getAttribute('data-score-id');
+            const branchName = btn.getAttribute('data-branch-name');
+            const week = btn.getAttribute('data-week');
+            const reason = btn.getAttribute('data-reason');
+            const action = btn.getAttribute('data-action'); // Nhận biết đang bấm 'Từ chối' hay 'Duyệt'
+
+            document.getElementById('modal_score_id').value = scoreId;
+            document.getElementById('modal_action').value = action;
+            document.getElementById('resolveBranch').value = "Lớp " + branchName + " (" + week + ")";
+            document.getElementById('resolveReason').innerHTML = reason; // Sử dụng innerHTML vì lý do có chứa link ảnh
+
+            const title = document.getElementById('modal_title');
+            const submitBtn = document.getElementById('modal_submit_btn');
+            const approveFields = document.getElementById('approve_fields');
+
+            // Biến hình Modal tùy theo Action
+            if(action === 'approve') {
+                title.innerHTML = '<i class="fa-solid fa-check-circle text-success me-2"></i>Duyệt Phúc Khảo';
+                submitBtn.className = 'btn btn-success fw-bold px-4 shadow-sm flex-grow-1 py-2 rounded-pill';
+                submitBtn.innerHTML = '<i class="fa-solid fa-check-double me-1"></i> Chốt Duyệt & Hoàn Điểm';
+                approveFields.style.display = 'block';
+            } else {
+                title.innerHTML = '<i class="fa-solid fa-ban text-danger me-2"></i>Từ Chối Phúc Khảo';
+                submitBtn.className = 'btn btn-danger fw-bold px-4 shadow-sm flex-grow-1 py-2 rounded-pill';
+                submitBtn.innerHTML = '<i class="fa-solid fa-xmark me-1"></i> Bác Bỏ Phúc Khảo';
+                approveFields.style.display = 'none';
+            }
             
             var myModal = new bootstrap.Modal(document.getElementById('resolveModal'));
             myModal.show();
         }
-    </script>
-    {% endif %}
 
-    <!-- JAVASCRIPT HỖ TRỢ VẼ BIỂU ĐỒ CHART.JS -->
-    <script>
-        const labels = {{ chart_labels | tojson }};
-        const data = {{ chart_data | tojson }};
-
-        const ctx = document.getElementById('top10Chart').getContext('2d');
-        new Chart(ctx, {
-            type: 'bar',
-            data: {
-                labels: labels,
-                datasets: [{
-                    label: 'Tổng điểm thi đua',
-                    data: data,
-                    backgroundColor: '#0054a6',
-                    borderRadius: 6
-                }]
-            },
-            options: {
-                responsive: true,
-                plugins: { legend: { display: false } },
-                scales: { y: { beginAtZero: true } }
+        // JS VẼ BIỂU ĐỒ (Chỉ chạy trên PC)
+        document.addEventListener("DOMContentLoaded", function() {
+            if(window.innerWidth > 768 && document.getElementById('top10Chart')) {
+                const labels = {{ chart_labels | tojson }};
+                const data = {{ chart_data | tojson }};
+                const ctx = document.getElementById('top10Chart').getContext('2d');
+                new Chart(ctx, {
+                    type: 'bar',
+                    data: {
+                        labels: labels,
+                        datasets: [{
+                            label: 'Tổng điểm thi đua',
+                            data: data,
+                            backgroundColor: '#0054a6',
+                            borderRadius: 6
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        plugins: { legend: { display: false } },
+                        scales: { y: { beginAtZero: true } }
+                    }
+                });
             }
         });
     </script>
-    
-    <!-- THÊM BẮT BUỘC: JS HỖ TRỢ MENU XỔ XUỐNG CỦA SIDEBAR -->
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>

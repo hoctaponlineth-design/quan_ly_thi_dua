@@ -124,7 +124,7 @@
                                             <th style="width: 40px;" class="text-center">
                                                 <input class="form-check-input" type="checkbox" id="selectAllUsers" style="cursor: pointer; transform: scale(1.2);">
                                             </th>
-                                            <th style="width: 5%">ID</th>
+                                            <th style="width: 5%">STT</th> <!-- Đã đổi ID thành STT -->
                                             <th>Tên đăng nhập</th>
                                             <th>Họ và Tên</th>
                                             <th>Phân quyền</th>
@@ -137,11 +137,13 @@
                                     <tr>
                                         <td class="text-center">
                                             <!-- Checkbox cá nhân. Nếu là admin tối cao thì vô hiệu hóa (disabled) -->
+                                            <!-- VẪN GIỮ NGUYÊN value="{{ u.id }}" ĐỂ KHÔNG BỊ LỖI BACKEND -->
                                             <input class="form-check-input user-checkbox" type="checkbox" name="user_ids" value="{{ u.id }}" 
                                                    {% if u.username.lower() == 'admin' %} disabled {% endif %} 
                                                    style="cursor: pointer; transform: scale(1.2);">
                                         </td>
-                                        <td class="fw-bold text-muted">{{ u.id }}</td>
+                                        <!-- Đã thay đổi hiển thị id thành loop.index để đếm từ 1, 2, 3... -->
+                                        <td class="fw-bold text-muted">{{ loop.index }}</td>
                                         <td class="fw-bold text-primary">{{ u.username }}</td>
                                         <td>{{ u.full_name }}</td>
                                         <td>

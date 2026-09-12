@@ -159,9 +159,9 @@
             display: none;
             flex-direction: row;
             align-items: center;
-            justify-content: center; /* [SỬA Ở ĐÂY]: Đẩy toàn bộ cụm Logo + Chữ vào chính giữa màn hình */
+            justify-content: center;
             width: 100%;
-            position: relative; /* [SỬA Ở ĐÂY]: Tạo điểm neo để ghim nút Menu */
+            position: relative;
         }
         
         .mobile-red-banner .banner-title-wrapper {
@@ -170,7 +170,6 @@
             gap: 12px;
         }
 
-        /* [SỬA Ở ĐÂY]: ÉP các dòng chữ căn giữa với nhau (Dòng trên và dòng dưới đối xứng) */
         .mobile-red-banner .banner-title-wrapper div {
             text-align: center; 
         }
@@ -194,7 +193,7 @@
         }
 
         .mobile-red-banner .btn-menu {
-            position: absolute; /* [SỬA Ở ĐÂY]: Ghim chặt nút menu vào lề phải */
+            position: absolute;
             right: 20px;
             color: white;
             background: rgba(255,255,255,0.15);
@@ -220,7 +219,7 @@
                 position: fixed;
                 top: 0; left: 0; width: 100%;
                 z-index: 1030;
-                background-color: transparent; /* Bỏ lót nền vì Banner đã ốp sát trần */
+                background-color: transparent;
             }
 
             #desktopSidebar { transform: translateX(-100%) !important; box-shadow: 10px 0 30px rgba(0,0,0,0.3); }
@@ -229,7 +228,7 @@
             .main-content { 
                 margin-left: 0 !important; width: 100% !important; max-width: 100vw !important;
                 padding: 0 !important; 
-                padding-top: 90px !important; /* GIẢM ĐƯỢC 1 NỬA KHOẢNG TRỐNG (Từ 180px -> 90px) */
+                padding-top: 90px !important; 
                 display: block !important;
             }
             
@@ -247,15 +246,14 @@
         }
         
 		@media (max-width: 480px) {
-            /* [BẢN VÁ]: BỐ CỤC 2x2 CHO WIDGET TRÊN ĐIỆN THOẠI (TIẾT KIỆM 50% CHIỀU CAO) */
             .widget-grid { 
-                grid-template-columns: 1fr 1fr; /* Ép thành 2 cột */
-                gap: 10px; /* Thu hẹp khoảng cách giữa các thẻ */
+                grid-template-columns: 1fr 1fr; 
+                gap: 10px; 
             }
             .widget-card { 
                 padding: 12px 8px; 
                 gap: 8px; 
-                flex-direction: column; /* Chuyển icon lên trên, chữ xuống dưới */
+                flex-direction: column; 
                 align-items: center; 
                 text-align: center; 
                 border-radius: 14px;
@@ -308,7 +306,7 @@
         .bottom-nav-item {
             flex: 1;
             text-align: center;
-            color: #94a3b8; /* Màu xám nhạt mặc định */
+            color: #94a3b8;
             text-decoration: none;
             display: flex;
             flex-direction: column;
@@ -329,20 +327,19 @@
             font-weight: 600;
         }
         
-        /* Hiệu ứng khi được chọn (Active) */
         .bottom-nav-item.active {
-            color: #e11d48; /* Màu Đỏ nổi bật */
+            color: #e11d48;
         }
         .bottom-nav-item.active i {
-            transform: translateY(-2px); /* Nảy icon lên một chút */
+            transform: translateY(-2px);
         }
         
         @media (max-width: 768px) {
             .bottom-nav {
-                display: flex; /* Chỉ kích hoạt trên màn hình điện thoại */
+                display: flex;
             }
             .main-content {
-                padding-bottom: 85px !important; /* Đẩy nội dung lên để không bị menu che khuất */
+                padding-bottom: 85px !important;
             }
         }
 		/* =========================================
@@ -361,27 +358,27 @@
         @keyframes shimmer {
             to { background-position-x: -200%; }
         }
-		/* Tùy chỉnh cụm 3 nút hành động GVCN bằng nhau tuyệt đối */
+		/* Tùy chỉnh cụm nút hành động GVCN bằng nhau tuyệt đối */
     .gvcn-action-grid {
         display: grid;
-        grid-template-columns: repeat(3, 1fr); /* Chia đều 3 cột bằng nhau */
-        gap: 8px; /* Khoảng cách giữa các nút */
+        grid-template-columns: repeat(4, 1fr);
+        gap: 8px;
         margin-top: 12px;
         width: 100%;
     }
     .btn-gvcn-equal {
         display: flex;
-        flex-direction: column; /* Icon ở trên, chữ ở dưới */
+        flex-direction: column;
         align-items: center;
         justify-content: center;
         width: 100%;
-        height: 75px; /* Cố định chiều cao để các nút vuông vắn bằng nhau */
+        height: 75px; 
         padding: 4px;
         border-radius: 12px;
         border: none;
         color: white;
         font-weight: 700;
-        font-size: 11px; /* Cỡ chữ vừa vặn cho mobile */
+        font-size: 11px; 
         text-align: center;
         text-decoration: none;
         box-shadow: 0 4px 10px rgba(0,0,0,0.08);
@@ -390,6 +387,38 @@
     }
     .btn-gvcn-equal:active { transform: scale(0.95); }
     .btn-gvcn-equal i { font-size: 16px; margin-bottom: 4px; }
+	/* =========================================
+           UI NÂNG CẤP: PHIẾU ĐÁNH GIÁ SAO ĐỎ CHUẨN APP
+           ========================================= */
+        .eval-category-card {
+            border: 1px solid var(--border); background: #ffffff; 
+            border-radius: 16px; margin-bottom: 20px; overflow: hidden;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.02);
+        }
+        .eval-category-header {
+            background: #f8fafc; padding: 12px 16px; border-bottom: 1px solid var(--border);
+            font-weight: 700; color: var(--primary); font-size: 15px; display: flex; align-items: center; gap: 8px;
+        }
+        .eval-option-box {
+            display: flex; gap: 12px; align-items: flex-start;
+            padding: 14px 16px; border: 2px solid transparent; border-radius: 12px;
+            margin: 10px 12px; cursor: pointer; transition: all 0.2s ease;
+            background-color: #f8fafc;
+        }
+        .eval-option-box input[type="radio"] {
+            transform: scale(1.3); margin-top: 3px; cursor: pointer; flex-shrink: 0;
+        }
+        .eval-option-box span { font-size: 14px; font-weight: 600; line-height: 1.4; color: #475569; transition: all 0.2s; }
+
+        /* HIỆU ỨNG MỚI: ĐỒNG NHẤT 1 MÀU XANH CHỦ ĐẠO CHO MỌI LỰA CHỌN (TRÁNH RỐI MẮT) */
+        .eval-option-box:has(input[type="radio"]:checked) { 
+            border-color: var(--primary); 
+            background: #eff6ff; 
+        }
+        .eval-option-box:has(input[type="radio"]:checked) span { 
+            color: var(--primary); 
+            font-weight: 700;
+        }
     </style>
 </head>
 <body>
@@ -413,8 +442,8 @@
                 <div class="banner-title-wrapper">
                     <i class="fa-solid fa-shield-halved"></i>
                     <div>
-                        <h2>HỆ THỐNG THI ĐUA GVCN</h2>
-                        <p>Design:🏆 Cô Thùy Tiên - Thầy Đức Anh 🏆 </p>
+                        <h2>HỆ THỐNG GVCN</h2>
+                        <p>Design:-- Cô Thùy Tiên - Thầy Đức Anh -- </p>
                     </div>
                 </div>
                 
@@ -425,17 +454,30 @@
             </div>
         </div>
 
-		<!-- BỘ LỌC TÌM KIẾM VÀ HÀNH ĐỘNG (ĐÃ TỐI ƯU KHÔNG GIAN) -->
-        <div class="glass-card mb-3">
+		<!-- BỘ LỌC TÌM KIẾM VÀ HÀNH ĐỘNG (Đã sửa lỗi dấu chú thích) -->
+        
+        <!-- BẢNG ĐIỆN TỬ: KHẨU HIỆU / CHỦ ĐỀ THÁNG -->
+        <div class="mb-2 mt-3" style="background: linear-gradient(135deg, #e0f2fe, #bae6fd); border: 1px solid #7dd3fc; border-radius: 12px; padding: 10px 15px; display: flex; align-items: center; box-shadow: 0 4px 10px rgba(0,0,0,0.05);">
+            <div class="bg-primary text-white rounded-circle d-flex align-items-center justify-content-center flex-shrink-0 shadow-sm me-3" style="width: 32px; height: 32px;">
+                <i class="fa-solid fa-bullhorn fa-shake" style="font-size: 14px;"></i>
+            </div>
+            <marquee behavior="scroll" direction="left" scrollamount="6" style="font-weight: 800; color: #0369a1; font-size: 14px; letter-spacing: 0.5px; margin-top: 2px;">
+                {{ global_slogan_text }}
+            </marquee>
+        </div>
+
+        <div class="glass-card mb-3" {% if is_gvcn %}style="background: transparent; border: none; box-shadow: none; margin-bottom: 0px !important;"{% endif %}>
+            
+            {% if not is_gvcn %}
             <div class="card-header-modern py-3">
                 <h2 class="card-title-modern"><i class="fa-solid fa-magnifying-glass text-primary"></i> Tra Cứu Dữ Liệu</h2>
                 <div class="badge-soft badge-success d-none d-md-flex">
                     {% if active_year %} <i class="fa-solid fa-calendar-check"></i> NH: {{ active_year.name }} {% else %} Chưa kích hoạt {% endif %}
                 </div>
             </div>
+            {% endif %}
             
-            <!-- Dùng p-3 thay vì filter-section để bóp nhỏ viền trắng -->
-            <div class="p-3">
+            <div class="{% if not is_gvcn %}p-3{% else %}p-0{% endif %}">
                 {% with messages = get_flashed_messages(with_categories=true) %}
                     {% if messages %}
                         {% for category, message in messages %}
@@ -448,10 +490,10 @@
 
                 <form method="GET" action="/class-dashboard" class="row g-2 align-items-end w-100 m-0">
                     
-                    <!-- 1. CỘT CHỌN LỚP (Bóp padding nhỏ lại) -->
+                    {% if not is_gvcn %}
                     <div class="col-12 col-md-6 px-0 pe-md-2">
                         <label class="widget-label d-block mb-1">Lớp / Chi đoàn</label>
-						<select class="form-select w-100 form-select-modern py-2" name="branch_id" onchange="this.form.submit()" {% if is_gvcn %}disabled{% endif %}>
+                        <select class="form-select w-100 form-select-modern py-2" name="branch_id" onchange="this.form.submit()">
                             {% for b in branches %}
                                 <option value="{{ b.id }}" {% if selected_branch and selected_branch.id == b.id %}selected{% endif %}>
                                     Lớp {{ b.name }} ({{ b.group }})
@@ -459,8 +501,11 @@
                             {% endfor %}
                         </select>
                     </div>
+                    {% else %}
+                    <!-- Đã ẨN hoàn toàn ô chọn Lớp và thanh tiêu đề đối với tài khoản GVCN -->
+                    <input type="hidden" name="branch_id" value="{{ selected_branch.id if selected_branch else '' }}">
+                    {% endif %}
                     
-					<!-- 2. CỘT NÚT BẤM (ĐÃ THIẾT KẾ LƯỚI 3 CỘT ĐỀU NHAU) -->
                     <div class="col-12 px-0 mt-2">
                         {% if selected_branch %}
                         <div class="gvcn-action-grid">
@@ -469,8 +514,14 @@
                                 <i class="fa-solid fa-file-pdf"></i>
                                 <span>Xuất Hồ Sơ</span>
                             </a>
+
+                            <!-- 2. Nút Tra Sổ Đen -->
+                            <button type="button" class="btn-gvcn-equal" style="background: linear-gradient(135deg, #ef4444, #dc2626);" onclick="document.querySelector('[data-bs-target=\'#blacklist-pane\']').click()" title="Tra cứu Sổ Đen của lớp">
+                                <i class="fa-solid fa-book-skull"></i>
+                                <span>Tra Sổ Đen</span>
+                            </button>
                             
-                            <!-- 2. Nút Sửa Thông Tin -->
+                            <!-- 3. Nút Sửa Thông Tin -->
                             {% if is_gvcn or session.get('role') in ['Quản trị viên', 'Admin', 'Bí thư Đoàn trường'] %}
                             <button type="button" class="btn-gvcn-equal" style="background: linear-gradient(135deg, #2563eb, #1d4ed8);" onclick="openEditBranchModal()" title="Sửa thông tin lớp">
                                 <i class="fa-solid fa-user-pen"></i>
@@ -478,7 +529,7 @@
                             </button>
                             {% endif %}
                             
-                            <!-- 3. Nút Bật/Tắt Thông Báo (Toggle) -->
+                            <!-- 4. Nút Bật/Tắt Thông Báo -->
                             {% if is_gvcn %}
                             <button type="button" class="btn-gvcn-equal" id="btnPushNotifyGVCN" style="background: linear-gradient(135deg, #0ea5e9, #0284c7);" onclick="enablePushNotifications()" title="Bật/Tắt thông báo vi phạm">
                                 <i class="fa-solid fa-bell"></i>
@@ -493,6 +544,122 @@
         </div>
 
         {% if selected_branch %}
+		<!-- BẮT ĐẦU: KHỐI ĐIỂM DANH GVCN 15 PHÚT (ĐÃ NÂNG CẤP TOÀN DIỆN) -->
+        {% if is_gvcn %}
+        
+        <!-- Bổ sung CSS Hiệu ứng nhịp đập trái tim -->
+        <style>
+            @keyframes pulse-white {
+                0% { box-shadow: 0 0 0 0 rgba(255, 255, 255, 0.6); }
+                70% { box-shadow: 0 0 0 12px rgba(255, 255, 255, 0); }
+                100% { box-shadow: 0 0 0 0 rgba(255, 255, 255, 0); }
+            }
+            .btn-checkin-pulse { animation: pulse-white 2s infinite; }
+        </style>
+
+        <div class="glass-card mt-3 mb-4 border-0 position-relative overflow-hidden" style="background: linear-gradient(135deg, #10b981, #047857); color: white; box-shadow: 0 10px 20px -5px rgba(16, 185, 129, 0.4); border-radius: 16px;">
+            <!-- Họa tiết chìm trang trí (Watermark chiếc lá) -->
+            <i class="fa-solid fa-seedling position-absolute opacity-10" style="font-size: 120px; right: -20px; bottom: -20px; transform: rotate(-15deg);"></i>
+            
+            <div class="p-3 p-md-4 d-flex flex-column flex-md-row align-items-center justify-content-between gap-3 position-relative z-1">
+                <div class="d-flex align-items-center gap-3 w-100">
+                    <div class="bg-white text-success rounded-circle d-flex align-items-center justify-content-center shadow flex-shrink-0" style="width: 55px; height: 55px;">
+                        <i class="fa-solid fa-hand-holding-heart fs-3 fa-beat"></i>
+                    </div>
+                    <div>
+						<!-- Lời chào cá nhân hóa tự động gọi tên GVCN -->
+                        <div class="text-warning fw-bold mb-1" style="letter-spacing: 0.5px; text-transform: uppercase;">
+                            <div style="font-size: 11px; opacity: 0.9;" class="mb-1"><i class="fa-regular fa-sun me-1 fa-spin-pulse"></i> Chào buổi sáng, Thầy/cô:</div>
+                            <div style="font-size: 14px;">{% if selected_branch and selected_branch.gvcn %}{{ selected_branch.gvcn }}{% else %}Thầy/cô{% endif %}!</div>
+                        </div>
+                        <h5 class="fw-bold mb-1" style="font-size: 17px; text-shadow: 1px 1px 2px rgba(0,0,0,0.1);">Đồng hành 15 phút đầu giờ</h5>
+                        <p class="mb-0 opacity-90" style="font-size: 13px;">Thầy/Cô bấm vào GHI NHẬN CÓ MẶT để xác nhận có mặt tại lớp nhé!</p>
+                    </div>
+                </div>
+                <!-- Nút bấm có class btn-checkin-pulse tạo hiệu ứng nhịp thở -->
+                <button id="btn-checkin" class="btn btn-light text-success fw-bold px-4 py-3 shadow w-100 w-md-auto btn-checkin-pulse" style="border-radius: 12px; font-size: 15px; white-space: nowrap; transition: all 0.3s;" 
+                        onclick="diemDanh15Phut({{ selected_branch.id }}, 'Tuần hiện tại')">
+                    <i class="fa-solid fa-face-smile-wink me-2 fs-5"></i> GHI NHẬN CÓ MẶT
+                </button>
+            </div>
+        </div>
+
+		<script>
+        // [BỔ SUNG 1]: TỰ ĐỘNG KIỂM TRA TRÍ NHỚ KHI VỪA MỞ TRANG HOẶC F5
+        document.addEventListener("DOMContentLoaded", function() {
+            {% if is_gvcn and selected_branch %}
+            const branchId = '{{ selected_branch.id }}';
+            const today = new Date().toLocaleDateString('vi-VN'); 
+            const storageKey = 'checkin_status_' + branchId + '_' + today;
+            
+            let btn = document.getElementById('btn-checkin');
+            
+            // Nếu điện thoại nhớ ra là hôm nay đã điểm danh rồi -> Khóa nút luôn
+            if(btn && localStorage.getItem(storageKey) === 'done') {
+                btn.disabled = true;
+                btn.classList.remove('btn-checkin-pulse', 'text-success');
+                btn.style.color = '#64748b';
+                btn.style.background = '#e2e8f0';
+                btn.innerHTML = '<i class="fa-solid fa-check-double"></i> ĐÃ GHI NHẬN';
+            }
+            {% endif %}
+        });
+
+        // GIỮ NGUYÊN HÀM CŨ CỦA THẦY - CHỈ CẤY THÊM LỆNH LƯU TRÍ NHỚ
+        function diemDanh15Phut(branchId, weekName) {
+            if(!confirm("Xác nhận Thầy/Cô đang có mặt tại lớp để đồng hành cùng các em?")) return;
+            
+            let btn = document.getElementById('btn-checkin');
+            btn.disabled = true;
+            btn.classList.remove('btn-checkin-pulse'); // Tắt nhịp đập khi đã bấm
+            btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Đang xử lý...';
+
+            fetch('/api/gvcn_checkin', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({branch_id: branchId, week_name: weekName})
+            })
+            .then(res => res.json())
+            .then(data => {
+                // Tự động tạo chìa khóa lưu trí nhớ cho ngày hôm nay
+                const today = new Date().toLocaleDateString('vi-VN');
+                const storageKey = 'checkin_status_' + branchId + '_' + today;
+
+                if(data.success) {
+                    // [BỔ SUNG 2]: Bấm thành công -> Lưu vào bộ nhớ điện thoại
+                    localStorage.setItem(storageKey, 'done'); 
+                    
+                    btn.innerHTML = '<i class="fa-solid fa-check-double"></i> ĐÃ GHI NHẬN';
+                    btn.classList.remove('text-success');
+                    btn.style.color = '#64748b';
+                    btn.style.background = '#e2e8f0';
+                } else {
+                    alert("⚠️ " + data.error);
+                    if(data.error.includes("rồi")) {
+                        // [BỔ SUNG 3]: Nếu hệ thống báo "đã ghi nhận rồi" -> Cập nhật luôn trí nhớ để lần sau không hiện lại
+                        localStorage.setItem(storageKey, 'done'); 
+                        
+                        btn.innerHTML = '<i class="fa-solid fa-check-double"></i> ĐÃ GHI NHẬN';
+                        btn.style.color = '#64748b';
+                        btn.style.background = '#e2e8f0';
+                    } else {
+                        btn.disabled = false;
+                        btn.classList.add('btn-checkin-pulse'); // Bật lại nhịp đập nếu bị lỗi
+                        btn.innerHTML = '<i class="fa-solid fa-face-smile-wink me-2 fs-5"></i> GHI NHẬN CÓ MẶT';
+                    }
+                }
+            })
+            .catch(err => {
+                alert("Lỗi kết nối mạng!");
+                btn.disabled = false;
+                btn.classList.add('btn-checkin-pulse'); // Bật lại nhịp đập nếu bị lỗi
+                btn.innerHTML = '<i class="fa-solid fa-face-smile-wink me-2 fs-5"></i> GHI NHẬN CÓ MẶT';
+            });
+        }
+        </script>
+        {% endif %}
+        <!-- KẾT THÚC: KHỐI ĐIỂM DANH GVCN 15 PHÚT -->
+
         <!-- WIDGETS THÔNG TIN -->
         <div class="widget-grid">
             <div class="widget-card">
@@ -555,6 +722,18 @@
 					<li class="nav-item" role="presentation">
                         <button class="modern-tab" data-bs-toggle="tab" data-bs-target="#violation-bank-pane" type="button" role="tab">
                             <i class="fa-solid fa-scale-balanced"></i> Ngân Hàng Lỗi
+                        </button>
+                    </li>
+                    <!-- TAB SỔ ĐEN CỦA LỚP ĐƯỢC TÍCH HỢP -->
+                    <li class="nav-item" role="presentation">
+                        <button class="modern-tab text-danger" data-bs-toggle="tab" data-bs-target="#blacklist-pane" type="button" role="tab" style="border-color: #fecaca; background-color: #fef2f2;">
+                            <i class="fa-solid fa-book-skull"></i> Sổ Đen Của Lớp
+                        </button>
+                    </li>
+                    <!-- TAB HỒ SƠ PHÚC KHẢO ĐƯỢC TÍCH HỢP -->
+                    <li class="nav-item" role="presentation">
+                        <button class="modern-tab text-primary" data-bs-toggle="tab" data-bs-target="#appeal-history-pane" type="button" role="tab" style="border-color: #bfdbfe; background-color: #eff6ff;">
+                            <i class="fa-solid fa-scale-balanced"></i> Hồ sơ Phúc khảo
                         </button>
                     </li>
                 </ul>
@@ -632,7 +811,6 @@
 									<td data-label="Ghi Chú Lỗi" class="col-details">
                                         <div class="text-main fw-bold mb-2 auto-color-note" style="line-height: 1.5;">{{ sc.note }}</div>
 										
-                                        <!-- [BẢN VÁ LỖI TỐI THƯỢNG]: NÚT XEM ẢNH GỌI ĐÚNG HÀM SLIDER -->
                                         {% if sc.evidence_image %}
                                         <div class="mb-2 mt-1">
                                             <button type="button" class="btn btn-sm fw-bold shadow-sm" style="color: #dc3545; border: 1px solid #dc3545; background: #fff5f5; border-radius: 8px;" onclick="viewEvidenceSafe(event, '{{ sc.evidence_image }}', '{{ sc.week }}')">
@@ -641,7 +819,6 @@
                                         </div>
                                         {% endif %}
                                         
-										<!-- HIỂN THỊ LỊCH SỬ PHÚC KHẢO -->
                                         {% if sc.appeal_reason %}
                                             <div class="p-3 bg-warning bg-opacity-10 border border-warning border-opacity-25 rounded-3 mt-2 mb-2">
                                                 <div class="widget-label text-dark mb-1"><i class="fa-solid fa-scale-balanced text-warning"></i> Lịch sử khiếu nại:</div>
@@ -650,7 +827,6 @@
                                                 </div>
                                                 
                                                 {% if sc.appeal_response %}
-                                                    <!-- [NÂNG CẤP LÕI]: HIỂN THỊ TRẠNG THÁI TICKET -->
                                                     {% if "[ĐÃ DUYỆT]" in sc.appeal_response %}
                                                         <div class="alert alert-success mt-2 py-2 px-3 border-0 shadow-sm d-flex gap-2 align-items-start mb-0">
                                                             <i class="fa-solid fa-circle-check fs-5 mt-1 text-success"></i>
@@ -668,7 +844,6 @@
                                                             </div>
                                                         </div>
                                                     {% else %}
-                                                        <!-- Dành cho các phản hồi cũ -->
                                                         <div class="alert alert-info mt-2 py-2 px-3 border-0 shadow-sm d-flex gap-2 align-items-start mb-0">
                                                             <i class="fa-solid fa-circle-info fs-5 mt-1"></i>
                                                             <div>
@@ -692,7 +867,6 @@
                                             </div>
                                         {% endif %}
 
-                                        <!-- ĐIỀU KHIỂN NÚT BẤM DÀNH CHO GVCN -->
                                         {% if is_gvcn and not sc.is_locked %}
                                             {% if sc.is_appeal_expired %}
                                                 <div class="badge-soft mt-2 w-100 justify-content-center py-2" style="background: #f1f5f9; color: #94a3b8; border: 1px dashed #cbd5e1; cursor: not-allowed;" title="Đã quá 3 ngày kể từ khi công bố điểm">
@@ -734,16 +908,15 @@
                     </div>
                 </div>
 
-                <!-- TAB: BẢNG XẾP HẠNG TOÀN TRƯỜNG (CÓ CHỌN TUẦN / THÁNG / HỌC KỲ) -->
+                <!-- TAB: BẢNG XẾP HẠNG TOÀN TRƯỜNG -->
                 <div class="tab-pane fade" id="leaderboard-pane" role="tabpanel">
                     <div class="p-4 pb-2">
                         <div class="d-flex justify-content-between align-items-center flex-wrap gap-3 mb-3">
                             <div>
-                                <h5 class="fw-bold text-primary m-0"><i class="fa-solid fa-trophy text-warning me-2"></i> Bảng Xếp Hạng Thi Đua Toàn Trường</h5>
-                                <small class="text-muted">Thống kê vị thế các chi đoàn phân theo nhóm và chu kỳ thời gian.</small>
+                                <h5 class="fw-bold text-primary m-0"><i class="fa-solid fa-trophy text-warning me-2"></i>XH Thi Đua Toàn Trường</h5>
+                                <small class="text-muted">TK các Chi đoàn phân theo nhóm và thời gian.</small>
                             </div>
                             
-                            <!-- BỘ CHỌN LOẠI CHU KỲ VÀ MỐC THỜI GIAN -->
                             <div class="d-flex align-items-center gap-2 flex-wrap">
                                 <select class="form-select form-select-sm fw-bold text-secondary" id="bxhPeriodType" style="width: 130px;" onchange="updateBxhTimeOptions()">
                                     <option value="Tuan">Theo Tuần</option>
@@ -756,11 +929,10 @@
                             </div>
                         </div>
 
-                        <!-- THANH CHUYỂN ĐỔI NHÓM (TABS) -->
                         <ul class="nav nav-pills nav-fill mb-3 bg-white p-1 rounded shadow-sm border" id="groupTabs" role="tablist">
                             <li class="nav-item" role="presentation">
                                 <button class="nav-link active fw-bold py-2" id="group1-tab" data-bs-toggle="pill" data-bs-target="#group1Pane" type="button" role="tab">
-                                    🏆 Nhóm 1
+                                    🏅 Nhóm 1
                                 </button>
                             </li>
                             <li class="nav-item" role="presentation">
@@ -771,9 +943,7 @@
                         </ul>
                     </div>
 
-                    <!-- NỘI DUNG 2 NHÓM -->
                     <div class="tab-content px-4 pb-4" id="groupTabsContent">
-                        <!-- TAB NHÓM 1 -->
                         <div class="tab-pane fade show active" id="group1Pane" role="tabpanel">
                             <div class="table-responsive-custom border rounded-3 bg-white">
                                 <table class="table-modern">
@@ -792,7 +962,6 @@
                             </div>
                         </div>
 
-                        <!-- TAB NHÓM 2 -->
                         <div class="tab-pane fade" id="group2Pane" role="tabpanel">
                             <div class="table-responsive-custom border rounded-3 bg-white">
                                 <table class="table-modern">
@@ -813,11 +982,11 @@
                     </div>
                 </div>
 
-<!-- TAB 2: SAO ĐỎ CHẤM ĐIỂM -->
+                <!-- TAB 2: SAO ĐỎ CHẤM ĐIỂM -->
                 <div class="tab-pane fade" id="monitor-pane" role="tabpanel">
                     <div class="p-4 pb-0">
                         <div class="alert alert-primary bg-opacity-10 border-0 text-primary fw-bold rounded-3 small mb-0 d-flex gap-2">
-                            <i class="fa-solid fa-circle-info mt-1"></i> Danh sách Sao đỏ đã được phân công giám sát lớp {{ selected_branch.name }}, kèm theo tổng điểm thi đua tuần tương ứng.
+                            <i class="fa-solid fa-circle-info mt-1"></i> Danh sách SĐ đã được phân công chấm lớp {{ selected_branch.name }}, kèm tổng điểm thi đua tuần tương ứng.
                         </div>
                     </div>
                     <div class="table-responsive-custom mt-3">
@@ -884,7 +1053,7 @@
                 <div class="tab-pane fade" id="assignments-pane" role="tabpanel">
                     <div class="p-4 pb-0">
                         <div class="alert alert-info bg-opacity-10 border-0 text-primary fw-bold rounded-3 small mb-0 d-flex gap-2">
-                            <i class="fa-solid fa-clipboard-user mt-1"></i> Lịch phân công nhiệm vụ cho các học sinh lớp {{ selected_branch.name }} tham gia Đội Sao đỏ.
+                            <i class="fa-solid fa-clipboard-user mt-1"></i> Lịch phân công nhiệm vụ cho HS lớp {{ selected_branch.name }} tham gia Đội Sao đỏ.
                         </div>
                     </div>
                     <div class="table-responsive-custom mt-3">
@@ -924,7 +1093,7 @@
                 <div class="tab-pane fade" id="violation-bank-pane" role="tabpanel">
                     <div class="p-4 pb-0">
                         <div class="alert alert-secondary bg-opacity-10 border-0 text-secondary fw-bold rounded-3 small mb-0 d-flex gap-2">
-                            <i class="fa-solid fa-book-open mt-1"></i> Bảng tra cứu barem điểm thi đua đang được áp dụng cho năm học hiện tại.
+                            <i class="fa-solid fa-book-open mt-1"></i> Bảng tra cứu Barem điểm thi đua đang được áp dụng cho năm học hiện tại.
                         </div>
                     </div>
                     <div class="table-responsive-custom mt-3">
@@ -961,6 +1130,139 @@
                     </div>
                 </div>
 
+                <!-- ========================================= -->
+                <!-- [BẢN VÁ LỖI TỐI THƯỢNG]: TAB SỔ ĐEN CỦA LỚP ĐƯỢC CHUẨN HÓA -->
+                <!-- ========================================= -->
+                <div class="tab-pane fade" id="blacklist-pane" role="tabpanel">
+                    <div class="p-4 pb-0">
+                        <div class="alert alert-danger bg-opacity-10 border-0 text-danger fw-bold rounded-3 small mb-3 d-flex gap-2">
+                            <i class="fa-solid fa-triangle-exclamation mt-1"></i> Danh sách chi tiết các học sinh lớp {{ selected_branch.name }} có lỗi vi phạm được ghi nhận.
+                        </div>
+                        
+                        <!-- Bộ lọc Tuần/Tháng -->
+                        <div class="d-flex flex-wrap gap-3 mb-4 bg-white p-3 rounded-3 shadow-sm border">
+                            <select id="bl_time_mode" class="form-select border-danger text-danger fw-bold" style="width: 150px;" onchange="updateBlTimeValues()">
+                                <option value="week">Theo Tuần</option>
+                                <option value="month">Theo Tháng</option>
+                            </select>
+                            <select id="bl_time_value" class="form-select border-secondary fw-bold text-dark flex-fill" style="min-width: 150px;">
+                                <!-- Options Tuần/Tháng nạp tự động bằng JS -->
+                            </select>
+                            <button class="btn-modern btn-modern-primary fw-bold px-4" onclick="loadClassBlacklist()">
+                                <i class="fa-solid fa-magnifying-glass me-1"></i> Lọc dữ liệu
+                            </button>
+                            <button class="btn-modern btn-modern-warning fw-bold px-4" style="background: #10b981; color: white;" onclick="exportClassBlacklist()">
+                                <i class="fa-solid fa-file-excel me-1"></i> Tải Excel
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <!-- Bảng dữ liệu Sổ Đen -->
+                    <div class="table-responsive-custom mt-2 border-top">
+                        <table class="table-modern">
+                            <thead>
+                                <tr>
+                                    <th style="width: 8%;">STT</th>
+                                    <th style="width: 15%;">Thời gian</th>
+                                    <th style="text-align: left;">Họ tên Học sinh</th>
+                                    <th style="text-align: left;">Lỗi Vi phạm</th>
+                                    <th class="text-center" style="width: 10%;">Số lần</th>
+                                    <!-- THÊM CỘT ĐIỂM TRỪ THEO YÊU CẦU -->
+                                    <th class="text-center" style="width: 15%;">Điểm trừ</th>
+                                </tr>
+                            </thead>
+                            <tbody id="blTableBody">
+                                <tr>
+                                    <td colspan="6" class="col-details text-center py-5 text-muted fst-italic">
+                                        Vui lòng bấm "Lọc dữ liệu" để xem danh sách vi phạm...
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- ========================================= -->
+                <!-- [BẢN NÂNG CẤP LÕI]: TAB HỒ SƠ PHÚC KHẢO (ĐÃ ĐƯỢC BÓC TÁCH) -->
+                <!-- ========================================= -->
+                <div class="tab-pane fade" id="appeal-history-pane" role="tabpanel">
+                    <div class="p-4 pb-0">
+                        <div class="alert alert-primary bg-opacity-10 border-0 text-primary fw-bold rounded-3 small mb-3 d-flex gap-2">
+                            <i class="fa-solid fa-circle-info mt-1"></i> Tra cứu và theo dõi tiến trình xử lý các yêu cầu khiếu nại điểm của lớp.
+                        </div>
+                        
+                        <div class="d-flex flex-wrap gap-3 mb-4 bg-white p-3 rounded-3 shadow-sm border align-items-center">
+                            <div class="input-group" style="max-width: 400px; flex-grow: 1;">
+                                <span class="input-group-text bg-light border-end-0"><i class="fa-solid fa-magnifying-glass text-muted"></i></span>
+                                <input type="text" id="appealSearchInput" class="form-control border-start-0 ps-0 bg-light" placeholder="Nhập tên HS, Lỗi hoặc Tuần để lọc nhanh..." style="box-shadow: none;">
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="table-responsive-custom mt-2 border-top">
+                        <table class="table-modern" id="appealTable">
+                            <thead>
+                                <tr>
+                                    <th style="width: 5%;">STT</th>
+                                    <th style="width: 10%;">Tuần</th>
+                                    <th style="width: 15%;">Thời gian gửi</th>
+                                    <th style="width: 25%; text-align: left;">Nội dung (Lỗi & Tên HS)</th>
+                                    <th style="width: 25%; text-align: left;">Lý do / Minh chứng</th>
+                                    <th style="width: 20%;">Trạng thái</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% if appeal_records %}
+                                    {% for record in appeal_records %}
+                                    <tr>
+                                        <td data-label="STT" class="fw-bold text-muted text-md-center">{{ loop.index }}</td>
+                                        <td data-label="Tuần"><span class="badge-soft badge-secondary shadow-sm">{{ record.week }}</span></td>
+                                        <td data-label="Gửi lúc" class="text-md-center"><span class="small text-muted fw-bold"><i class="fa-regular fa-clock me-1"></i>{{ record.time }}</span></td>
+                                        <td data-label="Nội dung" class="text-danger fw-bold" style="text-align: left !important; font-size: 13px;">
+                                            {{ record.errors_raw | safe if record.errors_raw else "Không có lỗi đính kèm" }}
+                                        </td>
+                                        <td data-label="Lý do" class="text-muted" style="text-align: left !important; font-size: 13px; line-height: 1.5;">
+                                            {{ record.reason | safe }}
+                                        </td>
+                                        <td data-label="Trạng thái" class="text-md-center">
+                                            <span class="badge bg-{{ record.badge }} px-3 py-1 rounded-pill shadow-sm mb-1" style="font-size: 12px;">{{ record.status }}</span>
+                                            {% if record.response %}
+                                                <div class="fst-italic mt-2" style="font-size: 12px; color: #475569; background: #f8fafc; padding: 6px; border-radius: 6px; border-left: 2px solid {% if record.badge == 'success' %}#22c55e{% else %}#ef4444{% endif %}; text-align: left;">
+                                                    {{ record.response | replace('[ĐÃ DUYỆT]', '') | replace('[TỪ CHỐI]', '') | truncate(40) }}
+                                                </div>
+                                            {% endif %}
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                {% else %}
+                                    <tr>
+                                        <td colspan="6" class="col-details text-center py-5 text-muted fst-italic">
+                                            <i class="fa-solid fa-box-open fs-3 d-block mb-2 opacity-50"></i> Lớp chưa từng gửi yêu cầu phúc khảo nào.
+                                        </td>
+                                    </tr>
+                                {% endif %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Kịch bản Javascript cho thanh tìm kiếm thông minh -->
+                <script>
+                    document.addEventListener("DOMContentLoaded", function() {
+                        const searchInput = document.getElementById("appealSearchInput");
+                        if(searchInput) {
+                            searchInput.addEventListener("keyup", function() {
+                                const filter = this.value.toLowerCase();
+                                const rows = document.querySelectorAll("#appealTable tbody tr:not(.col-details)"); // Không ẩn hàng thông báo trống
+                                rows.forEach(row => {
+                                    const textContent = row.textContent.toLowerCase();
+                                    row.style.display = textContent.includes(filter) ? "" : "none";
+                                });
+                            });
+                        }
+                    });
+                </script>
+
             </div>
         </div>
         
@@ -974,40 +1276,50 @@
         </div>
         {% endif %}
     </div>
+
+	<!-- MODAL PHÚC KHẢO (NÂNG CẤP UI/UX HIỆN ĐẠI) -->
     <div class="modal fade" id="appealModal" tabindex="-1" aria-hidden="true">
-        <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-dialog modal-dialog-centered modal-fullscreen-md-down">
             <div class="modal-content" style="border-radius: 20px; border: none; box-shadow: 0 20px 40px rgba(0,0,0,0.2);">
-                <div class="modal-header border-0 pb-0" style="padding: 24px 24px 10px 24px;">
-                    <h5 class="modal-title fw-bold text-main fs-5"><i class="fa-solid fa-hand-paper text-warning me-2"></i> Yêu Cầu Phúc Khảo Điểm</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                <!-- Header: Gọn gàng, tích hợp luôn tên Tuần -->
+                <div class="modal-header border-bottom-0 pb-0" style="padding: 20px 24px 10px 24px;">
+                    <div class="d-flex align-items-center gap-2">
+                        <h5 class="modal-title fw-bold text-main fs-5 m-0"><i class="fa-solid fa-scale-balanced text-primary me-2"></i>Phúc Khảo Điểm</h5>
+                        <span class="badge bg-primary bg-opacity-10 text-primary px-2 py-1 fs-6 rounded-3" id="appealWeekNameDisplay">Tuần...</span>
+                    </div>
+                    <button type="button" class="btn-close bg-light rounded-circle p-2" data-bs-dismiss="modal"></button>
                 </div>
-                <form action="/submit_appeal" method="POST" id="appealForm">
-                    <div class="modal-body px-4 pb-4 mt-3">
+                
+                <form action="/submit_appeal" method="POST" id="appealForm" class="d-flex flex-column h-100">
+                    <div class="modal-body px-4 pt-3 pb-2">
                         <input type="hidden" name="score_id" id="appealScoreId">
-                        <input type="hidden" name="reason" id="finalReason"> <!-- Ẩn: Biến này sẽ chứa dữ liệu tổng hợp gửi về Server -->
+                        <input type="hidden" name="reason" id="finalReason">
+                        <input type="hidden" id="appealWeekName"> <!-- Ẩn input này đi vì đã đưa lên Header -->
                         
-                        <div class="widget-label mb-2 text-muted">Đang khiếu nại cho:</div>
-                        <input type="text" class="form-control fw-bold text-primary bg-primary bg-opacity-10 border-0 mb-4" id="appealWeekName" readonly style="font-size: 15px; padding: 12px 16px; border-radius: 12px;">
-                        
-                        <!-- KHU VỰC CHỌN LỖI CỤ THỂ SẼ ĐƯỢC JAVASCRIPT SINH RA -->
-                        <div class="widget-label mb-2 text-danger" id="appealViolationsLabel" style="display:none;"><i class="fa-solid fa-list-check me-1"></i> Tích chọn các lỗi bị ghi nhận sai (Nếu có):</div>
-                        <div id="appealViolationsContainer" class="mb-4 d-flex flex-column gap-2" style="max-height: 250px; overflow-y: auto; overflow-x: hidden;">
-                            <!-- Checkbox lỗi sẽ nạp vào đây -->
+                        <!-- Section 1: Danh sách lỗi dạng Card chọn (Bỏ màu đỏ chói) -->
+                        <div id="appealViolationsSection" style="display:none;">
+                            <label class="fw-bold text-secondary mb-2" style="font-size: 13px; letter-spacing: 0.5px;">1. CHỌN LỖI CẦN KHIẾU NẠI (NẾU CÓ)</label>
+                            <div id="appealViolationsContainer" class="mb-3 d-flex flex-column gap-2" style="max-height: 40vh; overflow-y: auto; overflow-x: hidden; padding-right: 4px;">
+                                <!-- Checkbox Cards sẽ được JS sinh ra ở đây -->
+                            </div>
                         </div>
 
-                        <div class="widget-label mb-2 text-muted"><i class="fa-solid fa-pen-to-square me-1"></i> Nội dung/ Minh chứng bổ sung:</div>
-                        <textarea class="form-control shadow-sm" id="appealReasonText" rows="3" placeholder="Ghi rõ lý do tại sao các lỗi trên bị chấm sai..." required style="border-radius: 12px; resize: none; padding: 16px; font-size: 14px; background: #ffffff; border: 1px solid var(--border);"></textarea>
+                        <!-- Section 2: Lý do / Minh chứng -->
+                        <label class="fw-bold text-secondary mb-2" style="font-size: 13px; letter-spacing: 0.5px;">2. NỘI DUNG / LÝ DO CHI TIẾT</label>
+                        <textarea class="form-control shadow-none" id="appealReasonText" rows="4" placeholder="Nhập nội dung tại đây...." required style="border-radius: 12px; resize: none; padding: 14px; font-size: 14.5px; background: #f8fafc; border: 1.5px solid var(--border); transition: all 0.2s;"></textarea>
                     </div>
-                    <div class="modal-footer border-0 px-4 pb-4 pt-0 d-flex gap-2">
-                        <button type="button" class="btn-modern btn-light fw-bold px-4 py-2" style="background: #f1f5f9; color: var(--text-main);" data-bs-dismiss="modal">Hủy</button>
-                        <button type="submit" class="btn-modern btn-modern-warning fw-bold flex-grow-1 shadow-sm py-2"><i class="fa-solid fa-paper-plane me-1"></i> Gửi Yêu Cầu Cho Đoàn Trường</button>
+                    
+                    <!-- Footer: Nút bấm tràn viền chuẩn Mobile App -->
+                    <div class="modal-footer border-0 px-4 pb-4 pt-2 d-flex gap-2 w-100">
+                        <button type="button" class="btn fw-bold py-2 w-100" style="background: #f1f5f9; color: #64748b; border-radius: 12px; font-size: 15px; flex: 1;" data-bs-dismiss="modal">Hủy bỏ</button>
+                        <button type="submit" class="btn fw-bold py-2 w-100 shadow-sm" style="background: var(--primary); color: white; border-radius: 12px; font-size: 15px; flex: 2;"><i class="fa-solid fa-paper-plane me-1"></i> Gửi Yêu Cầu</button>
                     </div>
                 </form>
             </div>
         </div>
     </div>
     
-	<!-- MODAL TRẢ LỜI PHÚC KHẢO (BCH) ĐÃ NÂNG CẤP LUỒNG TICKETING -->
+	<!-- MODAL TRẢ LỜI PHÚC KHẢO (BCH) -->
     {% if not is_gvcn %}
     <div class="modal fade" id="resolveModal" tabindex="-1" aria-hidden="true">
         <div class="modal-dialog modal-dialog-centered modal-lg">
@@ -1025,18 +1337,20 @@
                             <input type="text" class="form-control fw-bold text-primary bg-light border-0" id="resolveBranch" readonly style="font-size: 15px; padding: 12px 16px; border-radius: 12px;">
                         </div>
 
-                        <!-- LÝ DO GVCN -->
+                        <!-- KHU VỰC HIỂN THỊ CÁC CHECKBOX CHỌN LỖI ĐỂ GỠ (BẢN VÁ LỖI) -->
                         <div class="mb-4">
-                            <label class="widget-label text-dark mb-2">Nội dung khiếu nại của GVCN:</label>
+                            <label class="widget-label text-dark mb-2">Nội dung khiếu nại (Tích chọn các lỗi ĐỒNG Ý GỠ):</label>
+                            <div id="resolveErrorCheckboxes" class="d-flex flex-column gap-2 mb-3"></div>
+                            
+                            <label class="widget-label text-dark mb-2 border-top pt-3 w-100">Lý do / Minh chứng của GVCN:</label>
                             <div class="p-3 bg-light border border-secondary border-opacity-25 rounded-3 text-danger fst-italic shadow-sm" id="resolveReason" style="border-radius: 12px; font-size: 14px;">
-                                <!-- JS sẽ đẩy nội dung vào đây -->
                             </div>
                         </div>
 
-                        <!-- Ô NHẬP ĐIỂM HOÀN LẠI (TỰ ĐỘNG) -->
+                        <!-- Ô TỰ ĐỘNG NHẢY ĐIỂM -->
                         <div class="mb-4 p-3 bg-primary bg-opacity-10 border border-primary border-opacity-50 rounded-3" style="border-radius: 12px;">
-                            <label class="widget-label text-primary mb-2"><i class="fa-solid fa-rotate-left me-1"></i> Số điểm hoàn lại (Chỉ nhập nếu Duyệt):</label>
-                            <input type="number" step="0.5" min="0" class="form-control border-primary fw-bold fs-5 text-primary" name="refund_points" value="0" placeholder="VD: 2.0" style="border-radius: 12px;">
+                            <label class="widget-label text-primary mb-2"><i class="fa-solid fa-rotate-left me-1"></i> Số điểm hoàn lại (Tự động tính):</label>
+                            <input type="number" step="0.5" min="0" class="form-control border-primary fw-bold fs-5 text-primary" name="refund_points" id="refundPointsInput" value="0" placeholder="VD: 2.0" style="border-radius: 12px;">
                             <small class="text-muted mt-2 d-block"><i class="fa-solid fa-circle-info me-1"></i> Hệ thống tự động cộng số điểm này vào điểm của lớp và xóa lỗi khỏi Sổ đen.</small>
                         </div>
                         
@@ -1046,11 +1360,9 @@
                         </div>
                     </div>
                     <div class="modal-footer border-0 px-4 pb-4 pt-0 d-flex gap-2">
-                        <!-- NÚT TỪ CHỐI -->
                         <button type="submit" name="action" value="reject" class="btn-modern btn-danger fw-bold flex-grow-1" style="background: #ef4444; color: white;">
                             <i class="fa-solid fa-ban me-1"></i> Từ chối
                         </button>
-                        <!-- NÚT ĐỒNG Ý -->
                         <button type="submit" name="action" value="approve" class="btn-modern btn-success fw-bold flex-grow-1" style="background: #22c55e; color: white;">
                             <i class="fa-solid fa-check-double me-1"></i> Duyệt & Hoàn Điểm
                         </button>
@@ -1061,108 +1373,121 @@
     </div>
     {% endif %}
 
-    <!-- MODAL ĐÁNH GIÁ SAO ĐỎ -->
+	<!-- MODAL ĐÁNH GIÁ SAO ĐỎ (ĐÃ NÂNG CẤP UI) -->
     <div class="modal fade" id="evalModal" tabindex="-1" aria-hidden="true">
-        <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-dialog modal-lg modal-dialog-centered modal-fullscreen-md-down">
             <div class="modal-content border-0 shadow-lg" style="border-radius: 20px; overflow: hidden;">
-                <div class="modal-header text-white" style="background: linear-gradient(135deg, #0d6efd, #004080);">
-                    <h5 class="modal-title fw-bold">
+                <!-- Header -->
+                <div class="modal-header text-white border-0 pb-3" style="background: linear-gradient(135deg, #2563eb, #1e40af); padding: 20px 24px;">
+                    <h5 class="modal-title fw-bold fs-5">
                         <i class="fa-solid fa-clipboard-check me-2"></i>Phiếu Đánh Giá Sao Đỏ
                     </h5>
                     <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
                 </div>
-                <div class="modal-body bg-light p-4">
-                    <div class="alert alert-info border-0 shadow-sm rounded-4 mb-4">
-                        <i class="fa-solid fa-user-shield me-2"></i>Đang đánh giá: <strong id="evalStarName" class="text-danger fs-5">...</strong>
-                        <br><small class="text-muted"><i class="fa-regular fa-clock me-1"></i>Kỳ đánh giá: <span id="evalWeekName"></span></small>
+                
+                <div class="modal-body bg-light p-3 p-md-4" style="padding-bottom: 90px !important;">
+                    
+                    <!-- KHỐI THÔNG TIN ĐỐI TƯỢNG (TÊN NẰM DÒNG RIÊNG) -->
+                    <div class="p-3 bg-primary bg-opacity-10 rounded-4 mb-4 border border-primary border-opacity-25 shadow-sm">
+                        <div class="d-flex align-items-center mb-1">
+                            <i class="fa-solid fa-user-shield text-primary me-2"></i>
+                            <span class="text-secondary fw-bold" style="font-size: 13px; text-transform: uppercase; letter-spacing: 0.5px;">Đối tượng đánh giá:</span>
+                        </div>
+                        <div id="evalStarName" class="fw-bold text-danger mb-2 ps-4" style="font-size: 22px; line-height: 1.2;">
+                            ...
+                        </div>
+                        <div class="ps-4">
+                            <span class="badge bg-white text-dark border shadow-sm px-3 py-2" style="font-size: 12px;">
+                                <i class="fa-regular fa-clock me-1 text-primary"></i> Kỳ đánh giá: <span id="evalWeekName" class="fw-bold text-primary"></span>
+                            </span>
+                        </div>
                     </div>
 
                     <form id="evalForm">
                         <input type="hidden" id="evalStarId">
                         <input type="hidden" id="evalWeek">
 
-                        <div class="card border-0 shadow-sm rounded-4 mb-3">
-                            <div class="card-body">
-                                <h6 class="fw-bold text-primary mb-3">1. Giờ giấc & Chuyên cần</h6>
-                                <div class="form-check mb-2">
-                                    <input class="form-check-input" type="radio" name="score_gio_giac" id="gg5" value="5" checked>
-                                    <label class="form-check-label fw-bold text-success" for="gg5"> Có mặt trực sớm, đúng giờ quy định (5đ)</label>
-                                </div>
-                                <div class="form-check mb-2">
-                                    <input class="form-check-input" type="radio" name="score_gio_giac" id="gg3" value="3">
-                                    <label class="form-check-label text-warning fw-bold" for="gg3"> Có đi muộn nhưng có xin phép/báo cáo (3đ)</label>
-                                </div>
-                                <div class="form-check">
-                                    <input class="form-check-input" type="radio" name="score_gio_giac" id="gg1" value="1">
-                                    <label class="form-check-label text-danger fw-bold" for="gg1"> Bỏ trực hoặc đi muộn không lý do (1đ)</label>
-                                </div>
-                            </div>
+                        <!-- Tiêu chí 1 -->
+                        <div class="eval-category-card">
+                            <div class="eval-category-header"><i class="fa-solid fa-clock-rotate-left"></i> 1. Giờ giấc & Chuyên cần</div>
+                            <label class="eval-option-box">
+                                <input class="form-check-input" type="radio" name="score_gio_giac" value="5" checked>
+                                <span>Có mặt trực sớm, đúng giờ quy định (5đ)</span>
+                            </label>
+                            <label class="eval-option-box">
+                                <input class="form-check-input" type="radio" name="score_gio_giac" value="3">
+                                <span>Có đi muộn nhưng có xin phép/báo cáo (3đ)</span>
+                            </label>
+                            <label class="eval-option-box mb-3">
+                                <input class="form-check-input" type="radio" name="score_gio_giac" value="1">
+                                <span>Bỏ trực hoặc đi muộn không lý do (1đ)</span>
+                            </label>
                         </div>
 
-                        <div class="card border-0 shadow-sm rounded-4 mb-3">
-                            <div class="card-body">
-                                <h6 class="fw-bold text-primary mb-3">2. Tác phong & Đồng phục</h6>
-                                <div class="form-check mb-2">
-                                    <input class="form-check-input" type="radio" name="score_tac_phong" id="tp5" value="5" checked>
-                                    <label class="form-check-label fw-bold text-success" for="tp5"> Trang phục nghiêm túc, đeo thẻ tên/huy hiệu đầy đủ (5đ)</label>
-                                </div>
-                                <div class="form-check mb-2">
-                                    <input class="form-check-input" type="radio" name="score_tac_phong" id="tp3" value="3">
-                                    <label class="form-check-label text-warning fw-bold" for="tp3"> Đồng phục đúng quy định nhưng quên đeo thẻ tên/ huy hiệu (3đ)</label>
-                                </div>
-                                <div class="form-check">
-                                    <input class="form-check-input" type="radio" name="score_tac_phong" id="tp1" value="1">
-                                    <label class="form-check-label text-danger fw-bold" for="tp1"> Vi phạm nội quy đồng phục của nhà trường (1đ)</label>
-                                </div>
-                            </div>
+                        <!-- Tiêu chí 2 -->
+                        <div class="eval-category-card">
+                            <div class="eval-category-header"><i class="fa-solid fa-shirt"></i> 2. Tác phong & Đồng phục</div>
+                            <label class="eval-option-box">
+                                <input class="form-check-input" type="radio" name="score_tac_phong" value="5" checked>
+                                <span>Trang phục nghiêm túc, đeo thẻ tên/huy hiệu đầy đủ (5đ)</span>
+                            </label>
+                            <label class="eval-option-box">
+                                <input class="form-check-input" type="radio" name="score_tac_phong" value="3">
+                                <span>Đồng phục đúng quy định nhưng quên đeo thẻ (3đ)</span>
+                            </label>
+                            <label class="eval-option-box mb-3">
+                                <input class="form-check-input" type="radio" name="score_tac_phong" value="1">
+                                <span>Vi phạm nội quy đồng phục của nhà trường (1đ)</span>
+                            </label>
                         </div>
 
-                        <div class="card border-0 shadow-sm rounded-4 mb-3">
-                            <div class="card-body">
-                                <h6 class="fw-bold text-primary mb-3">3. Thái độ & Giao tiếp</h6>
-                                <div class="form-check mb-2">
-                                    <input class="form-check-input" type="radio" name="score_thai_do" id="td5" value="5" checked>
-                                    <label class="form-check-label fw-bold text-success" for="td5"> Lễ phép với giáo viên, nhắc nhở học sinh hòa nhã (5đ)</label>
-                                </div>
-                                <div class="form-check mb-2">
-                                    <input class="form-check-input" type="radio" name="score_thai_do" id="td3" value="3">
-                                    <label class="form-check-label text-warning fw-bold" for="td3"> Hoàn thành nhiệm vụ nhưng giao tiếp còn cứng nhắc (3đ)</label>
-                                </div>
-                                <div class="form-check">
-                                    <input class="form-check-input" type="radio" name="score_thai_do" id="td1" value="1">
-                                    <label class="form-check-label text-danger fw-bold" for="td1"> Có thái độ hách dịch, lớn tiếng, thiếu tôn trọng (1đ)</label>
-                                </div>
-                            </div>
+                        <!-- Tiêu chí 3 -->
+                        <div class="eval-category-card">
+                            <div class="eval-category-header"><i class="fa-solid fa-comments"></i> 3. Thái độ & Giao tiếp</div>
+                            <label class="eval-option-box">
+                                <input class="form-check-input" type="radio" name="score_thai_do" value="5" checked>
+                                <span>Lễ phép với giáo viên, nhắc nhở học sinh hòa nhã (5đ)</span>
+                            </label>
+                            <label class="eval-option-box">
+                                <input class="form-check-input" type="radio" name="score_thai_do" value="3">
+                                <span>Hoàn thành nhiệm vụ nhưng giao tiếp còn cứng nhắc (3đ)</span>
+                            </label>
+                            <label class="eval-option-box mb-3">
+                                <input class="form-check-input" type="radio" name="score_thai_do" value="1">
+                                <span>Có thái độ hách dịch, lớn tiếng, thiếu tôn trọng (1đ)</span>
+                            </label>
                         </div>
 
-                        <div class="card border-0 shadow-sm rounded-4 mb-3">
-                            <div class="card-body">
-                                <h6 class="fw-bold text-primary mb-3">4. Tính Công tâm & Chính xác</h6>
-                                <div class="form-check mb-2">
-                                    <input class="form-check-input" type="radio" name="score_cong_tam" id="ct5" value="5" checked>
-                                    <label class="form-check-label fw-bold text-success" for="ct5"> Ghi nhận lỗi chính xác, trung thực, khách quan (5đ)</label>
-                                </div>
-                                <div class="form-check mb-2">
-                                    <input class="form-check-input" type="radio" name="score_cong_tam" id="ct3" value="3">
-                                    <label class="form-check-label text-warning fw-bold" for="ct3"> Chấm tương đối, đôi chỗ còn bỏ sót lỗi nhỏ (3đ)</label>
-                                </div>
-                                <div class="form-check">
-                                    <input class="form-check-input" type="radio" name="score_cong_tam" id="ct1" value="1">
-                                    <label class="form-check-label text-danger fw-bold" for="ct1"> Bao che cho học sinh vi phạm hoặc trù dập lớp trực (1đ)</label>
-                                </div>
-                            </div>
+                        <!-- Tiêu chí 4 -->
+                        <div class="eval-category-card">
+                            <div class="eval-category-header"><i class="fa-solid fa-scale-balanced"></i> 4. Tính Công tâm & Chính xác</div>
+                            <label class="eval-option-box">
+                                <input class="form-check-input" type="radio" name="score_cong_tam" value="5" checked>
+                                <span>Ghi nhận lỗi chính xác, trung thực, khách quan (5đ)</span>
+                            </label>
+                            <label class="eval-option-box">
+                                <input class="form-check-input" type="radio" name="score_cong_tam" value="3">
+                                <span>Chấm tương đối, đôi chỗ còn bỏ sót lỗi nhỏ (3đ)</span>
+                            </label>
+                            <label class="eval-option-box mb-3">
+                                <input class="form-check-input" type="radio" name="score_cong_tam" value="1">
+                                <span>Bao che cho học sinh vi phạm hoặc trù dập lớp trực (1đ)</span>
+                            </label>
                         </div>
 
-                        <div class="mb-3">
-                            <label class="fw-bold text-secondary mb-2">Góp ý ẩn danh (Không bắt buộc):</label>
-                            <textarea class="form-control rounded-3" id="evalComment" rows="3" placeholder="Nhập nhận xét chi tiết để Bí thư Đoàn trường xem xét..."></textarea>
+                        <!-- Ghi chú ẩn danh -->
+                        <div class="mb-2">
+                            <label class="fw-bold text-secondary mb-2 ms-1"><i class="fa-solid fa-pen-to-square me-1"></i> Góp ý ẩn danh (Không bắt buộc):</label>
+                            <textarea class="form-control" id="evalComment" rows="3" placeholder="Nhập nhận xét chi tiết để Bí thư Đoàn trường xem xét..." style="border-radius: 12px; resize: none; background: #ffffff; border: 1.5px solid var(--border); padding: 14px; font-size: 14px;"></textarea>
                         </div>
                     </form>
                 </div>
-                <div class="modal-footer bg-white border-0 p-3">
-                    <button type="button" class="btn btn-light rounded-pill px-4 fw-bold" data-bs-dismiss="modal">Hủy</button>
-                    <button type="button" class="btn btn-primary rounded-pill px-4 fw-bold shadow-sm" id="btnSubmitEval" onclick="submitEvaluation()">
-                        <i class="fa-solid fa-paper-plane me-2"></i> Gửi Đánh Giá
+                
+                <!-- Footer dính dưới đáy trên Mobile -->
+                <div class="modal-footer bg-white border-top p-3" style="position: sticky; bottom: 0; z-index: 10; box-shadow: 0 -4px 15px rgba(0,0,0,0.05);">
+                    <button type="button" class="btn btn-light fw-bold px-4" data-bs-dismiss="modal" style="border-radius: 12px; height: 45px;">Hủy</button>
+                    <button type="button" class="btn btn-primary fw-bold px-4 shadow-sm flex-grow-1" id="btnSubmitEval" onclick="submitEvaluation()" style="border-radius: 12px; height: 45px; background: var(--primary);">
+                        <i class="fa-solid fa-paper-plane me-1"></i> Gửi Đánh Giá
                     </button>
                 </div>
             </div>
@@ -1212,13 +1537,11 @@
                 <div class="modal-body p-4">
                     <input type="hidden" id="editBranchId" value="{{ selected_branch.id }}">
                     
-                    <!-- [BỔ SUNG]: KHỐI NHẬP SĨ SỐ LỚP -->
                     <h6 class="fw-bold text-secondary mb-3"><i class="fa-solid fa-users me-2"></i>Thông tin chung</h6>
                     <div class="mb-4">
                         <label class="form-label fw-bold small text-muted">Sĩ số lớp (Hiện tại: {{ selected_branch.si_so }} HS):</label>
                         <input type="number" class="form-control fw-bold text-primary" id="editSiSo" value="{{ selected_branch.si_so or '' }}" placeholder="VD: 45">
                     </div>
-                    <!-- ============================ -->
 
                     <h6 class="fw-bold text-secondary mb-3 border-top pt-3"><i class="fa-solid fa-chalkboard-user me-2"></i>Thông tin Giáo viên chủ nhiệm</h6>
                     <div class="mb-3">
@@ -1250,15 +1573,12 @@
         </div>
     </div>
 
-    <!-- ========================================================================= -->
-    <!-- [NÂNG CẤP]: KHUNG XEM ẢNH MINH CHỨNG CÓ CHỨC NĂNG VUỐT / CHUYỂN TRANG -->
-    <!-- ========================================================================= -->
+    <!-- KHUNG XEM ẢNH MINH CHỨNG -->
     <div id="customEvidenceOverlay" style="display: none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0,0,0,0.95); z-index: 999999; align-items: center; justify-content: center; flex-direction: column;">
         <div style="position: absolute; top: 15px; right: 25px; color: white; font-size: 40px; cursor: pointer; font-weight: bold; z-index: 9999999;" onclick="closeEvidenceSafe()">&times;</div>
         
         <h4 id="customEvidenceTitle" style="color: white; margin-bottom: 15px; font-weight: bold; font-family: 'Inter', sans-serif;"><i class="fa-regular fa-images me-2"></i>Ảnh Minh Chứng</h4>
         
-        <!-- Khung Slider Bootstrap -->
         <div id="evidenceCarousel" class="carousel slide" data-bs-ride="false" style="width: 100%; max-width: 700px; padding: 0 15px;">
             <div class="carousel-indicators" id="carouselIndicators" style="bottom: -40px;"></div>
             <div class="carousel-inner" id="customEvidenceImgContainer" style="border-radius: 12px; overflow: hidden; box-shadow: 0 10px 30px rgba(0,0,0,0.5);">
@@ -1273,7 +1593,6 @@
             </button>
         </div>
         
-        <!-- Bộ đếm số lượng ảnh -->
         <div id="mobileImageCounter" class="text-white fw-bold mt-4" style="font-size: 16px; letter-spacing: 1px;"></div>
     </div>
 
@@ -1281,7 +1600,6 @@
         function viewEvidenceSafe(event, imagePaths, weekName) {
             if(event) { event.preventDefault(); event.stopPropagation(); }
             
-            // Tách chuỗi nhiều ảnh và lọc các chuỗi rỗng
             let paths = imagePaths.split('|').filter(p => p.trim() !== '');
             if(paths.length === 0) {
                 alert("Không tìm thấy dữ liệu ảnh minh chứng!");
@@ -1291,12 +1609,9 @@
             let imgHtml = '';
             let indHtml = '';
             
-            // Tạo các trang ảnh trong Slider
             paths.forEach((p, index) => {
                 let activeClass = index === 0 ? 'active' : '';
-                
                 indHtml += `<button type="button" data-bs-target="#evidenceCarousel" data-bs-slide-to="${index}" class="${activeClass}" aria-current="${index === 0 ? 'true' : 'false'}"></button>`;
-                
                 imgHtml += `
                 <div class="carousel-item ${activeClass}">
                     <img src="${p.trim()}" class="d-block w-100" style="max-height: 75vh; object-fit: contain; background: transparent;">
@@ -1311,14 +1626,9 @@
             if(counterEl) counterEl.innerHTML = `Ảnh 1 / ${paths.length}`;
             
             let myCarousel = document.getElementById('evidenceCarousel');
-            // Cần khởi tạo lại Carousel để tránh kẹt trạng thái cũ
             let bsCarousel = bootstrap.Carousel.getInstance(myCarousel);
-            if (bsCarousel) {
-                bsCarousel.dispose();
-            }
-            new bootstrap.Carousel(myCarousel, {
-                interval: false // Tắt tự động chạy
-            });
+            if (bsCarousel) { bsCarousel.dispose(); }
+            new bootstrap.Carousel(myCarousel, { interval: false });
 
             myCarousel.addEventListener('slide.bs.carousel', function (e) {
                 if(counterEl) counterEl.innerHTML = `Ảnh ${e.to + 1} / ${paths.length}`;
@@ -1344,9 +1654,7 @@
         }
     </script>
 
-	<!-- =========================================
-         THANH ĐIỀU HƯỚNG DƯỚI ĐÁY (BOTTOM NAV) - NATIVE APP
-         ========================================= -->
+	<!-- THANH ĐIỀU HƯỚNG DƯỚI ĐÁY (BOTTOM NAV) - NATIVE APP -->
     <div class="bottom-nav d-md-none" id="mobileBottomNav" role="tablist">
         <!-- 1. Trang chủ -->
         <button class="bottom-nav-item active" data-bs-toggle="tab" data-bs-target="#scores-pane" type="button" role="tab">
@@ -1360,10 +1668,10 @@
             <span>Xếp hạng</span>
         </button>
         
-        <!-- 3. Tra cứu -->
-        <button class="bottom-nav-item" data-bs-toggle="tab" data-bs-target="#violation-bank-pane" type="button" role="tab">
-            <i class="fa-solid fa-scale-balanced"></i>
-            <span>Tra cứu</span>
+        <!-- 3. Tra cứu Sổ Đen -->
+        <button class="bottom-nav-item" data-bs-toggle="tab" data-bs-target="#blacklist-pane" type="button" role="tab">
+            <i class="fa-solid fa-book-skull"></i>
+            <span>Sổ Đen</span>
         </button>
         
         <!-- 4. Đăng xuất -->
@@ -1372,6 +1680,7 @@
             <span>Đăng xuất</span>
         </button>
     </div>
+
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script>
         // Mở Popup đánh giá
@@ -1446,122 +1755,226 @@
                 btn.innerHTML = '<i class="fa-solid fa-paper-plane me-2"></i> Gửi Đánh Giá';
             }
         }
-
-		// XỬ LÝ MỞ MODAL PHÚC KHẢO VÀ KHÓA CÁC LỖI CỦA NGÀY HÔM TRƯỚC
-        function openAppealModal(btn) {
+		// =======================================================
+        // NẠP DỮ LIỆU BAREM LỖI TỪ SERVER XUỐNG ĐỂ JAVASCRIPT TRA CỨU ĐIỂM
+        // =======================================================
+        const violationBankData = [
+            {% for cat in violation_bank %}
+            { name: "{{ cat.name | safe }}", points: parseFloat('{{ cat.penalty_points }}') || 0 },
+            {% endfor %}
+        ];
+		function openAppealModal(btn) {
             let scoreId = btn.getAttribute('data-score-id');
             let weekName = btn.getAttribute('data-week');
             let noteText = btn.getAttribute('data-note');
 
             document.getElementById('appealScoreId').value = scoreId;
             document.getElementById('appealWeekName').value = weekName;
+            document.getElementById('appealWeekNameDisplay').innerText = weekName; 
             
             let container = document.getElementById('appealViolationsContainer');
-            let label = document.getElementById('appealViolationsLabel');
-            container.innerHTML = ''; // Reset rổ chứa lỗi
+            let section = document.getElementById('appealViolationsSection');
+            container.innerHTML = ''; 
             
-            // XÁC ĐỊNH THỨ HỆ THỐNG HIỆN TẠI (0: Chủ nhật, 1: Thứ 2, ..., 6: Thứ 7)
             const dayOrder = { 'CN': 0, 'T2': 1, 'T3': 2, 'T4': 3, 'T5': 4, 'T6': 5, 'T7': 6 };
             const jsDay = new Date().getDay(); 
             const dayMap = ['CN', 'T2', 'T3', 'T4', 'T5', 'T6', 'T7'];
             const currentDayCode = dayMap[jsDay];
             const currentRank = dayOrder[currentDayCode] !== undefined ? dayOrder[currentDayCode] : 99;
 
-            // Cắt chuỗi ghi chú bằng dấu chấm phẩy và sinh ra các Checkbox
             if (noteText && noteText.trim() !== '' && noteText.trim() !== 'Không có vi phạm' && noteText.trim() !== 'Không có') {
-                label.style.display = 'block';
+                section.style.display = 'block';
                 let violations = noteText.split(';');
                 violations.forEach((v, index) => {
                     let vClean = v.trim();
                     if(vClean) {
-                        // KIỂM TRA XEM LỖI NÀY THUỘC THỨ MẤY (VD: [T2], [T3]...)
                         let matchDay = vClean.match(/\[?(T[2-7]|CN)\]?/i);
                         let isPastDay = false;
                         
                         if (matchDay && matchDay[1]) {
                             let violationDayCode = matchDay[1].toUpperCase();
                             let violationRank = dayOrder[violationDayCode];
-                            
-                            // Nếu thứ của lỗi đứng TRƯỚC thứ hiện tại -> Lỗi của ngày hôm trước
                             if (violationRank !== undefined && violationRank < currentRank) {
                                 isPastDay = true;
                             }
                         }
-
-                        // Tạo thẻ Label bao bọc: Nếu là ngày trước thì làm mờ và chặn click
-                        let labelNode = document.createElement('label');
-                        labelNode.className = 'd-flex align-items-start p-3 border rounded-3 shadow-sm w-100 ' + (isPastDay ? 'bg-light opacity-75' : 'bg-white');
-                        labelNode.style.cursor = isPastDay ? 'not-allowed' : 'pointer';
-                        labelNode.style.borderColor = isPastDay ? '#cbd5e1' : '#fca5a5';
                         
-                        // Chỉ thêm hiệu ứng hover cho lỗi trong ngày hợp lệ
-                        if (!isPastDay) {
-                            labelNode.onmouseenter = function() { this.style.backgroundColor = '#fef2f2'; this.style.borderColor = '#ef4444'; };
-                            labelNode.onmouseleave = function() { this.style.backgroundColor = '#ffffff'; this.style.borderColor = '#fca5a5'; };
+                        // [TÍNH NĂNG MỚI]: Tự động tra cứu và gắn điểm phạt cho GVCN thấy
+                        let qtyMatch = vClean.match(/x\s*(\d+)/i);
+                        let qty = qtyMatch ? parseInt(qtyMatch[1]) : 1;
+                        let foundPoints = 0.0;
+                        for (let i = 0; i < violationBankData.length; i++) {
+                            if (vClean.toLowerCase().includes(violationBankData[i].name.toLowerCase())) {
+                                foundPoints = violationBankData[i].points;
+                                break;
+                            }
                         }
+                        let itemPoints = foundPoints * qty;
 
+                        let labelNode = document.createElement('label');
+                        labelNode.className = 'd-flex align-items-center p-3 border rounded-3 w-100 mb-1 transition-all';
+                        labelNode.style.cursor = isPastDay ? 'not-allowed' : 'pointer';
+                        labelNode.style.background = isPastDay ? '#f8fafc' : '#ffffff';
+                        labelNode.style.borderColor = '#e2e8f0';
+                        
                         let disabledAttr = isPastDay ? 'disabled' : '';
-                        let badgePast = isPastDay ? '<span class="badge bg-secondary ms-2" style="font-size: 11px;">⚠️ Quá hạn (Lỗi ngày trước)</span>' : '';
+                        let badgePast = isPastDay ? '<span class="badge bg-secondary ms-2 opacity-75" style="font-size: 10px;">Hết hạn</span>' : '';
+                        
+                        // Hiển thị điểm phạt bằng nhãn đỏ
+                        let pointBadge = itemPoints > 0 ? `<span class="badge bg-danger ms-2">-${itemPoints}đ</span>` : '';
 
                         labelNode.innerHTML = `
-                            <input class="form-check-input m-0 me-3 shadow-none flex-shrink-0" type="checkbox" value="${vClean}" id="viol_app_${index}" ${disabledAttr} style="width: 18px; height: 18px; margin-top: 2px !important; cursor: ${isPastDay ? 'not-allowed' : 'pointer'}; border-color: ${isPastDay ? '#94a3b8' : '#ef4444'};">
-                            <div class="fw-bold ${isPastDay ? 'text-secondary text-decoration-line-through' : 'text-danger'} w-100" style="font-size: 14.5px; line-height: 1.5;">
-                                ${vClean} ${badgePast}
+                            <div class="form-check m-0 pe-3 d-flex align-items-center">
+                                <input class="form-check-input shadow-none appeal-err-cb" type="checkbox" value="${vClean}" data-points="${itemPoints}" ${disabledAttr} style="width: 20px; height: 20px; cursor: inherit;">
+                            </div>
+                            <div class="flex-grow-1" style="line-height: 1.4;">
+                                <div class="fw-bold ${isPastDay ? 'text-muted opacity-50 text-decoration-line-through' : 'text-main'}" style="font-size: 14px;">
+                                    ${vClean} ${pointBadge} ${badgePast}
+                                </div>
                             </div>
                         `;
+
+                        if (!isPastDay) {
+                            let checkbox = labelNode.querySelector('input');
+                            checkbox.addEventListener('change', function() {
+                                if(this.checked) {
+                                    labelNode.style.borderColor = 'var(--primary)';
+                                    labelNode.style.background = '#eff6ff'; 
+                                } else {
+                                    labelNode.style.borderColor = '#e2e8f0';
+                                    labelNode.style.background = '#ffffff';
+                                }
+                            });
+                        }
                         container.appendChild(labelNode);
                     }
                 });
             } else {
-                label.style.display = 'none';
+                section.style.display = 'none';
             }
             
-            document.getElementById('appealReasonText').value = ''; // Reset ô nhập chữ
+            let textarea = document.getElementById('appealReasonText');
+            textarea.value = ''; 
+            textarea.style.borderColor = 'var(--border)';
+            textarea.addEventListener('focus', function() { this.style.borderColor = 'var(--primary)'; this.style.boxShadow = '0 0 0 3px rgba(37,99,235,0.1)';});
+            textarea.addEventListener('blur', function() { this.style.borderColor = 'var(--border)'; this.style.boxShadow = 'none';});
+
             var myModal = new bootstrap.Modal(document.getElementById('appealModal'));
             myModal.show();
         }
 
-        // THUẬT TOÁN ĐÓNG GÓI DỮ LIỆU KHI BẤM NÚT "GỬI YÊU CẦU"
+        // [TÍNH NĂNG MỚI]: Đóng gói "(Phạt Xđ)" vào chuỗi dữ liệu gửi lên Server
         document.getElementById('appealForm').addEventListener('submit', function(e) {
             let selected = [];
-            let container = document.getElementById('appealViolationsContainer');
-            let checkboxes = container.querySelectorAll('input[type="checkbox"]:checked');
+            let checkboxes = document.querySelectorAll('.appeal-err-cb:checked');
             
-            // Gom tất cả các lỗi được tích chọn
-            checkboxes.forEach(cb => {
-                selected.push(cb.value);
+            checkboxes.forEach(cb => { 
+                let pts = cb.getAttribute('data-points');
+                let val = cb.value;
+                if(pts && parseFloat(pts) > 0) {
+                    selected.push(`${val} (Phạt ${pts}đ)`);
+                } else {
+                    selected.push(val);
+                }
             });
             
             let textReason = document.getElementById('appealReasonText').value;
             let finalReason = "";
             
-            // Định dạng lại thành 1 đoạn text chuẩn để gửi cho Backend
             if(selected.length > 0) {
                 finalReason = "Phúc khảo các lỗi: [" + selected.join("] & [") + "] | Lý do: " + textReason;
             } else {
                 finalReason = textReason;
             }
-            
-            // Đổ dữ liệu đã gộp vào thẻ Input Ẩn để Flask nhận diện
             document.getElementById('finalReason').value = finalReason;
         });
-        
+
         function openResolveModal(btn) {
             document.getElementById('resolveScoreId').value = btn.getAttribute('data-score-id');
             document.getElementById('resolveBranch').value = "Lớp " + btn.getAttribute('data-branch-name') + " (" + btn.getAttribute('data-week') + ")";
             
-            let reasonText = btn.getAttribute('data-reason');
+            let reasonText = btn.getAttribute('data-reason') || '';
             let reasonDiv = document.getElementById('resolveReason');
-            if (reasonDiv) {
-                // Xử lý xuống dòng cho các lỗi gửi trong nhiều ngày khác nhau
-                reasonDiv.innerHTML = '"' + reasonText.replace(/ \| /g, '<br>') + '"';
+            let checkboxesDiv = document.getElementById('resolveErrorCheckboxes');
+            
+            if(checkboxesDiv) checkboxesDiv.innerHTML = ''; 
+            
+            let refundInput = document.querySelector('input[name="refund_points"]');
+            let totalRefund = 0.0;
+            
+            let cleanReasonText = reasonText;
+            let timeMatch = reasonText.match(/^\[\d{2}\/\d{2}\/\d{4} \d{2}:\d{2}\]\s*/);
+            if (timeMatch) {
+                cleanReasonText = reasonText.replace(timeMatch[0], '');
             }
             
+            let regex = /Phúc khảo các lỗi:\s*(.*?)\s*\|\s*Lý do:(.*)/is;
+            let match = cleanReasonText.match(regex);
+            
+            if (match) {
+                let errorsStr = match[1]; 
+                let reasonStr = match[2];
+                if(reasonDiv) reasonDiv.innerHTML = '"' + reasonStr.trim().replace(/ \| /g, '<br>') + '"';
+                
+                let appealedErrors = errorsStr.split(" & "); 
+                appealedErrors.forEach((errStr) => {
+                    let cleanErr = errStr.trim();
+                    if (cleanErr.startsWith('[')) cleanErr = cleanErr.substring(1);
+                    if (cleanErr.endsWith(']')) cleanErr = cleanErr.substring(0, cleanErr.length - 1);
+                    
+                    // [TÍNH NĂNG MỚI]: Gọt bỏ chữ "(Phạt Xđ)" để tính toán nội bộ an toàn
+                    cleanErr = cleanErr.replace(/\(Phạt .*?đ\)/i, '').trim();
+                    if (!cleanErr) return;
+                    
+                    let qtyMatch = cleanErr.match(/x\s*(\d+)/i);
+                    let qty = qtyMatch ? parseInt(qtyMatch[1]) : 1;
+                    
+                    let foundPoints = 0.0;
+                    for (let i = 0; i < violationBankData.length; i++) {
+                        if (cleanErr.toLowerCase().includes(violationBankData[i].name.toLowerCase())) {
+                            foundPoints = violationBankData[i].points;
+                            break;
+                        }
+                    }
+                    let itemPoints = foundPoints * qty;
+                    totalRefund += itemPoints; 
+                    
+                    if(checkboxesDiv) {
+                        let html = `
+                        <label class="d-flex align-items-center p-2 border rounded-3 bg-white transition-all error-cb-label" style="cursor:pointer; border-color: #2563eb;">
+                            <input type="checkbox" class="form-check-input me-3 resolve-err-cb" name="approved_errors[]" value="${cleanErr}" data-points="${itemPoints}" checked style="width:20px; height:20px;">
+                            <span class="fw-bold text-main flex-grow-1" style="font-size:14px;">${cleanErr}</span>
+                            <span class="badge bg-danger rounded-pill shadow-sm">+${itemPoints}đ</span>
+                        </label>`;
+                        checkboxesDiv.insertAdjacentHTML('beforeend', html);
+                    }
+                });
+                
+                if(checkboxesDiv) {
+                    let cbs = checkboxesDiv.querySelectorAll('.resolve-err-cb');
+                    cbs.forEach(cb => {
+                        cb.addEventListener('change', function() {
+                            let currentTotal = 0.0;
+                            checkboxesDiv.querySelectorAll('.resolve-err-cb:checked').forEach(checkedCb => {
+                                currentTotal += parseFloat(checkedCb.getAttribute('data-points'));
+                            });
+                            if (refundInput) refundInput.value = currentTotal > 0 ? currentTotal.toFixed(1) : "0.0";
+                            this.parentElement.style.borderColor = this.checked ? '#2563eb' : '#e2e8f0';
+                            this.parentElement.style.opacity = this.checked ? '1' : '0.5';
+                        });
+                    });
+                }
+
+            } else {
+                if(reasonDiv) reasonDiv.innerHTML = '"' + reasonText.replace(/ \| /g, '<br>') + '"';
+                if(checkboxesDiv) checkboxesDiv.innerHTML = '<div class="text-muted small fst-italic">Khiếu nại tay, không có danh sách lỗi cụ thể đính kèm.</div>';
+            }
+
+            if (refundInput) refundInput.value = totalRefund > 0 ? totalRefund.toFixed(1) : "0.0";
             var myModal = new bootstrap.Modal(document.getElementById('resolveModal'));
             myModal.show();
         }
 
-        // ĐIỀU KHIỂN CẬP NHẬT MỐC THỜI GIAN BXH (TUẦN / THÁNG / HỌC KỲ)
         async function updateBxhTimeOptions() {
             const periodType = document.getElementById('bxhPeriodType').value;
             const timeSelect = document.getElementById('bxhWeekSelector');
@@ -1578,7 +1991,6 @@
                 }
                 loadSchoolLeaderboard();
             } else if (periodType === 'Thang') {
-                // Gọi API lấy danh sách tháng đồng bộ từ Điểm thi đua tháng
                 timeSelect.innerHTML = '<option value="">Đang tải tháng...</option>';
                 try {
                     const response = await fetch('/api/gvcn/get_months');
@@ -1618,35 +2030,28 @@
         }
 
 		document.addEventListener("DOMContentLoaded", function() {
-            // Kiểm tra xem trên thanh địa chỉ có gắn thẻ #hash nào không để bật đúng Tab đó
             let hash = window.location.hash;
             if (hash) {
                 let targetTabButton = document.querySelector(`[data-bs-target="${hash}"]`);
                 if (targetTabButton) {
-                    // Kích hoạt Tab tương ứng bằng Bootstrap Tab API
                     let tabInstance = new bootstrap.Tab(targetTabButton);
                     tabInstance.show();
                     
-                    // [BẢN VÁ QUAN TRỌNG]: TỰ ĐỘNG KÍCH HOẠT HÀM TẢI DỮ LIỆU NẾU LÀ TAB XẾP HẠNG
                     if (hash === '#leaderboard-pane') {
                         if (typeof loadSchoolLeaderboard === 'function') {
                             loadSchoolLeaderboard();
                         }
                     }
                     
-                    // Đồng thời cập nhật lại class active cho thanh menu dưới
                     document.querySelectorAll('.bottom-nav .bottom-nav-item').forEach(el => el.classList.remove('active'));
-                    let activeNav = document.querySelector(`.bottom-nav-item[href*="${hash}"]`);
+                    let activeNav = document.querySelector(`.bottom-nav-item[data-bs-target="${hash}"]`);
                     if(activeNav) activeNav.classList.add('active');
                 }
             }
         });
 
-		// HÀM TẢI BẢNG XẾP HẠNG TOÀN TRƯỜNG CHO APP GVCN
         async function loadSchoolLeaderboard() {
             const selector = document.getElementById('bxhWeekSelector');
-            
-            // [VÁ LỖI 404]: Nếu ô chọn tuần đang trống (chưa nạp kịp options), tự động gọi hàm nạp danh sách và dừng lại
             if (selector && selector.options.length === 0) {
                 if (typeof updateBxhTimeOptions === 'function') {
                     updateBxhTimeOptions(); 
@@ -1657,7 +2062,6 @@
             const body1 = document.getElementById('leaderboardGroup1Body');
             const body2 = document.getElementById('leaderboardGroup2Body');
             
-            // [VÁ LỖI 404]: Bảo vệ biến weekName, nếu rỗng thì ép về "Tuần 1" để link API không bị cụt
             let weekName = "Tuần 1";
             if (selector && selector.value.trim() !== '') {
                 weekName = selector.value.trim();
@@ -1673,7 +2077,7 @@
                 </td>
                 <td class="text-center"><div class="skeleton skeleton-badge mx-auto"></div></td>
                 <td class="text-end pe-4"><div class="skeleton skeleton-text ms-auto" style="width: 50px; height: 20px;"></div></td>
-            </tr>`.repeat(4); // Lặp lại 4 dòng ảo
+            </tr>`.repeat(4); 
             body1.innerHTML = loadingHtml;
             body2.innerHTML = loadingHtml;
 
@@ -1723,6 +2127,7 @@
                 body2.innerHTML = errorHtml;
             }
         }
+        
 		function renderLeaderboardTable(tbodyId, listData) {
             let tbody = document.getElementById(tbodyId);
             if (!tbody) return;
@@ -1757,7 +2162,6 @@
                     <td data-label="Tổng điểm" class="text-md-end pe-md-4 fw-bold text-danger fs-6">${item.total_score} đ</td>
                 `;
 
-                // Gắn sự kiện click bằng thuần JavaScript (An toàn tuyệt đối với mọi loại ký tự đặc biệt trong ghi chú)
                 const btn = tr.querySelector('.class-detail-btn');
                 btn.addEventListener('click', function() {
                     showLeaderboardDetail(
@@ -1834,7 +2238,7 @@
                     if (!cleanErr) return;
                     
                     let matchDay = cleanErr.match(/\[?(T[2-7]|CN)\]?/i);
-                    let color = '#475569'; // Mặc định xám đen
+                    let color = '#475569';
                     
                     if (matchDay && matchDay[1]) {
                         let dayKey = matchDay[1].toUpperCase();
@@ -1897,11 +2301,8 @@
     </script>
 
 	<script>
-        // ======================================================
         // THUẬT TOÁN ĐỒNG BỘ TAB & TẢI DỮ LIỆU ĐỘNG (AJAX)
-        // ======================================================
         document.addEventListener("DOMContentLoaded", function() {
-            // 1. Kiểm tra thanh địa chỉ có gắn thẻ #hash nào không để bật đúng Tab đó khi vừa vào trang
             let hash = window.location.hash;
             if (hash) {
                 let targetTabButton = document.querySelector(`button[data-bs-target="${hash}"]`);
@@ -1911,65 +2312,126 @@
                 }
             }
 
-            // 2. Lắng nghe sự kiện BẤM CHUYỂN TAB (Bấm ở thanh trên hay thanh dưới đều bắt được)
             var triggerTabList = [].slice.call(document.querySelectorAll('button[data-bs-toggle="tab"]'));
-            
             triggerTabList.forEach(function (tabEl) {
                 tabEl.addEventListener('shown.bs.tab', function (event) {
-                    // Lấy ID của Tab vừa được mở ra
                     var targetId = event.target.getAttribute('data-bs-target');
-                    
-                    // Đổi URL trên trình duyệt nhưng KHÔNG tải lại trang (Giúp người dùng F5 không bị mất Tab)
                     history.pushState(null, null, targetId);
                     
-                    // Tắt sáng tất cả các nút
                     document.querySelectorAll('.modern-tab, .bottom-nav-item').forEach(btn => {
                         btn.classList.remove('active');
                     });
 
-                    // Bật sáng đúng các nút trỏ về Tab đang mở (Đồng bộ cả nút trên Desktop và Mobile)
                     document.querySelectorAll(`button[data-bs-target="${targetId}"]`).forEach(btn => {
                         btn.classList.add('active');
                     });
                     
-                    // [TÍNH NĂNG LÕI]: Tự động tải lại Bảng xếp hạng mới nhất từ máy chủ khi bấm vào Tab Xếp Hạng
                     if (targetId === '#leaderboard-pane') {
                         if (typeof loadSchoolLeaderboard === 'function') {
-                            // Gọi hàm API AJAX đã có sẵn trong file của thầy/cô
                             loadSchoolLeaderboard(); 
+                        }
+                    }
+                    
+                    // [BẢN VÁ LỖI TỐI THƯỢNG]: TỰ ĐỘNG GỌI HÀM LỌC SỔ ĐEN KHI CHUYỂN TAB
+                    if (targetId === '#blacklist-pane') {
+                        if (document.getElementById('bl_time_value').options.length === 0) {
+                            updateBlTimeValues();
+                        }
+                        if (typeof loadClassBlacklist === 'function') {
+                            loadClassBlacklist();
                         }
                     }
                 });
             });
         });
     </script>
+
+    <!-- [BẢN NÂNG CẤP LÕI]: CÁC HÀM XỬ LÝ LỌC SỔ ĐEN LỚP VÀ XUẤT EXCEL -->
+    <script>
+        function updateBlTimeValues() {
+            let mode = document.getElementById('bl_time_mode').value;
+            let select = document.getElementById('bl_time_value');
+            select.innerHTML = '';
+            if (mode === 'week') {
+                for (let i = 1; i <= 40; i++) {
+                    select.innerHTML += `<option value="Tuần ${i}">Tuần ${i}</option>`;
+                }
+            } else {
+                let months = ["Tháng 8", "Tháng 9", "Tháng 10", "Tháng 11", "Tháng 12", "Tháng 1", "Tháng 2", "Tháng 3", "Tháng 4", "Tháng 5"];
+                months.forEach(m => { select.innerHTML += `<option value="${m}">${m}</option>`; });
+            }
+        }
+
+        async function loadClassBlacklist() {
+            const branchId = '{{ selected_branch.id if selected_branch else "" }}';
+            if (!branchId) return;
+
+            const timeMode = document.getElementById('bl_time_mode').value;
+            const timeValue = document.getElementById('bl_time_value').value;
+            const tbody = document.getElementById('blTableBody');
+            
+            tbody.innerHTML = '<tr><td colspan="6" class="text-center py-4 text-primary fw-bold"><i class="fa-solid fa-spinner fa-spin me-2"></i> Đang tải dữ liệu...</td></tr>';
+            
+            try {
+                const res = await fetch(`/api/class_blacklist?branch_id=${branchId}&time_mode=${timeMode}&time_value=${timeValue}`);
+                const result = await res.json();
+                
+                if (result.success) {
+                    if (result.data.length === 0) {
+                        tbody.innerHTML = '<tr><td colspan="6" class="text-center py-5 text-success fw-bold"><i class="fa-regular fa-face-smile fs-3 d-block mb-2"></i> Tuyệt vời! Không có học sinh nào bị ghi nhận vi phạm trong khoảng thời gian này.</td></tr>';
+                        return;
+                    }
+                    
+                    let html = '';
+                    result.data.forEach((item, index) => {
+                        html += `
+                            <tr>
+                                <td data-label="STT" class="fw-bold text-muted text-md-center">${index + 1}</td>
+                                <td data-label="Thời gian"><span class="badge-soft badge-secondary shadow-sm">${item.week}</span></td>
+                                <td data-label="Học sinh" class="fw-bold text-primary" style="text-align: left !important;">${item.student_name}</td>
+                                <td data-label="Lỗi vi phạm" class="text-danger fw-bold" style="text-align: left !important;">${item.violation_name}</td>
+                                <td data-label="Số lần" class="text-md-center"><span class="badge bg-danger rounded-pill px-3 py-1 shadow-sm">${item.quantity}</span></td>
+                                <td data-label="Điểm trừ" class="text-md-center"><span class="text-danger fw-bold">-${item.penalty} đ</span></td>
+                            </tr>
+                        `;
+                    });
+                    tbody.innerHTML = html;
+                } else {
+                    tbody.innerHTML = `<tr><td colspan="6" class="text-center py-4 text-danger">Lỗi: ${result.error}</td></tr>`;
+                }
+            } catch (e) {
+                tbody.innerHTML = '<tr><td colspan="6" class="text-center py-4 text-danger">Lỗi kết nối máy chủ!</td></tr>';
+            }
+        }
+
+        function exportClassBlacklist() {
+            const branchId = '{{ selected_branch.id if selected_branch else "" }}';
+            if (!branchId) { alert("Không nhận diện được Lớp!"); return; }
+
+            const timeMode = document.getElementById('bl_time_mode').value;
+            const timeValue = document.getElementById('bl_time_value').value;
+            window.location.href = `/export_class_blacklist?branch_id=${branchId}&time_mode=${timeMode}&time_value=${timeValue}`;
+        }
+    </script>
+
 	<!-- THƯ VIỆN HIỆU ỨNG PHÁO HOA (GAMIFICATION) -->
     <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
     <script>
         document.addEventListener("DOMContentLoaded", function() {
-            // Kiểm tra xem lớp có đang đạt Top 1 trong tuần mới nhất không
             {% if weekly_scores and weekly_scores[0].rank == 1 %}
-                
-                // Trì hoãn 0.5s để giao diện load xong rồi mới bắn pháo hoa
                 setTimeout(function() {
-                    var duration = 4 * 1000; // Bắn liên tục trong 4 giây
+                    var duration = 4 * 1000; 
                     var animationEnd = Date.now() + duration;
                     var defaults = { startVelocity: 30, spread: 360, ticks: 60, zIndex: 9999 };
 
-                    function randomInRange(min, max) {
-                      return Math.random() * (max - min) + min;
-                    }
+                    function randomInRange(min, max) { return Math.random() * (max - min) + min; }
 
                     var interval = setInterval(function() {
                       var timeLeft = animationEnd - Date.now();
-
-                      if (timeLeft <= 0) {
-                        return clearInterval(interval);
-                      }
+                      if (timeLeft <= 0) return clearInterval(interval);
 
                       var particleCount = 50 * (timeLeft / duration);
                       
-                      // Bắn từ 2 mép màn hình
                       confetti(Object.assign({}, defaults, { particleCount,
                         origin: { x: randomInRange(0.1, 0.3), y: Math.random() - 0.2 }
                       }));
@@ -1977,16 +2439,12 @@
                         origin: { x: randomInRange(0.7, 0.9), y: Math.random() - 0.2 }
                       }));
                     }, 250);
-                    
                 }, 500);
             {% endif %}
         });
     </script>
-	<!-- =========================================
-         THUẬT TOÁN ĐĂNG KÝ THÔNG BÁO ĐẨY (WEB PUSH) CHO GVCN
-         ========================================= -->
+	<!-- THUẬT TOÁN ĐĂNG KÝ THÔNG BÁO ĐẨY (WEB PUSH) CHO GVCN -->
 	<script>
-        // Hàm chuyển đổi VAPID Key sang dạng nhị phân
         function urlBase64ToUint8Array(base64String) {
             const padding = '='.repeat((4 - base64String.length % 4) % 4);
             const base64 = (base64String + padding).replace(/\-/g, '+').replace(/_/g, '/');
@@ -1996,7 +2454,6 @@
             return outputArray;
         }
 
-        // 1. TỰ ĐỘNG KIỂM TRA TRẠNG THÁI KHI VỪA MỞ TRANG
         document.addEventListener("DOMContentLoaded", async function() {
             if ('serviceWorker' in navigator && 'PushManager' in window) {
                 const registration = await navigator.serviceWorker.ready;
@@ -2005,19 +2462,16 @@
                 const btn = document.getElementById('btnPushNotifyGVCN');
                 if (btn) {
                     if (subscription) {
-                        // Nếu đã đăng ký trước đó -> Đổi nút thành trạng thái "Đang bật"
-                        btn.innerHTML = '<i class="fa-solid fa-bell-slash me-1"></i> Tắt Thông Báo';
-                        btn.style.backgroundColor = '#64748b'; // Màu xám/tím dịu
+                        btn.innerHTML = '<i class="fa-solid fa-bell-slash"></i><span>Tắt Thông Báo</span>';
+                        btn.style.background = 'linear-gradient(135deg, #64748b, #475569)'; 
                     } else {
-                        // Chưa đăng ký -> Trạng thái "Chưa bật"
-                        btn.innerHTML = '<i class="fa-solid fa-bell fa-shake me-1"></i> Bật Thông Báo';
-                        btn.style.backgroundColor = '#0ea5e9'; // Màu xanh dương
+                        btn.innerHTML = '<i class="fa-solid fa-bell"></i><span>Thông Báo</span>';
+                        btn.style.background = 'linear-gradient(135deg, #0ea5e9, #0284c7)'; 
                     }
                 }
             }
         });
 
-        // 2. HÀM XỬ LÝ BẬT / TẮT KHI BẤM VÀO NÚT (TOGGLE)
         async function enablePushNotifications() {
             if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
                 alert("❌ Trình duyệt của bạn không hỗ trợ Thông báo đẩy!"); return;
@@ -2027,29 +2481,25 @@
                 const registration = await navigator.serviceWorker.register('/sw.js');
                 await navigator.serviceWorker.ready;
                 
-                // Kiểm tra xem thiết bị đã đăng ký nhận thông báo chưa
                 let subscription = await registration.pushManager.getSubscription();
                 const btn = document.getElementById('btnPushNotifyGVCN');
 
                 if (subscription) {
-                    // --- NẾU ĐÃ BẬT -> TIẾN HÀNH TẮT (UNSUBSCRIBE) ---
                     const success = await subscription.unsubscribe();
                     if (success) {
                         if (btn) {
-                            btn.innerHTML = '<i class="fa-solid fa-bell fa-shake me-1"></i> Bật Thông Báo Vi Phạm';
-                            btn.style.backgroundColor = '#0ea5e9';
+                            btn.innerHTML = '<i class="fa-solid fa-bell"></i><span>Thông Báo</span>';
+                            btn.style.background = 'linear-gradient(135deg, #0ea5e9, #0284c7)';
                         }
                         alert("🔕 Đã tắt thông báo thành công. Bạn sẽ không nhận được tin nhắn vi phạm nữa.");
                     }
                 } else {
-                    // --- NẾU ĐANG TẮT -> TIẾN HÀNH BẬT (SUBSCRIBE) ---
                     const permission = await Notification.requestPermission();
                     if (permission !== 'granted') {
                         alert("❌ Bạn đã từ chối nhận thông báo. Vui lòng cấp quyền trong cài đặt trình duyệt."); 
                         return;
                     }
 
-                    // PUBLIC KEY VAPID (Khóa thầy/cô vừa lấy từ VapidKeys.com)
                     const publicVapidKey = "BGL6lcaXMAK5VhqdjWBO9IZ0ECiKYu47oE_RQE7rCpRinW2Je0IyrnNQi35glDiMPAMzIh0ynLUHxu4aZFCIWSs"; 
                     
                     subscription = await registration.pushManager.subscribe({
@@ -2057,7 +2507,6 @@
                         applicationServerKey: urlBase64ToUint8Array(publicVapidKey)
                     });
                     
-                    // Gửi mã đăng ký về Backend Flask
                     await fetch('/api/save_subscription', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
@@ -2065,8 +2514,8 @@
                     });
 
                     if (btn) {
-                        btn.innerHTML = '<i class="fa-solid fa-bell-slash me-1"></i> Tắt Thông Báo';
-                        btn.style.backgroundColor = '#64748b';
+                        btn.innerHTML = '<i class="fa-solid fa-bell-slash"></i><span>Tắt Thông Báo</span>';
+                        btn.style.background = 'linear-gradient(135deg, #64748b, #475569)';
                     }
                     alert("✅ Đã bật thông báo thành công! Điện thoại của thầy/cô sẽ nhận tin nhắn thời gian thực.");
                 }
@@ -2076,6 +2525,42 @@
                 alert("❌ Lỗi kết nối máy chủ Push.");
             }
         }
+    </script>
+	<!-- THUẬT TOÁN TỰ ĐỘNG CHUẨN HÓA SỐ ĐIỆN THOẠI BỊ LỖI .0 TỪ EXCEL -->
+    <script>
+        document.addEventListener("DOMContentLoaded", function() {
+            function formatPhoneNumber(phoneStr) {
+                if (!phoneStr || phoneStr.trim() === '' || phoneStr.includes('---')) return phoneStr;
+                let p = phoneStr.trim();
+                
+                // 1. Cắt bỏ đuôi .0 do Excel tự sinh
+                if (p.endsWith('.0')) {
+                    p = p.slice(0, -2);
+                }
+                // 2. Bù số 0 ở đầu nếu hệ thống nhận nhầm thành kiểu Toán học
+                if (p.length > 0 && !p.startsWith('0') && !isNaN(p)) {
+                    p = '0' + p;
+                }
+                return p;
+            }
+
+            // Sửa hiển thị trên các nút bấm Gọi điện của App
+            document.querySelectorAll('a[href^="tel:"]').forEach(a => {
+                let originalPhone = a.getAttribute('href').replace('tel:', '');
+                if (originalPhone && originalPhone !== '---') {
+                    let cleanPhone = formatPhoneNumber(originalPhone);
+                    a.setAttribute('href', 'tel:' + cleanPhone);
+                    a.innerHTML = '<i class="fa-solid fa-phone"></i> ' + cleanPhone;
+                }
+            });
+
+            // Tự động điền số ĐÃ LÀM SẠCH vào Modal Cập nhật (Để làm sạch CSDL khi GVCN ấn Lưu)
+            let editGvcnPhone = document.getElementById('editGvcnPhone');
+            if (editGvcnPhone) editGvcnPhone.value = formatPhoneNumber(editGvcnPhone.value);
+            
+            let editMonitorPhone = document.getElementById('editMonitorPhone');
+            if (editMonitorPhone) editMonitorPhone.value = formatPhoneNumber(editMonitorPhone.value);
+        });
     </script>
 </body>
 </html>

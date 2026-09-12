@@ -440,15 +440,41 @@
 
 		<!-- 5. THANH CÔNG CỤ DƯỚI ĐÁY -->
         <div class="fixed-bottom-bar">
-            <div class="d-flex gap-2">
-				<label class="btn-custom btn-purple m-0" style="cursor: pointer;" title="Tải lên hàng loạt nhiều Sổ Đầu Bài cùng lúc">
+            <div class="d-flex gap-3 align-items-center">
+                <!-- BỘ LỌC CHỌN NGÀY QUÉT SỔ ĐẦU BÀI -->
+                <div class="d-flex align-items-center gap-2 bg-light border rounded-pill px-3 py-1 shadow-sm">
+                    <i class="fa-solid fa-filter text-primary"></i>
+                    <select id="target_day" class="form-select form-select-sm border-0 bg-transparent fw-bold text-primary shadow-none" style="width: 140px; cursor: pointer;">
+                        <option value="Tất cả">Quét Cả Tuần</option>
+                        <option value="Thứ 2">Chỉ quét Thứ 2</option>
+                        <option value="Thứ 3">Chỉ quét Thứ 3</option>
+                        <option value="Thứ 4">Chỉ quét Thứ 4</option>
+                        <option value="Thứ 5">Chỉ quét Thứ 5</option>
+                        <option value="Thứ 6">Chỉ quét Thứ 6</option>
+                        <option value="Thứ 7">Chỉ quét Thứ 7</option>
+                    </select>
+                </div>
+
+                <!-- [BẢN NÂNG CẤP]: CÔNG TẮC QUÉT CA CHIỀU (TỰ ĐỘNG CỘNG DỒN) -->
+                <div class="form-check form-switch m-0 d-flex align-items-center bg-danger bg-opacity-10 border border-danger border-opacity-25 rounded-pill px-3 py-1 shadow-sm">
+                    <input class="form-check-input m-0 me-2" type="checkbox" id="isAfternoonToggle" style="cursor: pointer; width: 2.5em;">
+                    <label class="form-check-label fw-bold text-danger m-0" for="isAfternoonToggle" style="font-size: 13px; cursor: pointer; padding-top: 1px;">
+                        Quét Sổ Chiều (Thứ 5 & Cộng dồn)
+                    </label>
+                </div>
+
+                <!-- NÚT TẢI LÊN HÀNG LOẠT -->
+                <label class="btn-custom btn-purple m-0" style="cursor: pointer;" title="Tải lên hàng loạt nhiều Sổ Đầu Bài cùng lúc">
                     <i class="fa-solid fa-upload"></i> Nhập SĐB Hàng Loạt
                     <input type="file" class="d-none" accept=".xlsx, .xls" multiple onchange="uploadMultipleSDB(this)">
                 </label>
+                
+                <!-- NÚT AI -->
                 <button type="button" class="btn-custom btn-pink" onclick="openAiReportModal('{{ current_week }}')">
                     <i class="fa-solid fa-wand-magic-sparkles"></i> AI Phân tích tuần
                 </button>
             </div>
+            
             <div class="d-flex gap-2">
                 <button class="btn-custom btn-outline-blue fw-bold bg-white" onclick="previewBlacklist()">
                     <i class="fa-regular fa-eye"></i> Danh sách sổ đen
@@ -458,7 +484,6 @@
                 </button>
             </div>
         </div>
-    </div>
 
     <!-- MODAL AI -->
     <div class="modal fade" id="aiReportModal" tabindex="-1" aria-hidden="true">
@@ -893,6 +918,8 @@
             } catch (err) { console.error(err); alert("Lỗi kết nối đến máy chủ!"); }
         }
 
+		window.classEvalData = {}; // Bộ nhớ tạm để lưu và cộng dồn số tiết học (Tốt, Khá, TB, Yếu)
+
         async function uploadSDB(inputElement, branchId) {
             let file = inputElement.files[0];
             if (!file) return;
@@ -902,19 +929,25 @@
             
             let formData = new FormData();
             formData.append("excel_file", file);
-            let tr = inputElement.closest('tr');
             
+            let tr = inputElement.closest('tr');
             let branchNameNode = tr.querySelector('.branch-name');
             let cleanBranchName = branchNameNode.textContent.replace(/[^a-zA-Z0-9]/g, '').toUpperCase();
             formData.append("expected_branch_name", cleanBranchName);
             
+            let targetDayVal = document.getElementById('target_day') ? document.getElementById('target_day').value : "Tất cả";
+            formData.append('target_day', targetDayVal);
+            
+            // Lấy trạng thái công tắc Quét ca chiều
+            let isAfternoon = document.getElementById('isAfternoonToggle') ? document.getElementById('isAfternoonToggle').checked : false;
+            formData.append('is_afternoon', isAfternoon);
+            
             try {
                 let cleanUrl = window.location.origin + '/api/parse_sodaubai';
                 let response = await fetch(cleanUrl, { method: 'POST', body: formData });
-                
-                let result;
                 let contentType = response.headers.get("content-type");
                 
+                let result;
                 if (contentType && contentType.includes("application/json")) {
                     result = await response.json();
                 } else {
@@ -925,29 +958,81 @@
                     if(statusLabel) statusLabel.innerHTML = '<i class="fa-solid fa-check text-success"></i> Điền xong!';
                     let branchGroup = tr.getAttribute('data-group');
 
-                    let displayBranchName = branchNameNode.innerText.trim();
-                    await openDetailModal(branchId, displayBranchName, branchGroup);
+                    await openDetailModal(branchId, branchNameNode.innerText.trim(), branchGroup);
 
                     setTimeout(() => {
                         const tbody = document.getElementById('subjectsBody');
                         if (tbody) {
-                            tbody.innerHTML = '';
+                            // [THUẬT TOÁN ĐIỀU KIỆN]: Nếu quét Sáng -> Xóa trắng bảng để ghi đè. Nếu quét Chiều -> Giữ nguyên để cộng dồn.
+                            if (!isAfternoon) tbody.innerHTML = ''; 
+                            
                             if (result.raw_list && result.raw_list.length > 0) {
-                                result.raw_list.forEach(item => { addSubjectRow(item.subj, item.c10, item.c9, item.c8); });
-                            } else {
-                                addSubjectRow("Chưa có điểm", 0, 0, 0);
+                                result.raw_list.forEach(item => { 
+                                    let exists = false;
+                                    document.querySelectorAll('#subjectsBody tr').forEach(row => {
+                                        let subjInput = row.querySelector('.subject-name') || row.querySelector('.sub-name-input');
+                                        if (subjInput && subjInput.value.trim() === item.subj) {
+                                            let c10Input = row.querySelector('.val-c10') || row.querySelector('.sub-c10');
+                                            let c9Input = row.querySelector('.val-c9') || row.querySelector('.sub-c9');
+                                            let c8Input = row.querySelector('.val-c8') || row.querySelector('.sub-c8');
+                                            
+                                            if (c10Input) c10Input.value = parseInt(c10Input.value || 0) + item.c10;
+                                            if (c9Input) c9Input.value = parseInt(c9Input.value || 0) + item.c9;
+                                            if (c8Input && !c8Input.hasAttribute('readonly')) c8Input.value = parseInt(c8Input.value || 0) + item.c8;
+                                            exists = true;
+                                        }
+                                    });
+                                    if (!exists) addSubjectRow(item.subj, item.c10, item.c9, item.c8);
+                                });
                             }
                         }
 
+                        // [THUẬT TOÁN ĐỒNG BỘ ĐÁNH GIÁ TIẾT HỌC]
+                        if (!window.classEvalData[branchId] || !isAfternoon) {
+                            window.classEvalData[branchId] = { tot: 0, kha: 0, tb: 0, yeu: 0 };
+                        }
+                        
+                        if (isAfternoon) {
+                            window.classEvalData[branchId].tot += (result.tiet_tot || 0);
+                            window.classEvalData[branchId].kha += (result.tiet_kha || 0);
+                            window.classEvalData[branchId].tb += (result.tiet_tb || 0);
+                            window.classEvalData[branchId].yeu += (result.tiet_yeu || 0);
+                        } else {
+                            window.classEvalData[branchId].tot = (result.tiet_tot || 0);
+                            window.classEvalData[branchId].kha = (result.tiet_kha || 0);
+                            window.classEvalData[branchId].tb = (result.tiet_tb || 0);
+                            window.classEvalData[branchId].yeu = (result.tiet_yeu || 0);
+                        }
+                        
+                        let t_tot = window.classEvalData[branchId].tot;
+                        let t_kha = window.classEvalData[branchId].kha;
+                        let t_tb = window.classEvalData[branchId].tb;
+                        let t_yeu = window.classEvalData[branchId].yeu;
+                        let tong = t_tot + t_kha + t_tb + t_yeu;
+                        
                         const ratingSelect = document.getElementById('detailRating');
-                        if (ratingSelect) ratingSelect.value = result.xep_loai;
+                        if (ratingSelect) {
+                            let newRating = "Bình thường";
+                            if (tong > 0) {
+                                if (t_tot === tong) newRating = "Tuần Tốt";
+                                else if (t_yeu === 0 && t_tb === 0 && t_kha > 0) newRating = "Tuần Khá";
+                            }
+                            ratingSelect.value = newRating;
+                            updateRowStyle(ratingSelect);
+                        }
 
+                        // [THUẬT TOÁN CỘNG DỒN LỖI VI PHẠM SỔ ĐEN]
                         const noteInput = document.getElementById('detailNote');
                         if (noteInput && result.note) {
-                            let currentVal = noteInput.value.trim();
-                            noteInput.value = currentVal ? `${currentVal} ; ${result.note}` : result.note;
+                            if (isAfternoon) {
+                                let currentVal = noteInput.value.trim();
+                                noteInput.value = currentVal ? `${currentVal} ; ${result.note}` : result.note;
+                            } else {
+                                noteInput.value = result.note;
+                            }
                             noteInput.dispatchEvent(new Event('input', { bubbles: true }));
                         }
+                        
                         updateLiveTotal();
                     }, 500);
                 } else {
@@ -956,8 +1041,7 @@
                 }
             } catch (e) {
                 if(statusLabel) statusLabel.innerHTML = '<i class="fa-solid fa-xmark text-danger"></i> Lỗi kết nối';
-                console.error("Chi tiết lỗi fetch:", e);
-                alert("Không thể kết nối tới API /api/parse_sodaubai.");
+                alert("Không thể kết nối tới máy chủ.");
             }
             inputElement.value = ""; 
         }
@@ -1422,7 +1506,7 @@
             });
         });
 
-        async function uploadMultipleSDB(inputElement) {
+		async function uploadMultipleSDB(inputElement) {
             let files = inputElement.files;
             if (!files || files.length === 0) return;
 
@@ -1457,11 +1541,16 @@
             const maxMon = parseInt(document.getElementById('configMaxMon').value) || 4;
             const maxTot = parseInt(document.getElementById('configMaxTot').value) || 14;
 
+            let targetDayVal = document.getElementById('target_day') ? document.getElementById('target_day').value : "Tất cả";
+            let isAfternoon = document.getElementById('isAfternoonToggle') ? document.getElementById('isAfternoonToggle').checked : false;
+
             for (let i = 0; i < files.length; i++) {
                 document.getElementById('batchProgressText').innerText = `Đang phân tích ${i+1} / ${files.length} Sổ đầu bài...`;
                 let file = files[i];
                 let formData = new FormData();
                 formData.append("excel_file", file);
+                formData.append('target_day', targetDayVal);
+                formData.append('is_afternoon', isAfternoon);
                 
                 try {
                     let response = await fetch('/api/parse_sodaubai', { method: 'POST', body: formData });
@@ -1476,11 +1565,42 @@
                             let bGroup = branchInfo.group;
 
                             if (result.raw_list && result.raw_list.length > 0) {
+                                let oldScores = [];
+                                // Nếu là Ca Sáng -> Xóa trắng cữ liệu cũ. Nếu Chiều -> Gọi API lấy dữ liệu cũ để gộp
+                                if (isAfternoon) {
+                                    try {
+                                        const resOld = await fetch(`/api/raw_scores/${encodeURIComponent(weekName)}/${bId}`);
+                                        const jsonOld = await resOld.json();
+                                        if(jsonOld.data) oldScores = jsonOld.data;
+                                    } catch(e) {}
+                                }
+                                
+                                let mergedList = [];
+                                result.raw_list.forEach(newItem => {
+                                    let existItem = oldScores.find(o => o.subj === newItem.subj);
+                                    if (existItem) {
+                                        mergedList.push({
+                                            subj: newItem.subj,
+                                            c10: existItem.c10 + newItem.c10,
+                                            c9: existItem.c9 + newItem.c9,
+                                            c8: existItem.c8 + newItem.c8
+                                        });
+                                    } else {
+                                        mergedList.push(newItem);
+                                    }
+                                });
+                                oldScores.forEach(oldItem => {
+                                    let existItem = result.raw_list.find(n => n.subj === oldItem.subj);
+                                    if (!existItem) mergedList.push(oldItem);
+                                });
+
                                 await fetch(`/api/raw_scores/${encodeURIComponent(weekName)}/${bId}`, {
                                     method: 'POST',
                                     headers: {'Content-Type': 'application/json'},
-                                    body: JSON.stringify({raw_list: result.raw_list})
+                                    body: JSON.stringify({raw_list: mergedList})
                                 });
+                                
+                                result.raw_list = mergedList; 
                             }
 
                             let t10 = 0, t9 = 0, t8 = 0;
@@ -1491,8 +1611,6 @@
                                     let k10 = Math.min(c10, maxMon); let k9 = Math.min(c9, maxMon - k10); let k8 = Math.min(c8, maxMon - k10 - k9);
                                     t10 += k10; t9 += k9; t8 += k8;
                                 });
-                            } else {
-                                t10 = result.c10 || 0; t9 = result.c9 || 0; t8 = bGroup.includes("1") ? 0 : (result.c8 || 0);
                             }
 
                             let sumVal = t10 + t9 + t8;
@@ -1511,20 +1629,25 @@
 
                             if (c8Input) c8Input.value = t8;
                             if (c9Input) c9Input.value = t9;
-                            
                             if (c10Input) {
                                 c10Input.value = t10;
                                 c10Input.dispatchEvent(new Event('input', { bubbles: true })); 
                             }
                             
+                            // Ghi đè Rating trực tiếp vì việc tính điểm xếp loại tự động ở Bulk rất phức tạp.
                             if (ratingSelect) {
-                                ratingSelect.value = result.xep_loai;
+                                if (result.xep_loai === "Tuần Tốt") ratingSelect.value = result.xep_loai;
+                                else if (result.xep_loai === "Tuần Khá" && ratingSelect.value !== "Tuần Tốt") ratingSelect.value = result.xep_loai;
                                 updateRowStyle(ratingSelect);
                             }
 
                             if (noteInput && result.note) {
-                                let currentVal = noteInput.value.trim();
-                                noteInput.value = currentVal ? `${currentVal} ; ${result.note}` : result.note;
+                                if (isAfternoon) {
+                                    let currentVal = noteInput.value.trim();
+                                    noteInput.value = currentVal ? `${currentVal} ; ${result.note}` : result.note;
+                                } else {
+                                    noteInput.value = result.note;
+                                }
                                 noteInput.dispatchEvent(new Event('input', { bubbles: true }));
                             }
 

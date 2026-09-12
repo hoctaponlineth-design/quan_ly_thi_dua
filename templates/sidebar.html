@@ -88,11 +88,13 @@
         <li><a href="/class_monthly_analysis" class="nav-link text-warning"><i class="fa-solid fa-microscope me-2"></i> Phân tích Tháng </a></li>
         <li><a href="/class_semester_analysis" class="nav-link text-warning"><i class="fa-solid fa-graduation-cap me-2"></i> Tổng kết Cuối kỳ </a></li>
         
-        <!-- TRUNG TÂM ĐIỀU HÀNH BGH (Điểm nhấn cho Ban Giám Hiệu) -->
+		<!-- TRUNG TÂM ĐIỀU HÀNH BGH (Điểm nhấn cho Ban Giám Hiệu) -->
         {% if session.get('role') in ['Quản trị viên', 'Admin', 'Ban Giám hiệu', 'Bí thư Đoàn trường', 'Bí thư'] %}
         <li><a href="/bgh/dashboard" class="nav-link text-warning fw-bold"><i class="fa-solid fa-chart-line me-2"></i> Điều Hành BGH</a></li>
+        
+        <!-- [NÂNG CẤP]: Nút xem Thống kê điểm danh GVCN -->
+        <li><a href="/gvcn_attendance_stats" class="nav-link text-info"><i class="fa-solid fa-fingerprint me-2"></i> K.Tra Điểm Danh GVCN</a></li>
         {% endif %}
-
         <!-- BÁO CÁO TOÀN TRƯỜNG -->
         <li><a href="/school_monthly_analysis" class="nav-link text-warning"><i class="fa-solid fa-building-columns me-2"></i> Đánh giá Toàn Trường</a></li>
         
@@ -107,18 +109,28 @@
         <li><a href="/users" class="nav-link"><i class="fa-solid fa-users-gear me-2"></i> Quản lý Người dùng</a></li>
         
         <li>
-            <a href="/blacklist" class="nav-link {% if request.path == '/blacklist' %}active{% endif %}">
-                <i class="fa-solid fa-book-skull text-danger me-2"></i> Tra cứu Sổ Đen
-            </a>
+            <a href="/blacklist" class="nav-link {% if request.path == '/blacklist' %}active{% endif %}"><i class="fa-solid fa-book-skull text-danger me-2"></i> Tra cứu Sổ Đen </a>
+			<a href="/appeals" class="nav-link"><i class="fa-solid fa-scale-balanced text-warning border border-warning rounded p-1 me-1 bg-warning bg-opacity-10"></i> Hồ sơ Phúc khảo</a>
         </li>
         
         <li><a href="/action_logs" class="nav-link text-info"><i class="fa-solid fa-clock-rotate-left me-2"></i> Nhật ký Hoạt động</a></li>
         <li><a href="/backup" class="nav-link text-warning"><i class="fa-solid fa-database me-2"></i> Sao lưu Dữ liệu</a></li>
         {% endif %}
     </ul>
+
+    <!-- ============================================== -->
+    <!-- [NÂNG CẤP MỚI] NÚT ĐỔI KHẨU HIỆU DÀNH CHO BGH  -->
+    <!-- ============================================== -->
+    {% if session.get('role') in ['Quản trị viên', 'Admin', 'Bí thư Đoàn trường'] %}
+    <div class="px-3 mt-1 mb-2">
+        <button type="button" class="btn w-100 fw-bold shadow-sm" style="background-color: #f59e0b; color: white; border-radius: 10px;" data-bs-toggle="modal" data-bs-target="#sloganModal">
+            <i class="fa-solid fa-bullhorn fa-shake me-1"></i> Đổi Khẩu hiệu GVCN
+        </button>
+    </div>
+    {% endif %}
     
 	<!-- FOOTER THÔNG TIN TÀI KHOẢN -->
-    <div class="p-3 mt-4 border-top border-secondary">
+    <div class="p-3 mt-auto border-top border-secondary">
         <div class="text-center mb-2">
             <span class="badge bg-primary w-100 py-2"><i class="fa-solid fa-user me-1"></i> {{ session.get('username', 'Tài khoản') }}</span>
             <div class="small mt-1 text-warning fw-bold text-truncate">
@@ -133,7 +145,36 @@
         <a href="/change-password" class="btn btn-outline-light w-100 mb-2" style="font-size: 13px;"><i class="fa-solid fa-key me-2"></i> Đổi mật khẩu</a>
         <a href="/logout" class="btn btn-danger w-100 fw-bold" style="font-size: 13px;"><i class="fa-solid fa-right-from-bracket me-2"></i> Đăng xuất</a>
     </div>
+</div> <!-- KẾT THÚC SIDEBAR -->
+
+<!-- ============================================== -->
+<!-- MODAL ĐỔI KHẨU HIỆU (ĐẶT NGOÀI SIDEBAR)        -->
+<!-- ============================================== -->
+{% if session.get('role') in ['Quản trị viên', 'Admin', 'Bí thư Đoàn trường'] %}
+<div class="modal fade" id="sloganModal" tabindex="-1" aria-hidden="true" style="z-index: 1060;">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg" style="border-radius: 16px;">
+            <div class="modal-header text-white" style="background: #0ea5e9;">
+                <h5 class="modal-title fw-bold" style="color: white;"><i class="fa-solid fa-pen-to-square me-2"></i>Đài Phát Thanh App GVCN</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <form action="/update_slogan" method="POST">
+                <div class="modal-body p-4 text-start">
+                    <label class="fw-bold text-secondary mb-2" style="color: #64748b;">Nhập nội dung Chủ đề tháng / Lời nhắc nhở:</label>
+                    <!-- Hiển thị nội dung cũ nếu có từ biến global_slogan_text -->
+                    <textarea class="form-control fw-bold text-primary" name="slogan_text" rows="4" required placeholder="VD: THÁNG 10 - CHĂM NGOAN HỌC GIỎI..." style="border-radius: 10px; resize: none; background: #f8fafc;">{{ global_slogan_text if global_slogan_text else '' }}</textarea>
+                    <small class="text-muted mt-2 d-block"><i class="fa-solid fa-circle-info me-1"></i> Nội dung này sẽ lập tức chạy trên màn hình điện thoại của toàn bộ Giáo viên chủ nhiệm.</small>
+                </div>
+                <div class="modal-footer bg-light border-0" style="border-bottom-left-radius: 16px; border-bottom-right-radius: 16px;">
+                    <button type="button" class="btn btn-light fw-bold" data-bs-dismiss="modal">Hủy bỏ</button>
+                    <button type="submit" class="btn fw-bold text-white shadow-sm" style="background: #0ea5e9;"><i class="fa-solid fa-satellite-dish me-1"></i> Lưu và Phát sóng</button>
+                </div>
+            </form>
+        </div>
+    </div>
 </div>
+{% endif %}
+<!-- ============================================== -->
 
 <!-- SCRIPT TỰ ĐỘNG BÔI ĐẬM MENU HIỆN TẠI -->
 <script>

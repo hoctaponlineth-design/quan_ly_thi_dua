@@ -70,41 +70,60 @@
             margin-bottom: 30px;
         }
 
-        .form-control {
-            padding: 16px 20px;
-            font-size: 15px;
-            font-weight: 500;
-            border-radius: 14px;
-            background-color: #f4f6f9;
-            border: 2px solid transparent;
+        /* =========================================
+           NÂNG CẤP GIAO DIỆN Ô NHẬP LIỆU LOGIN
+           ========================================= */
+
+        /* 1. Khung bao bọc toàn bộ (Tạo nền và viền chung) */
+        .input-group {
+            background-color: #f1f5f9; 
+            border: 1.5px solid transparent; 
+            border-radius: 14px; 
             transition: all 0.3s ease;
+            overflow: hidden; 
         }
 
-        .form-control:focus {
-            background-color: #ffffff;
-            border-color: #0054a6;
-            box-shadow: 0 0 0 4px rgba(0, 84, 166, 0.1);
+        /* 2. Hiệu ứng bừng sáng khi người dùng click vào bất kỳ đâu trong ô */
+        .input-group:focus-within {
+            background-color: #ffffff; 
+            border-color: #0054a6; 
+            box-shadow: 0 0 0 4px rgba(0, 84, 166, 0.15); 
         }
 
+        /* 3. Tinh chỉnh khối Icon bên trái */
         .input-group-text {
-            background-color: #f4f6f9;
-            border: 2px solid transparent;
-            border-right: none;
-            border-radius: 14px 0 0 14px;
-            color: #a0aab5;
-        }
-        
-        .form-control.with-icon {
-            border-left: none;
-            border-radius: 0 14px 14px 0;
-            padding-left: 0;
+            background-color: transparent !important; 
+            border: none !important; 
+            color: #64748b; 
+            padding-left: 20px;
+            padding-right: 10px;
+            transition: color 0.3s ease;
         }
 
-        .form-control:focus + .input-group-text,
+        /* 4. Đổi màu Icon sang Xanh khi ô bị Click */
         .input-group:focus-within .input-group-text {
-            background-color: #ffffff;
-            border-color: #0054a6;
             color: #0054a6;
+        }
+
+        /* 5. Tinh chỉnh khối Nhập chữ */
+        .form-control, .form-control.with-icon {
+            background-color: transparent !important; 
+            border: none !important; 
+            box-shadow: none !important; 
+            color: #0f172a;
+            font-weight: 600;
+            padding: 16px 20px 16px 5px;
+            height: auto;
+        }
+
+        /* 6. Xử lý triệt để nền vàng/xanh khi trình duyệt tự động điền (Autofill) mật khẩu */
+        .form-control:-webkit-autofill {
+            -webkit-box-shadow: 0 0 0 1000px #f1f5f9 inset !important;
+            -webkit-text-fill-color: #0f172a !important;
+            border-radius: 0 14px 14px 0;
+        }
+        .input-group:focus-within .form-control:-webkit-autofill {
+            -webkit-box-shadow: 0 0 0 1000px #ffffff inset !important;
         }
 
         .btn-login {
@@ -161,8 +180,13 @@
     <div class="login-wrapper">
         <div class="login-card">
             <div class="text-center">
-                <div class="login-icon-container">
-                    <i class="fa-solid fa-shield-halved"></i>
+				<!-- LOGO HUY HIỆU ĐOÀN TỪ THƯ MỤC STATIC -->
+                <div class="text-center mb-4">
+                    <img src="{{ url_for('static', filename='logo_doan.png') }}" 
+                         alt="Huy hiệu Đoàn" 
+                         style="width: 95px; height: 95px; object-fit: contain; filter: drop-shadow(0 10px 20px rgba(0, 84, 166, 0.4)); transition: transform 0.3s ease;"
+                         onmouseover="this.style.transform='scale(1.08)'" 
+                         onmouseout="this.style.transform='scale(1)'">
                 </div>
                 <h1 class="login-title">QUẢN LÝ THI ĐUA</h1>
                 <p class="login-subtitle">Trường THPT Thanh Hòa</p>

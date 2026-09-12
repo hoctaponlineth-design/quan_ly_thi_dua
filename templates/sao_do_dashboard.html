@@ -351,8 +351,8 @@
                                     <button type="button" class="btn btn-sm btn-outline-danger fw-bold shadow-sm" onclick="document.getElementById('cameraInput_{{ b.id }}').click()" style="border-radius: 8px;">
                                         <i class="fa-solid fa-camera"></i> Chụp thêm ảnh
                                     </button>
-                                    <input type="file" id="cameraInput_{{ b.id }}" accept="image/*" capture="environment" style="display: none;" onchange="processEvidenceImage(this, 'preview_{{ b.id }}Container', 'evidenceBase64_{{ b.id }}')">
-                                    <input type="hidden" name="evidence_base64" id="evidenceBase64_{{ b.id }}" value="[]">
+                                    <input type="file" id="cameraInput_{{ b.id }}" accept="image/*" style="display: none;" onchange="processEvidenceImage(this, 'preview_{{ b.id }}Container', 'evidenceBase64_{{ b.id }}')">
+									<input type="hidden" name="evidence_base64" id="evidenceBase64_{{ b.id }}" value="[]">
                                 </div>
                                 
                                 <div id="preview_{{ b.id }}Container" class="d-flex flex-wrap gap-2 mt-2"></div>
@@ -501,24 +501,30 @@
                         </div>
                         <input type="hidden" name="violation_id" id="hiddenQuickViolationId" required>
 
-<						!-- [NÂNG CẤP] 4. MINH CHỨNG SỐ DÀNH CHO GHI NHANH -->
+						<!-- [NÂNG CẤP] 4. MINH CHỨNG SỐ DÀNH CHO GHI NHANH -->
                         <div class="mb-4 bg-light p-2 rounded-3 border">
                             <label class="form-label small fw-bold text-secondary mb-2">4. Ảnh minh chứng (Tùy chọn):</label>
                             <div class="d-flex gap-2 align-items-center">
                                 <button type="button" class="btn btn-outline-danger fw-bold bg-white" onclick="document.getElementById('quickCameraInput').click()" style="border-radius: 10px;">
-                                    <i class="fa-solid fa-camera fs-5"></i> Bật Camera
+                                    <i class="fa-regular fa-image fs-5"></i> Chọn / Chụp ảnh
                                 </button>
-                                <input type="file" id="quickCameraInput" accept="image/*" capture="environment" style="display: none;" onchange="processEvidenceImage(this, 'quickPreviewContainer', 'quickEvidenceBase64')">
+                                <!-- Đã bỏ thuộc tính capture="environment" để cho phép chọn ảnh từ thư viện -->
+                                <input type="file" id="quickCameraInput" accept="image/*" style="display: none;" onchange="processEvidenceImage(this, 'quickPreviewContainer', 'quickEvidenceBase64')">
                                 <input type="hidden" name="evidence_base64" id="quickEvidenceBase64" value="[]">
                             </div>
                             <div id="quickPreviewContainer" class="d-flex flex-wrap gap-2 mt-2"></div>
                         </div>
                         <!-- ============================================== -->
 
-                        <!-- NÚT GỬI ĐƯỢC KHÓA BẢO VỆ -->
-                        <button type="submit" class="btn btn-secondary w-100 fw-bold btn-submit" id="btnSubmitQuickLog" style="height: 50px; border-radius: 14px;" disabled>
-                            <i class="fa-solid fa-lock me-1"></i> VUI LÒNG ĐIỀN ĐỦ THÔNG TIN
-                        </button>
+                        <!-- NÚT GỬI VÀ NÚT ĐÓNG DƯỚI CÙNG DÀNH CHO ĐIỆN THOẠI -->
+                        <div class="d-flex gap-2 mt-2">
+                            <button type="button" class="btn btn-light fw-bold text-secondary shadow-sm" data-bs-dismiss="modal" style="height: 50px; border-radius: 14px; width: 35%; border: 1px solid #ced4da;">
+                                ĐÓNG LẠI
+                            </button>
+                            <button type="submit" class="btn btn-secondary fw-bold btn-submit flex-grow-1 shadow-sm" id="btnSubmitQuickLog" style="height: 50px; border-radius: 14px;" disabled>
+                                <i class="fa-solid fa-lock me-1"></i> ĐIỀN THÔNG TIN
+                            </button>
+                        </div>
                     </div>
                 </form>
             </div>
