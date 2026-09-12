@@ -22,48 +22,65 @@ VAPID_CLAIMS = {
 # (Tùy chọn) Thầy/cô có thể tạo thêm bảng `PushSubscription` trong Models 
 # để lưu thông tin đăng ký của từng GVCN. Tạm thời chúng ta dùng Session/Dict để test.
 global_subscriptions = {}
-
-    
+  
 def process_and_save_evidence(base64_string, branch_id, week_name):
-    """Hàm hứng mảng Base64, giải mã thành nhiều ảnh và lưu nối tiếp bằng dấu |"""
+    """Hàm hứng chuỗi Base64 (Data URI) và đẩy lên Cloudinary một cách an toàn (Đã bọc thép chống nhân đôi)"""
     if not base64_string or base64_string.strip() in ["", "[]"]:
         return None
         
     try:
         import json
-        import time
-        import base64
+        import unicodedata
+        import re
         import os
+        import hashlib
+        import cloudinary
+        import cloudinary.uploader
         
-        # Kiểm tra xem có phải mảng JSON không (từ PWA gửi lên nhiều ảnh)
+        # Tự động nhận diện cấu hình Cloudinary
+        if os.environ.get("CLOUDINARY_URL"):
+            cloudinary.config(secure=True)
+        else:
+            cloudinary.config( 
+                cloud_name = os.environ.get("CLOUDINARY_CLOUD_NAME"), 
+                api_key = os.environ.get("CLOUDINARY_API_KEY"), 
+                api_secret = os.environ.get("CLOUDINARY_API_SECRET"),
+                secure = True
+            )
+            
+        # Xử lý danh sách hoặc chuỗi đơn
         if base64_string.startswith('['):
             base64_list = json.loads(base64_string)
         else:
             base64_list = [base64_string]
             
         saved_paths = []
-        upload_folder = os.path.join('static', 'uploads', 'evidences')
-        os.makedirs(upload_folder, exist_ok=True)
         
-        for idx, b64 in enumerate(base64_list):
+        # Chuẩn hóa tên tuần không dấu
+        safe_week = unicodedata.normalize('NFKD', str(week_name)).encode('ASCII', 'ignore').decode('utf-8')
+        safe_week = re.sub(r'[^a-zA-Z0-9]', '_', safe_week)
+        
+        for b64 in base64_list:
             if not b64: continue
-            if ',' in b64:
-                b64 = b64.split(',')[1]
-            b64 = b64 + '=' * (-len(b64) % 4)
             
-            timestamp = int(time.time())
-            filename = f"evid_{week_name}_b{branch_id}_{timestamp}_{idx}.jpg"
-            filepath = os.path.join(upload_folder, filename)
+            # [CHÌA KHÓA VÀNG]: Băm mã Base64 thành Dấu vân tay (MD5) để chống trùng lặp do mạng yếu
+            img_hash = hashlib.md5(b64.encode('utf-8')).hexdigest()[:15]
             
-            with open(filepath, "wb") as fh:
-                fh.write(base64.b64decode(b64))
-                
-            saved_paths.append(f"/static/uploads/evidences/{filename}")
+            # Đảm bảo chuỗi base64 giữ nguyên định dạng Data URI chuẩn từ FileReader
+            # Gắn thêm public_id để Cloudinary tự động ghi đè nếu mạng tự động gửi lại cùng 1 bức ảnh
+            upload_result = cloudinary.uploader.upload(
+                b64, 
+                folder=f"thidua_doantruong/{safe_week}",
+                public_id=f"img_{branch_id}_{img_hash}"
+            )
+            saved_paths.append(upload_result['secure_url'])
             
         return "|".join(saved_paths) if saved_paths else None
+        
     except Exception as e:
-        print(f"❌ LỖI GIẢI MÃ ẢNH MINH CHỨNG: {str(e)}")
-        return None
+        error_detail = str(e)
+        print(f"❌ LỖI UPLOAD ẢNH LÊN ĐÁM MÂY: {error_detail}")
+        raise Exception(error_detail)
     
 from flask import Flask, render_template, request, redirect, url_for, flash, session, send_file
 import openpyxl
@@ -73,7 +90,7 @@ from openpyxl.utils import get_column_letter
 
 # Import các thành phần từ thư mục con của dự án
 from database.database import init_db, get_session, session_scope
-from database.models import User, UserRole, SchoolYear, Branch, RedStar, DutyArea, Assignment, StarEvaluation, WeeklyScore, ViolationCategory, WeeklyViolation, RawScore, MonthlyRecord, ActionLog, ScoreSettings
+from database.models import User, UserRole, SchoolYear, Branch, RedStar, DutyArea, Assignment, StarEvaluation, WeeklyScore, ViolationCategory, WeeklyViolation, RawScore, MonthlyRecord, ActionLog, ScoreSettings, GVCNAttendance
 
 # Import hàm kiểm tra đăng nhập từ file account_manager
 from database.account_manager import verify_external_login, sync_account_to_json, remove_account_from_json, load_external_accounts, save_external_accounts
@@ -161,30 +178,56 @@ def save_action_logs(response):
     return response
 
 # ==========================================
-# CÁC HÀM TỰ ĐỘNG KHỞI TẠO HỆ THỐNG
+# CÁC HÀM TỰ ĐỘNG KHỞI TẠO VÀ ĐỒNG BỘ HỆ THỐNG
 # ==========================================
 def auto_init_accounts():
-    """Hàm tự động kiểm tra và tạo lại file accounts.json nếu bị mất"""
-    data_folder = "data"
-    os.makedirs(data_folder, exist_ok=True)
-    
-    file_path = os.path.join(data_folder, "accounts.json")
-    
-    if not os.path.exists(file_path):
-        default_accounts = [
-            {
-                "username": "admin",
-                "password": "1",  
-                "full_name": "Bí thư Đoàn trường",
-                "role": "Bí thư"
-            }
-        ]
-        try:
+    """Hàm tự động quét CSDL và đồng bộ lại file accounts.json để chống lỗi đăng nhập trên Render"""
+    try:
+        from database.database import session_scope
+        from database.models import User
+        import os, json
+        
+        data_folder = "data"
+        os.makedirs(data_folder, exist_ok=True)
+        file_path = os.path.join(data_folder, "accounts.json")
+        
+        with session_scope() as db_session:
+            # 1. Lấy toàn bộ user đang có trong CSDL
+            users = db_session.query(User).all()
+            
+            # Nếu CSDL hoàn toàn trống, tạo 1 acc admin mặc định
+            if not users:
+                default_accounts = [{
+                    "username": "admin", "password": "1",  
+                    "full_name": "Bí thư Đoàn trường", "role": "Bí thư"
+                }]
+                with open(file_path, "w", encoding="utf-8") as f:
+                    json.dump(default_accounts, f, indent=4, ensure_ascii=False)
+                print("Hệ thống: Đã khởi tạo accounts.json mặc định.")
+                return
+
+            # 2. Nếu CSDL có dữ liệu, ép đồng bộ toàn bộ từ CSDL -> file JSON
+            accounts_data = []
+            for u in users:
+                role_str = u.role.value if hasattr(u.role, 'value') else str(u.role)
+                accounts_data.append({
+                    "username": u.username,
+                    "password": u.password_hash,
+                    "full_name": u.full_name,
+                    "role": role_str,
+                    "is_active": getattr(u, 'is_active', True)
+                })
+                
             with open(file_path, "w", encoding="utf-8") as f:
-                json.dump(default_accounts, f, indent=4, ensure_ascii=False)
-            print("Hệ thống: Đã tự động khôi phục file accounts.json với tài khoản mặc định.")
-        except Exception as e:
-            print(f"Hệ thống: Lỗi không thể tạo file accounts.json - {e}")
+                json.dump(accounts_data, f, indent=4, ensure_ascii=False)
+                
+            print(f"✅ HỆ THỐNG: Đã đồng bộ {len(users)} tài khoản từ Database sang JSON thành công!")
+            
+    except Exception as e:
+        print(f"❌ Lỗi đồng bộ tài khoản: {e}")
+
+# KÍCH HOẠT NGAY LẬP TỨC KHI RENDER CHẠY
+auto_init_accounts()
 
 def create_mock_admin():
     """Tạo một tài khoản Bí thư Đoàn trường mặc định trong SQLite để test"""
@@ -219,7 +262,10 @@ def restrict_access():
         'api_gvcn_leaderboard',
         'api_gvcn_get_months',
         'update_branch_info',
-        'api_weekly_scores_json'
+        'api_weekly_scores_json',
+        'gvcn_checkin',
+        'api_class_blacklist',      # <--- BỔ SUNG DÒNG NÀY
+        'export_class_blacklist'    # <--- BỔ SUNG DÒNG NÀY
     ]
     
     allowed_for_saodo = [
@@ -240,7 +286,8 @@ def restrict_access():
         'export_class_dashboard',        
         'class_monthly_analysis',        
         'class_semester_analysis',       
-        'school_monthly_analysis'        
+        'school_monthly_analysis',
+        'gvcn_attendance_stats'
     ]
     
     # 3. KIỂM TRA QUYỀN TRUY CẬP THEO ROLE
@@ -289,7 +336,148 @@ def restrict_access():
 def ping():
     return "<h1>Kết nối thành công! Máy chủ đang hoạt động.</h1>"
 
-# API: BÓC TÁCH DỮ LIỆU TỪ FILE SỔ ĐẦU BÀI (TỐI ƯU CHỐNG SÓT ĐIỂM)
+@app.route('/api/gvcn_checkin', methods=['POST'])
+def gvcn_checkin():
+    # Chỉ GVCN mới được phép điểm danh
+    if session.get('role') != 'Giáo viên chủ nhiệm':
+        return {"success": False, "error": "Không có quyền thực hiện!"}, 403
+
+    data = request.get_json(force=True, silent=True) or request.form.to_dict()
+    branch_id = data.get('branch_id')
+    week_name = data.get('week_name')
+
+    if not branch_id or not week_name:
+        return {"success": False, "error": "Thiếu thông tin lớp hoặc tuần!"}, 400
+
+    try:
+        from datetime import date
+        with session_scope() as db_session:
+            today_date = date.today()
+            
+            # Kiểm tra xem hôm nay thầy cô đã bấm chưa
+            exist = db_session.query(GVCNAttendance).filter_by(branch_id=branch_id, date=today_date).first()
+            if exist:
+                return {"success": False, "error": "Thầy/Cô đã điểm danh cho ngày hôm nay rồi!"}, 400
+
+            # Ghi nhận vào DB
+            new_attendance = GVCNAttendance(
+                branch_id=branch_id, 
+                week_name=week_name, 
+                date=today_date
+            )
+            db_session.add(new_attendance)
+            
+            # (Tùy chọn) Lưu vết hệ thống để BGH biết
+            log_system_action("ĐIỂM DANH GVCN", f"GVCN Lớp ID {branch_id} đã điểm danh sinh hoạt 15p Tuần {week_name}")
+            
+            return {"success": True, "message": "✅ Điểm danh thành công! Cảm ơn Thầy/Cô."}, 200
+    except Exception as e:
+        import traceback; traceback.print_exc()
+        return {"success": False, "error": str(e)}, 500
+    
+@app.route('/gvcn_attendance_stats')
+def gvcn_attendance_stats():
+    # Chỉ Admin, BGH hoặc Bí thư mới được xem thống kê này
+    if session.get('role') not in ['Quản trị viên', 'Admin', 'Bí thư Đoàn trường', 'Bí thư', 'Ban Giám hiệu']:
+        flash("Bạn không có quyền xem bảng thống kê này!", "error")
+        return redirect(url_for('dashboard'))
+        
+    try:
+        with session_scope() as db_session:
+            active_year = db_session.query(SchoolYear).filter_by(is_active=True).first()
+            if not active_year:
+                flash("Chưa có năm học kích hoạt!", "error")
+                return redirect(url_for('dashboard'))
+                
+            time_mode = request.args.get('time_mode', 'week') 
+            time_value = request.args.get('time_value', '')
+            
+            # Lấy toàn bộ dữ liệu điểm danh của năm học hiện tại
+            all_atts = db_session.query(GVCNAttendance).join(Branch).filter(Branch.school_year_id == active_year.id).all()
+            
+            # Tự động trích xuất các Tuần, Tháng, Học kỳ, Năm học đã có dữ liệu để làm bộ lọc
+            available_weeks = sorted(list(set([a.week_name for a in all_atts if a.week_name])), key=lambda x: int(''.join(filter(str.isdigit, x))) if any(c.isdigit() for c in x) else 0)
+            available_months = sorted(list(set([a.date.strftime('Tháng %m/%Y') for a in all_atts if a.date])), reverse=True)
+            
+            available_semesters = set()
+            available_years = set()
+            
+            for a in all_atts:
+                if a.date:
+                    start_year = a.date.year if a.date.month >= 8 else a.date.year - 1
+                    school_year_str = f"{start_year}-{start_year + 1}"
+                    
+                    hk_str = f"Học kỳ 1 ({school_year_str})" if a.date.month >= 8 or a.date.month == 1 else f"Học kỳ 2 ({school_year_str})"
+                    available_semesters.add(hk_str)
+                    available_years.add(f"Năm học {school_year_str}")
+
+            available_semesters = sorted(list(available_semesters), reverse=True)
+            available_years = sorted(list(available_years), reverse=True)
+
+            # Đặt giá trị mặc định khi vừa vào trang
+            if time_mode == 'week' and not time_value and available_weeks:
+                time_value = available_weeks[-1] 
+            elif time_mode == 'month' and not time_value and available_months:
+                time_value = available_months[0]
+            elif time_mode == 'semester' and not time_value and available_semesters:
+                time_value = available_semesters[0]
+            elif time_mode == 'year' and not time_value and available_years:
+                time_value = available_years[0]
+                
+            # Bộ lọc dữ liệu
+            filtered_atts = []
+            for a in all_atts:
+                if not a.date: continue
+                if time_mode == 'week' and a.week_name == time_value:
+                    filtered_atts.append(a)
+                elif time_mode == 'month' and a.date.strftime('Tháng %m/%Y') == time_value:
+                    filtered_atts.append(a)
+                elif time_mode == 'semester':
+                    start_year = a.date.year if a.date.month >= 8 else a.date.year - 1
+                    hk_str = f"Học kỳ 1 ({start_year}-{start_year + 1})" if a.date.month >= 8 or a.date.month == 1 else f"Học kỳ 2 ({start_year}-{start_year + 1})"
+                    if hk_str == time_value:
+                        filtered_atts.append(a)
+                elif time_mode == 'year':
+                    start_year = a.date.year if a.date.month >= 8 else a.date.year - 1
+                    if f"Năm học {start_year}-{start_year + 1}" == time_value:
+                        filtered_atts.append(a)
+                    
+            # Thống kê tổng hợp theo từng lớp
+            stats = {}
+            branches = db_session.query(Branch).filter_by(school_year_id=active_year.id).all()
+            for b in branches:
+                stats[b.id] = {
+                    'branch_name': b.name,
+                    'gvcn': b.gvcn or "Chưa cập nhật",
+                    'count': 0,
+                    'dates': []
+                }
+            day_map = {0: 'T2', 1: 'T3', 2: 'T4', 3: 'T5', 4: 'T6', 5: 'T7', 6: 'CN'}   
+            for a in filtered_atts:
+                if a.branch_id in stats and a.date:
+                    stats[a.branch_id]['count'] += 1 # Đếm cộng dồn thành Tổng số buổi
+                    day_str = day_map.get(a.date.weekday(), '')
+                    date_str = f"{day_str} ({a.date.strftime('%d/%m')})" 
+                    stats[a.branch_id]['dates'].append(date_str)                    
+            
+            # Chuyển thành danh sách và xếp hạng (Xếp theo Lớp A-Z để dễ theo dõi)
+            stats_list = list(stats.values())
+            stats_list.sort(key=lambda x: x['branch_name'])
+            
+            return render_template('gvcn_attendance.html', 
+                                   stats_list=stats_list,
+                                   available_weeks=available_weeks,
+                                   available_months=available_months,
+                                   available_semesters=available_semesters,
+                                   available_years=available_years,
+                                   time_mode=time_mode,
+                                   time_value=time_value)
+    except Exception as e:
+        import traceback; traceback.print_exc()
+        flash(f"Lỗi tải thống kê: {e}", "error")
+        return redirect(url_for('dashboard'))
+    
+# API: BÓC TÁCH DỮ LIỆU TỪ FILE SỔ ĐẦU BÀI (TỐI ƯU CA CHIỀU & CỘNG DỒN TIẾT HỌC)
 @app.route('/api/parse_sodaubai', methods=['POST'])
 @app.route('/weekly/api/parse_sodaubai', methods=['POST'])
 def parse_sodaubai():
@@ -300,8 +488,11 @@ def parse_sodaubai():
     if file.filename == '':
         return {"error": "Chưa chọn file nào!"}, 400
         
-    # Lấy tên lớp dự kiến từ giao diện để đối chiếu
     expected_branch = request.form.get('expected_branch_name', '').strip().upper()
+    
+    # [NÂNG CẤP LÕI 1]: Tích hợp bộ lọc "Sổ Ca Chiều" (Khóa mục tiêu Thứ 5)
+    is_afternoon = request.form.get('is_afternoon', 'false').lower() == 'true'
+    target_day_input = 'Thứ 5' if is_afternoon else request.form.get('target_day', 'Tất cả').strip()
         
     try:
         import pandas as pd
@@ -309,11 +500,7 @@ def parse_sodaubai():
         
         df = pd.read_excel(file, header=None)
         
-        # =================================================================
-        # THUẬT TOÁN KHIÊN BẢO VỆ & NHẬN DIỆN LỚP TỰ ĐỘNG
-        # =================================================================
         found_class_name = None
-        # Quét tối đa 50 dòng đầu và toàn bộ cột để tìm chữ "Lớp: ..."
         for i in range(min(50, len(df))):
             for j in range(len(df.columns)):
                 cell_val = str(df.iloc[i, j]).strip()
@@ -325,16 +512,11 @@ def parse_sodaubai():
             if found_class_name:
                 break
         
-        # Nếu đang quét đơn lẻ (có expected_branch) thì khóa nòng kiểm tra
         if expected_branch and found_class_name and found_class_name != expected_branch:
-            return {
-                "error": f"⛔ CẢNH BÁO: FILE SỔ ĐẦU BÀI KHÔNG KHỚP!\nBạn đang ở form nhập điểm của lớp {expected_branch}, nhưng file Excel bạn vừa tải lên lại là Sổ đầu bài của lớp {found_class_name}. Vui lòng chọn lại đúng file!"
-            }, 400
+            return {"error": f"⛔ CẢNH BÁO: FILE SỔ ĐẦU BÀI KHÔNG KHỚP!\nBạn đang ở form nhập điểm của lớp {expected_branch}, nhưng file tải lên là của lớp {found_class_name}."}, 400
         
-        # Nếu quét hàng loạt nhưng không tìm thấy tên lớp trong file
         if not expected_branch and not found_class_name:
-            return {"error": "Không nhận diện được Tên lớp trong file Excel này (Thiếu ô 'Lớp: ...')."}, 400
-        # =================================================================
+            return {"error": "Không nhận diện được Tên lớp trong file Excel này."}, 400
         
         try:
             start_row = df[df[0].astype(str).str.contains('Thứ \nngày tháng', na=False, case=False)].index[0]
@@ -342,112 +524,101 @@ def parse_sodaubai():
             return {"error": "Hệ thống không nhận diện được biểu mẫu Sổ Đầu Bài này!"}, 400
             
         c10 = c9 = c8 = 0
-        
-        subject_scores = {}  # Phân loại điểm tốt (8, 9, 10) theo Tên Môn Học
-        bad_marks_list = []  # Lưu tạm toàn bộ lỗi điểm kém/không học bài để xén trần
-        
-        # [BẢN VÁ LỖI]: Dùng SET để lọc trùng lặp học sinh vắng trong cùng 1 ngày
+        subject_scores = {}
+        bad_marks_list = []
         general_violations_set = set()
         current_day = "Ngày khác"
         
         cat_khb = "Không học bài"
         cat_dk = "Bị điểm kém"
-        violation_names = [] # Khởi tạo danh sách tên lỗi an toàn
+        violation_names = [] 
         try:
             from database.models import ViolationCategory, SchoolYear
             from database.database import session_scope
             with session_scope() as db_session:
                 active_year = db_session.query(SchoolYear).filter_by(is_active=True).first()
                 cats = db_session.query(ViolationCategory).filter_by(school_year_id=active_year.id).all() if active_year else []
-                
-                # Sắp xếp tên từ dài đến ngắn để AI không nhận diện nhầm lỗi con
                 violation_names = sorted([c.name for c in cats], key=len, reverse=True) 
-                
                 for c in cats:
                     nl = c.name.lower()
                     if "không học" in nl or "không thuộc" in nl: cat_khb = c.name
                     if "điểm kém" in nl or "điểm yếu" in nl or "điểm 0" in nl: cat_dk = c.name
         except:
             pass
-        # ---------------------------------------------------------------------------------
-        # Bắt đầu quét từ start_row + 3 (bỏ qua dòng tiêu đề và hàng số thứ tự 1-10)
+
+        # [NÂNG CẤP LÕI 2]: Khai báo biến đếm số tiết ngay từ đầu
+        so_tot = so_kha = so_tb = so_yeu = 0
+
         for i in range(start_row + 3, len(df)):
             if i >= len(df): break
             
             cot0_text = str(df.iloc[i, 0])
-            if "Ý kiến nhận xét" in cot0_text or "Tổng số tiết" in cot0_text: break
-
-            # --- [THÊM TÍNH NĂNG]: Theo dõi ngày hiện tại để chống lặp ---
             cot0_clean = cot0_text.strip()
-            if cot0_clean and cot0_clean.lower() != 'nan':
-                current_day = cot0_clean.split('\n')[0].strip()
-            # =============================================================================
-            # --- [BỔ SUNG BƯỚC 2]: TỰ ĐỘNG BẮT LỖI VẮNG HỌC (CHỈ BẮT KHÔNG PHÉP) ---
-            # =============================================================================
+            
+            # [SỬA LỖI TỐI THƯỢNG]: Dùng continue thay vì break để không bỏ lỡ dữ liệu ca chiều
+            if not cot0_clean or cot0_clean.lower() == 'nan' or "tổng số tiết" in cot0_clean.lower() or "ý kiến nhận xét" in cot0_clean.lower():
+                continue
+            if "ban giám hiệu" in cot0_clean.lower() or "duyệt của ban" in cot0_clean.lower():
+                break
+
+            if cot0_clean and "thứ" in cot0_clean.lower():
+                base_day = cot0_clean.split('\n')[0].strip()
+                # Phân định Sáng/Chiều để chống lặp lỗi
+                current_day = f"{base_day} (Chiều)" if is_afternoon else base_day
+
+            # Bỏ qua nếu không phải ngày được chỉ định
+            if target_day_input != 'Tất cả' and target_day_input.lower() not in current_day.lower():
+                continue 
+
             try:
-                # Tự động dò tìm cột "Tên HS nghỉ tiết" hoặc "Vắng"
                 col_vang = 7 
                 for c in range(len(df.columns)):
                     col_title = str(df.iloc[start_row, c]).lower()
                     if "nghỉ tiết" in col_title or "vắng" in col_title:
-                        col_vang = c
-                        break
+                        col_vang = c; break
                         
                 val_vang = str(df.iloc[i, col_vang]).strip()
                 if val_vang and val_vang.lower() != 'nan':
-                    # Cắt chuỗi theo dấu phẩy/chấm phẩy để tách riêng từng em (nếu vắng nhiều em 1 tiết)
-                    import re
                     for p in re.split(r'[,;]+', val_vang):
                         p = p.strip()
                         if not p: continue
-                        
-                        # [QUY TẮC MỚI]: Chỉ bắt lỗi nếu giáo viên có ghi chữ "không" hoặc "kp"
-                        # Nếu ghi "có phép" hoặc chỉ ghi mỗi cái tên, hệ thống sẽ TỰ ĐỘNG BỎ QUA
                         if 'không' in p.lower() or 'kp' in p.lower():
-                            # Xóa phần ghi chú trong ngoặc () và các chữ thừa để lấy được mỗi Tên học sinh
                             stu_name = re.sub(r'\(.*?\)', '', p)
                             stu_name = re.sub(r'(?i)không phép|ko phép|kp', '', stu_name)
                             stu_name = stu_name.strip(' -:').title()
-                            
                             if stu_name:
-                                # Đưa vào SET vi phạm (Gắn kèm Tên + Ngày để chống lặp)
                                 general_violations_set.add(('Vắng học không phép', stu_name, current_day))
-            except Exception as e:
+            except Exception:
                 pass
-            # =============================================================================
                 
-            # Lấy tên môn học (Cột 3 theo biểu mẫu Sổ đầu bài)
             try: mon = str(df.iloc[i, 3]).strip()
             except: mon = "Khác"
             if not mon or mon.lower() == 'nan': mon = "Khác"
 
-            # =========================================================================
-            # --- [BẢN VÁ LỖI]: TÁCH RIÊNG CỘT XẾP LOẠI (18) KHỎI LUỒNG QUÉT CHỮ ---
-            # =========================================================================
-            # 1. Quét riêng cột 18 để phạt tập thể "Tiết Yếu" (nếu có)
+            # [NÂNG CẤP LÕI 3]: ĐÁNH GIÁ TIẾT HỌC (BẮT TRỌN CÁC LOẠI: KHÁ, TB, YẾU)
             try:
                 if 18 < len(df.columns):
                     xep_loai_tiet = str(df.iloc[i, 18]).strip().lower()
                     if xep_loai_tiet in ['yếu', 'kém']:
                         general_violations_set.add(('Tiết Yếu', '', current_day))
+                    elif xep_loai_tiet in ['trung bình', 'tb']:
+                        general_violations_set.add(('Tiết Trung bình', '', current_day))
+                    elif xep_loai_tiet == 'khá':
+                        general_violations_set.add(('Tiết Khá', '', current_day))
             except Exception:
                 pass
 
-            # 2. CHỈ gộp Cột 13, 14 (Điểm KT) và 15 (Nhận xét) để AI dò chữ và bắt lỗi cá nhân
             row_scores = []
             for col in [13, 14, 15]:
                 if col < len(df.columns):
                     val = str(df.iloc[i, col]).strip()
                     if val.lower() != 'nan': row_scores.append(val)
                     
-            # [BẢN VÁ LỖI TỐI THƯỢNG]: Dùng dấu CHẤM PHẨY để tạo vách ngăn giữa các cột
             diem_raw = " ; ".join(row_scores)
-            # =========================================================================
             
             if not diem_raw or 'Ý kiến' in diem_raw or 'BAN GIÁM' in diem_raw:
                 continue
                 
-            # THUẬT TOÁN MỚI: Tách theo dấu phẩy/chấm phẩy, trích xuất điểm bất chấp có nhận xét kèm theo phía sau
             entries = re.split(r'[,;]+', diem_raw)
             parsed_any = False
             
@@ -455,65 +626,45 @@ def parse_sodaubai():
                 entry = entry.strip()
                 if not entry: continue
                 
-                # =========================================================================
-                # --- [BẢN VÁ TỐI THƯỢNG]: DÒ TÌM LỖI BẰNG CHỮ THEO DANH SÁCH DATABASE ---
-                # =========================================================================
                 found_text_violation = False
                 for v_name in violation_names:
                     v_name_lower = v_name.lower()
-                    
-                    # Bỏ qua 2 lỗi này vì đã có thuật toán quét bằng "Số điểm" cực mạnh ở dưới
                     if v_name_lower in ['không học bài', 'bị điểm kém']: continue 
                     
                     if v_name_lower in entry.lower():
                         stu_name = ""
-                        # Ưu tiên 1: Tìm tên học sinh nằm trong ngoặc vuông hoặc tròn (Ví dụ: Ăn trong lớp [Nam])
                         match_bracket = re.search(r'\[(.*?)\]|\((.*?)\)', entry)
                         if match_bracket:
                             stu_name = match_bracket.group(1) or match_bracket.group(2)
                         else:
-                            # Ưu tiên 2: Tìm tên học sinh đứng trước/sau dấu phân cách hoặc lấy phần chữ còn lại
                             clean_name = re.sub(v_name, '', entry, flags=re.IGNORECASE)
                             clean_name = re.sub(r'[:\-x0-9]', '', clean_name).strip()
-                            # Nếu phần chữ còn lại ngắn (dưới 25 ký tự) thì khả năng cao đó là Tên học sinh
                             if len(clean_name) > 0 and len(clean_name) <= 25: 
                                 stu_name = clean_name
                         
                         stu_name = stu_name.strip()
                         
-                        # [BẢN VÁ LỖI NÒNG CỐT]: Chẻ nhỏ tên học sinh nếu bị dính chùm
                         if stu_name:
-                            import re
-                            # Tách bằng dấu phẩy, chấm phẩy, chữ "và", dấu "&", hoặc từ 2 khoảng trắng trở lên
                             split_names = re.split(r'[,;]|\s+và\s+|\s+&\s+|\s{2,}', stu_name, flags=re.IGNORECASE)
-                            
                             for s_name in split_names:
                                 s_name = s_name.strip().title()
                                 if s_name:
                                     general_violations_set.add((v_name, s_name, current_day))
                         else:
-                            # Không ghi tên ai thì phạt chung tập thể lớp
                             general_violations_set.add((v_name, "", current_day))
                             
                         found_text_violation = True
-                        break # Đã chốt được lỗi cho cụm từ này thì dừng vòng lặp quét chữ
+                        break 
                         
-                if found_text_violation:
-                    continue # Đã là lỗi bằng chữ thì bỏ qua, không quét điểm số nữa để tránh nhầm lẫn
-                # =========================================================================
+                if found_text_violation: continue 
 
-                # Tìm cặp [Tên học sinh] và [Con số điểm 0-10] ở bất kỳ vị trí nào trong đoạn phân tách
                 match = re.search(r'([A-ZÀ-Ỹa-zà-ỹ\s]+?)\s*[:\-]?\s*\b(10|[0-9])\b', entry)
                 if match:
                     parsed_any = True
                     raw_name = match.group(1).strip()
-                    # Lấy từ cuối cùng hoặc 2 từ cuối làm tên học sinh nếu chuỗi tên quá dài do dính chữ
                     name_words = raw_name.split()
                     name_part = name_words[-1].title() if name_words else "Học sinh"
                     score_val = int(match.group(2))
-                    
-                    tiet = str(df.iloc[i, 2]).strip()
-                    tiet_str = f"Tiết {tiet}" if tiet != 'nan' else "Tiết học"
                     
                     if score_val == 10:
                         c10 += 1
@@ -527,22 +678,17 @@ def parse_sodaubai():
                         c8 += 1
                         if mon not in subject_scores: subject_scores[mon] = {'c10': 0, 'c9': 0, 'c8': 0}
                         subject_scores[mon]['c8'] += 1
-                        
                     elif score_val == 0:
                         key = f"{name_part} (Môn {mon})" if name_part else f"Môn {mon}"
-                        bad_marks_list.append({'type': cat_khb, 'key': key, 'mon': mon}) # Dùng biến cat_khb chuẩn xác
-                    elif score_val > 0 and score_val < 5:
+                        bad_marks_list.append({'type': cat_khb, 'key': key, 'mon': mon}) 
+                    elif score_val in [1, 2]: 
                         key = f"{name_part} (Môn {mon})" if name_part else f"Môn {mon}"
-                        bad_marks_list.append({'type': cat_dk, 'key': key, 'mon': mon}) # Dùng biến cat_dk chuẩn xác
+                        bad_marks_list.append({'type': cat_dk, 'key': key, 'mon': mon}) 
             
-            # THUẬT TOÁN DỰ PHÒNG: Nếu không tách được theo tên, quét toàn bộ số nguyên hợp lệ trong ô
             if not parsed_any:
                 numbers = re.findall(r'\b(10|9|8|0|[1-4])\b', diem_raw)
                 for num_str in numbers:
                     num = int(num_str)
-                    tiet = str(df.iloc[i, 2]).strip()
-                    tiet_str = f"Tiết {tiet}" if tiet != 'nan' else "Tiết học"
-                    
                     if num == 10:
                         c10 += 1
                         if mon not in subject_scores: subject_scores[mon] = {'c10': 0, 'c9': 0, 'c8': 0}
@@ -555,13 +701,11 @@ def parse_sodaubai():
                         c8 += 1
                         if mon not in subject_scores: subject_scores[mon] = {'c10': 0, 'c9': 0, 'c8': 0}
                         subject_scores[mon]['c8'] += 1
-                        
                     elif num == 0:
                         bad_marks_list.append({'type': 'Không học bài', 'key': f"Môn {mon}", 'mon': mon})
-                    elif num in [1, 2, 3, 4]:
+                    elif num in [1, 2]:
                         bad_marks_list.append({'type': 'Bị điểm kém', 'key': f"Môn {mon}", 'mon': mon})
 
-        # THUẬT TOÁN XẾP LOẠI TUẦN THEO QUY CHẾ CỦA TRƯỜNG
         xep_loai = "Bình thường"
         summary_row = df[df[0].astype(str).str.contains('Tổng số giờ xếp loại', na=False, case=False)]
         if not summary_row.empty:
@@ -577,14 +721,10 @@ def parse_sodaubai():
             so_yeu = int(match_yeu.group(1)) if match_yeu else 0
             
             tong_tiet = so_tot + so_kha + so_tb + so_yeu
-            
             if tong_tiet > 0:
-                if so_tot == tong_tiet:
-                    xep_loai = "Tuần Tốt"
-                elif so_yeu == 0 and so_tb == 0 and so_kha > 0:
-                    xep_loai = "Tuần Khá"
+                if so_tot == tong_tiet: xep_loai = "Tuần Tốt"
+                elif so_yeu == 0 and so_tb == 0 and so_kha > 0: xep_loai = "Tuần Khá"
 
-        # --- THUẬT TOÁN XÉN TRẦN LỖI ĐIỂM KÉM / KHÔNG HỌC BÀI THEO BAREM ---
         max_tot = 14
         max_mon = 4
         try:
@@ -598,47 +738,30 @@ def parse_sodaubai():
         except Exception:
             pass
 
-        # 1. Gom nhóm lỗi theo từng môn học
         bad_by_subj = {}
         for bm in bad_marks_list:
             m = bm['mon']
-            if m not in bad_by_subj:
-                bad_by_subj[m] = []
+            if m not in bad_by_subj: bad_by_subj[m] = []
             bad_by_subj[m].append(bm)
 
-        # 2. Xén bớt số lượng lỗi mỗi môn (Không vượt quá max_mon)
         surviving_bad_marks = []
-        for m, marks in bad_by_subj.items():
-            surviving_bad_marks.extend(marks[:max_mon])
-
-        # 3. Xén bớt tổng số lỗi toàn tuần (Không vượt quá max_tot)
+        for m, marks in bad_by_subj.items(): surviving_bad_marks.extend(marks[:max_mon])
         surviving_bad_marks = surviving_bad_marks[:max_tot]
 
-        # 4. Tái tạo lại từ điển đếm số lượng sau khi đã xén trần
         final_bad_counts = {}
         for bm in surviving_bad_marks:
-            err_type = bm['type']
-            key = bm['key']
-            dict_key = (err_type, key)
+            dict_key = (bm['type'], bm['key'])
             final_bad_counts[dict_key] = final_bad_counts.get(dict_key, 0) + 1
 
-        # =========================================================================
-        # --- [BẢN VÁ LỖI]: ĐẶT Ở ĐÂY ĐỂ ĐẢM BẢO QUÉT HẾT TUẦN MỚI BẮT ĐẦU ĐẾM ---
-        # =========================================================================
         for err_type, stu_name, day in general_violations_set:
             dict_key = (err_type, stu_name)
             final_bad_counts[dict_key] = final_bad_counts.get(dict_key, 0) + 1
 
-        # ĐÓNG GÓI LỖI VÀO Ô GHI CHÚ (SỔ ĐEN)
         note_fragments = []
         for (err_type, key), count in final_bad_counts.items():
-            if key:
-                note_fragments.append(f"{err_type} x{count} [{key}]")
-            else:
-                note_fragments.append(f"{err_type} x{count}")
-        # ------------------------------------------------------------------
+            if key: note_fragments.append(f"{err_type} x{count} [{key}]")
+            else: note_fragments.append(f"{err_type} x{count}")
 
-        # ĐÓNG GÓI MẢNG ĐIỂM MÔN HỌC CHI TIẾT
         raw_list = []
         for subj, pts in subject_scores.items():
             raw_list.append({"subj": subj, "c10": pts['c10'], "c9": pts['c9'], "c8": pts['c8']})
@@ -648,13 +771,14 @@ def parse_sodaubai():
             "branch_name": found_class_name,
             "c10": c10, "c9": c9, "c8": c8,
             "xep_loai": xep_loai,
+            "tiet_tot": so_tot, "tiet_kha": so_kha, "tiet_tb": so_tb, "tiet_yeu": so_yeu, # [CHÌA KHÓA TRẢ VỀ]
             "note": " ; ".join(note_fragments),
             "raw_list": raw_list
         }
     except Exception as e:
         import traceback; traceback.print_exc()
         return {"error": f"Lỗi xử lý file Sổ Đầu Bài: {str(e)}"}, 500
-
+        
 @app.route('/')
 @app.route('/login', methods=['GET', 'POST'])
 def login():
@@ -715,62 +839,82 @@ def resolve_appeal():
                 week_num = score.week
 
                 # =======================================================
-                # TRƯỜNG HỢP 1: ĐỒNG Ý PHÚC KHẢO & HOÀN ĐIỂM
+                # TRƯỜNG HỢP 1: ĐỒNG Ý PHÚC KHẢO & TỰ ĐỘNG TÍNH TOÁN THEO TỪNG PHẦN
                 # =======================================================
                 if action == 'approve':
-                    # 1. Tự động hoàn điểm
-                    score.total_score = float(score.total_score or 0) + refund_points
-                    score.score_tru = max(0.0, float(score.score_tru or 0) - refund_points)
+                    auto_refund_points = 0.0
+                    # Hứng danh sách các lỗi mà BCH đã tích "Đồng ý" duyệt trên giao diện
+                    approved_errors = request.form.getlist('approved_errors[]')
                     
-                    # 2. TỰ ĐỘNG ĐỊNH VỊ VÀ XÓA LỖI KHỎI SỔ ĐEN (LÀM SẠCH GHI CHÚ)
                     if score.appeal_reason and "Phúc khảo các lỗi: [" in score.appeal_reason:
                         try:
                             import re
-                            # Trích xuất danh sách lỗi mà GVCN đã tích Checkbox gửi lên
-                            match = re.search(r'Phúc khảo các lỗi:\s*\[(.*?)\]\s*\|\s*Giải trình', score.appeal_reason)
-                            if match:
-                                errors_str = match.group(1)
-                                appealed_errors = [e.strip() for e in errors_str.split("] & [")]
-                                
-                                # Lấy danh sách lỗi hiện tại đang có của lớp
-                                current_notes = [n.strip() for n in (score.note or "").split(";") if n.strip()]
-                                remaining_notes = []
-                                
-                                # Quét và loại bỏ những lỗi trùng khớp với đơn phúc khảo
-                                for n in current_notes:
-                                    if n not in appealed_errors:
-                                        remaining_notes.append(n)
+                            current_notes = [n.strip() for n in (score.note or "").split(";") if n.strip()]
+                            remaining_notes = []
+                            
+                            all_categories = db_session.query(ViolationCategory).filter_by(school_year_id=score.branch.school_year_id).all()
+                            sorted_cats = sorted(all_categories, key=lambda x: len(x.name), reverse=True)
+                            
+                            # Quét từng lỗi đang có trong Sổ đen của lớp
+                            for n in current_notes:
+                                is_approved = False
+                                for app_err in approved_errors:
+                                        # [TÍNH NĂNG MỚI]: Loại bỏ đuôi (Phạt Xđ) để Server so khớp an toàn tuyệt đối
+                                    app_err_clean = re.sub(r'\(Phạt .*?đ\)', '', app_err).strip()
+                                    if app_err_clean in n or n in app_err_clean:
+                                        is_approved = True
+                                        break
                                         
-                                # Ghi đè lại ghi chú sạch sẽ vào Database
-                                score.note = " ; ".join(remaining_notes)
-                                
-                                # 3. ĐỒNG BỘ LÀM SẠCH "SỔ ĐEN TOÀN TRƯỜNG" (Bảng WeeklyViolation)
-                                db_session.query(WeeklyViolation).filter_by(weekly_score_id=score.id).delete()
-                                
-                                # Quét lại ghi chú mới và nạp lại vào Sổ đen những lỗi còn tồn tại
-                                all_categories = db_session.query(ViolationCategory).filter_by(school_year_id=score.branch.school_year_id).all()
-                                sorted_cats = sorted(all_categories, key=lambda x: len(x.name), reverse=True)
-                                
-                                for part in remaining_notes:
-                                    match_day = re.search(r'\[(T[2-7]|CN)\]', part)
-                                    day_pfx = match_day.group(0) if match_day else ""
-                                    text_to_parse = part.replace(day_pfx, "").strip() if day_pfx else part
-                                    
-                                    match_stu = re.search(r'\[(.*?)\]', text_to_parse)
-                                    stu_display = match_stu.group(1).strip() if match_stu else None
+                                if is_approved:
+                                    # LỖI ĐƯỢC DUYỆT GỠ: Không đưa vào remaining_notes nữa & Cộng điểm hoàn trả
+                                    day_pfx_match = re.search(r'\[(T[2-7]|CN)\]', n)
+                                    day_pfx = day_pfx_match.group(0) if day_pfx_match else ""
+                                    text_to_parse = n.replace(day_pfx, "").strip() if day_pfx else n
                                     
                                     for cat in sorted_cats:
-                                        if cat.name.lower() in text_to_parse.lower():
-                                            match_qty = re.search(r'(?:x|:|-)\s*(\d+)', text_to_parse.lower())
-                                            qty = int(match_qty.group(1)) if match_qty else 1
-                                            db_session.add(WeeklyViolation(weekly_score_id=score.id, violation_id=cat.id, quantity=qty, student_name=stu_display))
+                                        if cat.name.lower() in text_to_parse.lower() and getattr(cat, 'point_type', 'Điểm trừ') != 'Điểm cộng':
+                                            qty_match = re.search(r'(?:x|:|-)\s*(\d+)', text_to_parse.lower())
+                                            qty = int(qty_match.group(1)) if qty_match else 1
+                                            auto_refund_points += float(cat.penalty_points * qty)
                                             break
+                                else:
+                                    # LỖI BỊ TỪ CHỐI GỠ HOẶC LỖI KHÔNG BỊ KHIẾU NẠI -> Giữ lại trong Sổ đen
+                                    remaining_notes.append(n)
+                                    
+                            # Ghi đè lại ghi chú sau khi đã GỌT BỎ những lỗi được gỡ
+                            score.note = " ; ".join(remaining_notes)
+                            
+                            # ĐỒNG BỘ LÀM SẠCH "SỔ ĐEN TOÀN TRƯỜNG" DỰA TRÊN PHẦN CÒN LẠI
+                            db_session.query(WeeklyViolation).filter_by(weekly_score_id=score.id).delete()
+                            
+                            for part in remaining_notes:
+                                match_day = re.search(r'\[(T[2-7]|CN)\]', part)
+                                day_pfx = match_day.group(0) if match_day else ""
+                                text_to_parse = part.replace(day_pfx, "").strip() if day_pfx else part
+                                
+                                match_stu = re.search(r'\[(.*?)\]', text_to_parse)
+                                stu_display = match_stu.group(1).strip() if match_stu else None
+                                
+                                for cat in sorted_cats:
+                                    if cat.name.lower() in text_to_parse.lower():
+                                        match_qty = re.search(r'(?:x|:|-)\s*(\d+)', text_to_parse.lower())
+                                        qty = int(match_qty.group(1)) if match_qty else 1
+                                        db_session.add(WeeklyViolation(weekly_score_id=score.id, violation_id=cat.id, quantity=qty, student_name=stu_display))
+                                        break
                         except Exception as e:
                             print(f"Lỗi tự động xóa Sổ đen: {e}")
                     
-                    score.appeal_response = f"[ĐÃ DUYỆT] Hoàn lại {refund_points}đ. Phản hồi: {response_text}"
-                    log_system_action("XỬ LÝ PHÚC KHẢO", f"Đã DUYỆT khiếu nại lớp {score.branch.name} Tuần {score.week}. Tự động hoàn {refund_points}đ và xóa lỗi.")
-                    flash(f"✅ Đã duyệt khiếu nại, hoàn {refund_points}đ và tự động xóa lỗi khỏi Sổ đen của lớp {score.branch.name}!", "success")
+                    # Ưu tiên lấy điểm tự động tính toán bởi Python Backend.
+                    form_refund = request.form.get('refund_points', type=float, default=0.0)
+                    final_refund = auto_refund_points if auto_refund_points > 0 else form_refund
+                    
+                    # Thực hiện hoàn điểm
+                    score.total_score = float(score.total_score or 0) + final_refund
+                    score.score_tru = max(0.0, float(score.score_tru or 0) - final_refund)
+                    
+                    score.appeal_response = f"[ĐÃ DUYỆT BỘ PHẬN] Đã gỡ lỗi được chọn và hoàn {final_refund}đ. Phản hồi: {response_text}"
+                    log_system_action("XỬ LÝ PHÚC KHẢO", f"Đã DUYỆT 1 PHẦN khiếu nại lớp {score.branch.name} Tuần {score.week}. Tự động hoàn {final_refund}đ.")
+                    flash(f"✅ Đã duyệt khiếu nại, hệ thống hoàn {final_refund}đ và xử lý Sổ đen chuẩn xác!", "success")
                     
                     # [NÂNG CẤP]: BẮN THÔNG BÁO ĐẨY CHO GVCN KHI ĐƯỢC DUYỆT PHÚC KHẢO
                     try:
@@ -853,9 +997,14 @@ def dashboard():
                             if viol.student_name and str(viol.student_name).strip() != "":
                                 raw_names = str(viol.student_name).replace(';', ',').split(',')
                                 names = [n.strip().upper() for n in raw_names if n.strip()]
+                                
+                                # [THUẬT TOÁN CHIA ĐỀU BỘ ĐẾM]
+                                num_names = len(names)
+                                total_qty = int(viol.quantity) if viol.quantity else 1
+                                qty_per_student = max(1, total_qty // num_names) if num_names > 0 else total_qty
+                                
                                 for name in names:
-                                    qty = int(viol.quantity) if viol.quantity else 1
-                                    student_viol_counts[name] = student_viol_counts.get(name, 0) + qty
+                                    student_viol_counts[name] = student_viol_counts.get(name, 0) + qty_per_student
                         
                         # Nếu ai >= 3 lỗi, ném ngay ra bảng phong thần
                         for name, count in student_viol_counts.items():
@@ -1086,11 +1235,18 @@ def add_user():
 
     try:
         with session_scope() as db_session:
-            # [NÂNG CẤP]: Khớp nối chính xác quyền GVCN vào CSDL
+            # [ĐÃ SỬA]: Bổ sung nhận diện đầy đủ các quyền, đặc biệt là Ban Giám hiệu
             role_enum = UserRole.BCH
-            if "Quản trị" in role_text or "Admin" in role_text: role_enum = UserRole.ADMIN
-            elif "Bí thư" in role_text: role_enum = UserRole.BI_THU
-            elif "Giáo viên chủ nhiệm" in role_text: role_enum = UserRole.GVCN
+            if "Quản trị" in role_text or "Admin" in role_text: 
+                role_enum = UserRole.ADMIN
+            elif "Bí thư" in role_text: 
+                role_enum = UserRole.BI_THU
+            elif "Giáo viên chủ nhiệm" in role_text: 
+                role_enum = UserRole.GVCN
+            elif "Sao đỏ" in role_text: 
+                role_enum = UserRole.SAO_DO
+            elif "Ban Giám hiệu" in role_text or "BGH" in role_text: 
+                role_enum = getattr(UserRole, 'BGH', getattr(UserRole, 'BAN_GIAM_HIEU', UserRole.BCH))
 
             exist = db_session.query(User).filter_by(username=username).first()
             if exist:
@@ -1144,11 +1300,18 @@ def edit_user(id):
                 user.full_name = new_fullname
                 changes_made = True
 
-            # [NÂNG CẤP]: Khớp nối chính xác quyền GVCN vào CSDL
+            # [ĐÃ SỬA]: Bổ sung nhận diện phân quyền khi chỉnh sửa
             new_role_enum = UserRole.BCH
-            if "Quản trị" in new_role_text or "Admin" in new_role_text: new_role_enum = UserRole.ADMIN
-            elif "Bí thư" in new_role_text: new_role_enum = UserRole.BI_THU
-            elif "Giáo viên chủ nhiệm" in new_role_text: new_role_enum = UserRole.GVCN
+            if "Quản trị" in new_role_text or "Admin" in new_role_text: 
+                new_role_enum = UserRole.ADMIN
+            elif "Bí thư" in new_role_text: 
+                new_role_enum = UserRole.BI_THU
+            elif "Giáo viên chủ nhiệm" in new_role_text: 
+                new_role_enum = UserRole.GVCN
+            elif "Sao đỏ" in new_role_text: 
+                new_role_enum = UserRole.SAO_DO
+            elif "Ban Giám hiệu" in new_role_text or "BGH" in new_role_text: 
+                new_role_enum = getattr(UserRole, 'BGH', getattr(UserRole, 'BAN_GIAM_HIEU', UserRole.BCH))
                 
             if user.role != new_role_enum:
                 change_details.append(f"Quyền: '{user.role.value}' -> '{new_role_text}'")
@@ -1424,7 +1587,6 @@ def import_branches():
         
     return redirect(url_for('branches'))
 
-
 # ==========================================
 # MODULE: QUẢN LÝ ĐỘI SAO ĐỎ
 # ==========================================
@@ -1461,6 +1623,9 @@ def red_stars():
             branches_list = []
             search_name = request.args.get('search_name', '').strip()
             filter_branch = request.args.get('filter_branch', '')
+            
+            # [TÍNH NĂNG MỚI]: BẢN ĐỒ LỊCH TRỰC TUẦN HIỆN TẠI
+            current_assignments_map = {}
 
             if active_year:
                 branches_list = db_session.query(Branch).filter(Branch.school_year_id == active_year.id).all()
@@ -1474,11 +1639,47 @@ def red_stars():
                         query = query.filter(RedStar.branch_id == int(filter_branch))
                     stars_list = query.all()
                     
+                    # 1. Tìm tuần trực mới nhất
+                    latest_assign = db_session.query(Assignment).order_by(Assignment.week_number.desc()).first()
+                    current_week_num = latest_assign.week_number if latest_assign else 0
+                    
+                    # 2. Đọc Sơ đồ Cụm (class_zones.json) để dịch tên Khu vực ra Các lớp cụ thể
+                    import os, json
+                    zones_map = {}
+                    config_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "config", "class_zones.json")
+                    if os.path.exists(config_path):
+                        with open(config_path, "r", encoding="utf-8") as f:
+                            try: zones_map = json.load(f)
+                            except: pass
+                            
+                    # 3. Quét lịch trực tuần hiện tại và đóng gói dữ liệu cho từng Sao đỏ
+                    if current_week_num > 0:
+                        current_assigns = db_session.query(Assignment).filter(Assignment.week_number == current_week_num).all()
+                        for a in current_assigns:
+                            if a.duty_area:
+                                area_name = a.duty_area.name
+                                classes = zones_map.get(area_name, [])
+                                target_str = ", ".join(classes) if classes else "Khu vực chung"
+                                
+                                # Tạo chuỗi hiển thị HTML (Có icon và màu sắc bắt mắt)
+                                info_str = f"<div class='mt-1 p-2 rounded bg-primary bg-opacity-10 border border-primary border-opacity-25' style='font-size: 12px;'>" \
+                                           f"<span class='text-primary fw-bold'><i class='fa-solid fa-location-dot me-1'></i>Tuần {current_week_num}: {area_name}</span><br>" \
+                                           f"<span class='text-secondary fw-bold'><i class='fa-solid fa-school me-1'></i>Chấm: {target_str}</span>" \
+                                           f"</div>"
+                                           
+                                # Nếu một Sao đỏ trực 2 ca/tuần, sẽ cộng dồn chuỗi lại
+                                if a.red_star_id not in current_assignments_map:
+                                    current_assignments_map[a.red_star_id] = info_str
+                                else:
+                                    current_assignments_map[a.red_star_id] += info_str
+                    
             return render_template(
                 'red_stars.html', stars=stars_list, branches=branches_list, 
-                active_year=active_year, search_name=search_name, filter_branch=filter_branch
+                active_year=active_year, search_name=search_name, filter_branch=filter_branch,
+                current_assignments_map=current_assignments_map # Truyền bản đồ lịch trực ra Giao diện
             )
     except Exception as e:
+        import traceback; traceback.print_exc()
         flash(f"Lỗi phân hệ Sao đỏ: {e}", "error")
         return redirect(url_for('dashboard'))
 
@@ -1526,9 +1727,15 @@ def delete_red_star(id):
             star = db_session.query(RedStar).filter(RedStar.id == id).first()
             if star:
                 name = star.full_name
+                # Xóa lịch trực liên quan
                 db_session.query(Assignment).filter(Assignment.red_star_id == id).delete()
-                db_session.query(StarEvaluation).filter(StarEvaluation.red_star_id == id).delete()
+                
+                # [BẢN VÁ LỖI]: Đổi 'red_star_id' thành 'evaluatee_id' cho khớp với CSDL
+                db_session.query(StarEvaluation).filter(StarEvaluation.evaluatee_id == id).delete()
+                
+                # Xóa hồ sơ gốc
                 db_session.delete(star)
+                
                 log_system_action("ĐỘI SAO ĐỎ", f"Đã xóa vĩnh viễn Sao đỏ {name} và các lịch trực liên quan")
                 flash(f"Đã xóa vĩnh viễn Sao đỏ {name} và các lịch trực liên quan!", "success")
     except Exception as e:
@@ -1797,6 +2004,9 @@ def import_class_zones():
     if file and (file.filename.endswith('.xlsx') or file.filename.endswith('.xls')):
         try:
             import numpy as np
+            import pandas as pd
+            import os
+            import json
             
             df = pd.read_excel(file)
             df.columns = df.columns.str.strip().str.upper()
@@ -1846,7 +2056,8 @@ def import_class_zones():
                 for zone_name in dynamic_zones.keys():
                     exist = db_session.query(DutyArea).filter_by(name=zone_name).first()
                     if not exist:
-                        new_area = DutyArea(name=zone_name, required_stars=2)
+                        # [ĐÃ ĐỒNG BỘ]: Set required_stars = 1 để khớp với luật "1 người/1 vị trí"
+                        new_area = DutyArea(name=zone_name, required_stars=1)
                         db_session.add(new_area)
                         count_new += 1
                 
@@ -1947,7 +2158,7 @@ def auto_assign():
                 flash("Lỗi: Thiếu dữ liệu Khu vực trực hoặc Đội Sao đỏ để phân công!", "error")
                 return redirect(url_for('assignments', week=week_number))
                 
-            # 3. Đọc cấu hình Sơ đồ lớp để né (Không trực lớp mình)
+            # 3. Đọc cấu hình Sơ đồ lớp để né
             base_dir = os.path.dirname(os.path.abspath(__file__))
             config_path = os.path.join(base_dir, "config", "class_zones.json")
             zones_map = {}
@@ -1956,100 +2167,114 @@ def auto_assign():
                     try: zones_map = json.load(f)
                     except: pass
             
-            # HÀM BỔ TRỢ: Trích xuất Khối (10, 11, 12) từ tên lớp
             def get_grade(class_name):
                 match = re.search(r'(10|11|12)', str(class_name))
                 return match.group(1) if match else ""
 
-            # 4. [NÂNG CẤP LÕI - QUY TẮC 2]: TRÍCH XUẤT LỊCH SỬ ĐỂ ÉP LUẬT XOAY VÒNG
+            # 4. TRÍCH XUẤT LỊCH SỬ XOAY VÒNG
             history_counts = {star.id: {} for star in stars}
             past_assignments = db_session.query(Assignment).filter(Assignment.week_number < week_number).all()
             
             for pa in past_assignments:
-                # [ĐÃ VÁ LỖI]: Gọi thẳng Object pa.duty_area.id thay vì gọi cột database
                 if pa.red_star_id in history_counts and pa.duty_area:
                     area_id_val = pa.duty_area.id
                     history_counts[pa.red_star_id][area_id_val] = history_counts[pa.red_star_id].get(area_id_val, 0) + 1
 
-            # Biến đếm khối lượng công việc trong Tuần hiện tại
             current_week_shift_counts = {star.id: 0 for star in stars}
             success_count = 0
             
-            # Xáo trộn mảng cụm trực để đổi mới ngẫu nhiên thứ tự bốc thăm
-            random.shuffle(areas)
+            # QUY TẮC SẮP XẾP KHU VỰC: Ưu tiên Giám sát khối trước -> Cụm lớp -> Cổng sau cùng
+            areas_sorted = sorted(areas, key=lambda a: 0 if "KHỐI" in a.name.upper() else (1 if "CỔNG" not in a.name.upper() else 2))
             
-            # 5. Bắt đầu xếp lịch
+            # 5. Bắt đầu phân công cho từng ca (Sáng / Chiều)
             for shift in shifts:
+                # Danh sách quân số rảnh trong ca này (Mỗi em chỉ dùng đúng 1 lần)
                 available_stars = list(stars)
-                random.shuffle(available_stars) # Trộn ngẫu nhiên ban đầu
+                random.shuffle(available_stars)
                 
-                for area in areas:
-                    req_count = area.required_stars or 2
+                for area in areas_sorted:
+                    req_count = int(area.required_stars or 1)
                     assigned_count = 0
                     
-                    # Xác định CÁC KHỐI LỚP (10, 11, 12) có mặt trong Cụm trực này
+                    area_name_lower = area.name.lower()
+                    is_gate_area = "cổng" in area_name_lower
+                    
                     area_classes = [c.strip().upper() for c in zones_map.get(area.name, [])]
                     area_grades = {get_grade(c) for c in area_classes if get_grade(c)}
                     
-                    # [NÂNG CẤP LÕI - QUY TẮC 1]: Lọc ra danh sách Sao đỏ hợp lệ
-                    valid_stars_for_area = []
-                    for star in available_stars:
-                        star_class = star.branch.name.strip().upper() if star.branch else ""
-                        star_grade = get_grade(star_class)
-                        
-                        is_conflict = False
-                        # Nếu Cụm trực chứa lớp có cùng Khối với Sao đỏ -> XUNG ĐỘT
-                        if star_grade and star_grade in area_grades:
-                            is_conflict = True
-                        
-                        # Xử lý dự phòng cho cụm trực chưa có trong Sơ đồ lớp
-                        if not is_conflict and "KHỐI" in area.name.upper():
-                            if star_grade and star_grade in area.name:
-                                is_conflict = True
+                    while assigned_count < req_count:
+                        # Nếu vì lý do nào đó dùng hết quân mà vẫn thiếu ghế, cấp cứu nạp lại từ đầu
+                        if not available_stars:
+                            available_stars = list(stars)
+                            
+                        # Lọc danh sách thỏa mãn điều kiện an toàn
+                        valid_stars = []
+                        for star in available_stars:
+                            star_class = star.branch.name.strip().upper() if star.branch else ""
+                            star_grade = get_grade(star_class)
+                            
+                            is_conflict = False
+                            
+                            # Nếu không phải khu vực Cổng: Áp dụng luật nghiêm ngặt (Né khối + Né vị trí cũ)
+                            if not is_gate_area:
+                                if star_class in area_classes:
+                                    is_conflict = True
+                                elif star_grade and star_grade in area_grades:
+                                    is_conflict = True
+                                elif "KHỐI" in area.name.upper() and star_grade and star_grade in area.name:
+                                    is_conflict = True
+                                    
+                                if history_counts[star.id].get(area.id, 0) > 0:
+                                    is_conflict = True
+                                    
+                            if not is_conflict:
+                                valid_stars.append(star)
                                 
-                        if not is_conflict:
-                            valid_stars_for_area.append(star)
+                        # Cứu hộ tầng 1: Nếu lọc quá ngặt mà rỗng, cho phép trực lại vị trí cũ nhưng vẫn né khối
+                        if not valid_stars and not is_gate_area:
+                            for star in available_stars:
+                                star_class = star.branch.name.strip().upper() if star.branch else ""
+                                star_grade = get_grade(star_class)
+                                if star_class not in area_classes and (not star_grade or star_grade not in area_grades):
+                                    valid_stars.append(star)
+                                    
+                        # Cứu hộ tầng 2 (Tuyệt đối): Lấy bất kỳ ai còn lại trong danh sách rảnh
+                        if not valid_stars:
+                            valid_stars = list(available_stars)
                             
-                    # Sắp xếp theo ưu tiên: 1. Ít trực cụm này nhất -> 2. Ít việc trong tuần nhất
-                    valid_stars_for_area.sort(key=lambda s: (
-                        history_counts[s.id].get(area.id, 0),
-                        current_week_shift_counts[s.id]
-                    ))
-                    
-                    # Tiến hành bốc người vào Cụm trực
-                    stars_to_remove_from_shift = []
-                    for star in valid_stars_for_area:
-                        if assigned_count >= req_count:
-                            break
-                            
-                        # Chốt phân công
+                        # Sắp xếp theo ưu tiên: Ít lịch sử trực cụm này nhất & Ít việc trong tuần nhất
+                        valid_stars.sort(key=lambda s: (
+                            history_counts[s.id].get(area.id, 0),
+                            current_week_shift_counts[s.id]
+                        ))
+                        
+                        # CHỐT: Lấy em tốt nhất
+                        chosen_star = valid_stars[0]
+                        
                         new_assign = Assignment(
                             week_number=week_number,
                             shift=shift,
                             date=start_date,
-                            red_star=star,      
+                            red_star=chosen_star,      
                             duty_area=area      
                         )
                         db_session.add(new_assign)
                         
-                        current_week_shift_counts[star.id] += 1
-                        history_counts[star.id][area.id] = history_counts[star.id].get(area.id, 0) + 1
+                        # XÓA VĨNH VIỄN EM NÀY KHỎI DANH SÁCH RẢNH CỦA CA ĐÓ (Đảm bảo mỗi vị trí là duy nhất 1 người)
+                        available_stars.remove(chosen_star)
+                        
+                        current_week_shift_counts[chosen_star.id] += 1
+                        history_counts[chosen_star.id][area.id] = history_counts[chosen_star.id].get(area.id, 0) + 1
                         assigned_count += 1
-                        stars_to_remove_from_shift.append(star)
                         success_count += 1
-                            
-                    # Trực xong 1 ca rồi thì loại ra khỏi vòng lặp của buổi đó
-                    for s in stars_to_remove_from_shift:
-                        if s in available_stars:
-                            available_stars.remove(s)
             
             db_session.commit()
             
             if success_count > 0:
-                log_system_action("LỊCH TRỰC", f"Đã chạy thuật toán xếp lịch tự động cho Tuần {week_number}")
-                flash(f"✅ Đã phân công tự động Tuần {week_number} thành công! ({success_count} lượt trực)", "success")
+                log_system_action("LỊCH TRỰC", f"Đã phân công tự động Tuần {week_number}")
+                flash(f"✅ Đã phân công thành công! (Mỗi vị trí là duy nhất 1 Sao đỏ, lấp đầy {success_count} vị trí)", "success")
             else:
-                flash("⚠️ Thuật toán chạy xong nhưng không thể xếp lịch (Có thể do không đủ người đáp ứng điều kiện chéo tuyến).", "warning")
+                flash("⚠️ Không thể phân công do thiếu dữ liệu Sao đỏ.", "warning")
                 
     except Exception as e:
         import traceback
@@ -2058,7 +2283,6 @@ def auto_assign():
         
     return redirect(url_for('assignments', week=week_number))
 
-# --- XUẤT EXCEL LỊCH TRỰC ---
 @app.route('/export_schedule/<int:week>')
 def export_schedule(week):
     try:
@@ -2071,83 +2295,101 @@ def export_schedule(week):
             assignments = db_session.query(Assignment).join(RedStar).join(Branch).filter(
                 Assignment.week_number == week,
                 Branch.school_year_id == active_year.id
-            ).order_by(Assignment.shift, Assignment.id).all()
+            ).order_by(Assignment.shift, DutyArea.name).all()
             
             if not assignments:
                 flash(f"Chưa có dữ liệu lịch trực tuần {week} để xuất!", "error")
                 return redirect(url_for('assignments', week=week))
 
+            import os, json
             zones_map = {}
             if os.path.exists("config/class_zones.json"):
                 with open("config/class_zones.json", "r", encoding="utf-8") as f:
                     zones_map = json.load(f)
+
+            import openpyxl
+            from openpyxl.styles import Font, Alignment, Border, Side
+            import io
+            from flask import send_file
 
             wb = openpyxl.Workbook()
             ws = wb.active
             ws.title = f"Tuan_{week}"
             
             ws['A1'] = "ĐOÀN TRƯỜNG THPT THANH HÒA"
-            ws['D1'] = "ĐOÀN TNCS HỒ CHÍ MINH"
+            ws['E1'] = "ĐOÀN TNCS HỒ CHÍ MINH"
             ws['A1'].font = Font(name="Times New Roman", size=11, bold=True)
-            ws['D1'].font = Font(name="Times New Roman", size=11, bold=True)
-            ws['D1'].alignment = Alignment(horizontal="right")
+            ws['E1'].font = Font(name="Times New Roman", size=11, bold=True)
+            ws['E1'].alignment = Alignment(horizontal="right")
             
-            ws['A3'] = f"LỊCH TRỰC SAO ĐỎ - TUẦN {week}"
+            ws['A3'] = f"LỊCH TRỰC ĐỘI SAO ĐỎ - TUẦN {week}"
             ws['A3'].font = Font(name="Times New Roman", size=14, bold=True)
+            ws.merge_cells('A3:F3')
+            ws['A3'].alignment = Alignment(horizontal="center")
             
-            headers = ["STT", "Họ Và Tên", "Vị trí trực", "Ghi chú"]
+            # [ĐÃ NÂNG CẤP LÕI]: Chuẩn hóa tiêu đề Excel tách bạch Cụm và Lớp
+            headers = ["STT", "Họ Tên Sao Đỏ", "Lớp của SĐ", "Khu Vực Trực", "Giám Sát Các Lớp", "Ca Trực"]
             thin = Side(border_style="thin", color="000000")
             border = Border(left=thin, right=thin, top=thin, bottom=thin)
             
             for col_num, h_title in enumerate(headers, 1):
                 c = ws.cell(row=5, column=col_num, value=h_title)
-                c.font = Font(name="Times New Roman", size=11, bold=True)
+                c.font = Font(name="Times New Roman", size=12, bold=True)
                 c.alignment = Alignment(horizontal="center", vertical="center")
                 c.border = border
                 
             for idx, assign in enumerate(assignments, 1):
-                area_name = assign.duty_area.name if assign.duty_area else ""
-                disp_area = ", ".join(zones_map.get(area_name, [])) if area_name in zones_map else area_name
-                star_name = assign.red_star.full_name if assign.red_star else ""
-                branch_name = assign.red_star.branch.name if assign.red_star and assign.red_star.branch else ""
+                area_name = assign.duty_area.name if assign.duty_area else "Chưa phân công"
+                classes_list = zones_map.get(area_name, [])
+                class_str = ", ".join(classes_list) if classes_list else "Khu vực chung"
+                
+                star_name = assign.red_star.full_name if assign.red_star else "Khuyết"
+                branch_name = assign.red_star.branch.name if assign.red_star and assign.red_star.branch else "---"
                 
                 row_idx = idx + 5
-                c1 = ws.cell(row=row_idx, column=1, value=idx)
-                c2 = ws.cell(row=row_idx, column=2, value=f"{star_name} ({branch_name})")
-                c3 = ws.cell(row=row_idx, column=3, value=f"{disp_area} ({assign.shift})")
-                c4 = ws.cell(row=row_idx, column=4, value="")
+                row_data = [idx, star_name, branch_name, area_name, class_str, assign.shift]
                 
-                for c in [c1, c2, c3, c4]:
-                    c.font = Font(name="Times New Roman", size=11)
+                for col_num, val in enumerate(row_data, 1):
+                    c = ws.cell(row=row_idx, column=col_num, value=val)
+                    c.font = Font(name="Times New Roman", size=12)
                     c.border = border
-                c1.alignment = Alignment(horizontal="center")
+                    if col_num in [1, 3, 6]: 
+                        c.alignment = Alignment(horizontal="center")
                 
             ws.column_dimensions['A'].width = 8
-            ws.column_dimensions['B'].width = 30
-            ws.column_dimensions['C'].width = 35
-            ws.column_dimensions['D'].width = 20
+            ws.column_dimensions['B'].width = 25
+            ws.column_dimensions['C'].width = 15
+            ws.column_dimensions['D'].width = 22
+            ws.column_dimensions['E'].width = 30
+            ws.column_dimensions['F'].width = 15
             
-            log_system_action("XUẤT EXCEL", f"Xuất lịch trực Tuần {week}")
+            log_system_action("XUẤT EXCEL", f"Xuất lịch trực chuyên nghiệp Tuần {week}")
             out = io.BytesIO()
             wb.save(out)
             out.seek(0)
             return send_file(out, download_name=f"Lich_Truc_Tuan_{week}.xlsx", as_attachment=True)
     except Exception as e:
+        import traceback; traceback.print_exc()
         flash(f"Lỗi xuất excel lịch trực: {e}", "error")
         return redirect(url_for('assignments', week=week))
 
-# --- API LẤY DANH SÁCH GỢI Ý ĐỔI NGƯỜI THÔNG MINH ---
 @app.route('/api/get_swap_candidates/<int:assign_id>')
 def api_get_swap_candidates(assign_id):
     try:
+        from database.database import session_scope
+        from database.models import Assignment, DutyArea, RedStar
+        import json, os, re
+        
         with session_scope() as db_session:
             assign = db_session.query(Assignment).filter_by(id=assign_id).first()
             if not assign: return {"error": "Không tìm thấy lịch trực"}
             
             week_num = assign.week_number
             shift = assign.shift
-            area_name = assign.duty_area.name if assign.duty_area else ""
-            current_star_id = assign.red_star_id
+            
+            current_area_name = assign.duty_area.name if assign.duty_area else ""
+            current_star = assign.red_star
+            current_star_id = current_star.id if current_star else 0
             
             active_stars = db_session.query(RedStar).filter_by(is_active=True).all()
             shift_assignments = db_session.query(Assignment).filter_by(week_number=week_num, shift=shift).all()
@@ -2156,14 +2398,28 @@ def api_get_swap_candidates(assign_id):
             zones_map = {}
             if os.path.exists("config/class_zones.json"):
                 with open("config/class_zones.json", "r", encoding="utf-8") as f:
-                    zones_map = json.load(f)
+                    try: zones_map = json.load(f)
+                    except: pass
                     
-            restricted_classes = [c.upper() for c in zones_map.get(area_name, [])]
-            
-            is_gate_chinh = "Cổng chính" in area_name
-            is_gate_phu = "Cổng phụ" in area_name
-            is_giam_sat = "Giám sát" in area_name
-            is_cum = not (is_gate_chinh or is_gate_phu or is_giam_sat)
+            def get_grade(class_name):
+                match = re.search(r'(10|11|12)', str(class_name))
+                return match.group(1) if match else ""
+
+            # [THUẬT TOÁN ĐỔI NGƯỜI CHÉO THÔNG MINH]: Kiểm tra 1 Học sinh có hợp lệ trực 1 Khu vực hay không
+            def can_assign(star_obj, target_area_name):
+                if not star_obj: return False
+                if "cổng" in target_area_name.lower(): return True # Cổng thì vô tư
+                
+                s_class = star_obj.branch.name.strip().upper() if star_obj.branch else ""
+                s_grade = get_grade(s_class)
+                
+                a_classes = [c.strip().upper() for c in zones_map.get(target_area_name, [])]
+                a_grades = {get_grade(c) for c in a_classes if get_grade(c)}
+                
+                if s_class in a_classes: return False # Trùng lớp
+                if s_grade and s_grade in a_grades: return False # Trùng khối
+                if "KHỐI" in target_area_name.upper() and s_grade and s_grade in target_area_name.upper(): return False
+                return True
             
             free_list = []
             busy_list = []
@@ -2171,55 +2427,33 @@ def api_get_swap_candidates(assign_id):
             for star in active_stars:
                 if star.id == current_star_id: continue
                 
-                star_class_name = star.branch.name.upper() if star.branch else ""
-                is_owner = False
-                if star_class_name in restricted_classes: is_owner = True
-                elif "Khối" in area_name:
-                    grade_num = "".join(filter(str.isdigit, area_name))
-                    if grade_num and star_class_name.startswith(grade_num): is_owner = True
-                        
-                if is_owner: continue
+                # 1. Học sinh này có đủ điều kiện thế chỗ vào vị trí hiện tại không?
+                if not can_assign(star, current_area_name):
+                    continue
                     
                 is_busy = star.id in busy_map
-                swap_valid = True
                 target_assign_id = None
                 target_area_name = ""
                 
                 if is_busy:
                     target_assign_id, target_area_name = busy_map[star.id]
-                    t_gate_chinh = "Cổng chính" in target_area_name
-                    t_gate_phu = "Cổng phụ" in target_area_name
-                    t_giam_sat = "Giám sát" in target_area_name
-                    t_cum = not (t_gate_chinh or t_gate_phu or t_giam_sat)
-                    
-                    rule_matched = False
-                    if is_gate_chinh and t_gate_phu: rule_matched = True
-                    elif is_gate_phu and t_gate_chinh: rule_matched = True
-                    elif is_cum and t_giam_sat: rule_matched = True
-                    elif is_giam_sat and t_cum: rule_matched = True
-                    
-                    if not rule_matched: swap_valid = False
-                    
-                    if swap_valid:
-                        curr_class = assign.red_star.branch.name.upper() if assign.red_star and assign.red_star.branch else ""
-                        target_restricted = [c.upper() for c in zones_map.get(target_area_name, [])]
-                        if curr_class in target_restricted: swap_valid = False
-                        elif "Khối" in target_area_name:
-                            t_grade = "".join(filter(str.isdigit, target_area_name))
-                            if t_grade and curr_class.startswith(t_grade): swap_valid = False
+                    # 2. Học sinh hiện tại có đủ điều kiện sang thế chỗ ngược lại cho học sinh kia không?
+                    if not can_assign(current_star, target_area_name):
+                        continue
                 
-                if swap_valid:
-                    item = {
-                        "star_id": star.id,
-                        "star_name": f"{star.full_name} ({star.branch.name if star.branch else ''})",
-                        "target_assign_id": target_assign_id,
-                        "target_area_name": target_area_name
-                    }
-                    if is_busy: busy_list.append(item)
-                    else: free_list.append(item)
-                    
-            return {"free": free_list[:10], "busy": busy_list}
+                item = {
+                    "star_id": star.id,
+                    "star_name": f"{star.full_name} ({star.branch.name if star.branch else ''})",
+                    "target_assign_id": target_assign_id,
+                    "target_area_name": target_area_name
+                }
+                
+                if is_busy: busy_list.append(item)
+                else: free_list.append(item)
+                
+            return {"free": free_list[:15], "busy": busy_list}
     except Exception as e:
+        import traceback; traceback.print_exc()
         return {"error": str(e)}
 
 @app.route('/execute_swap', methods=['POST'])
@@ -2940,19 +3174,23 @@ def preview_blacklist():
                 ).all()
                 
             violations = []
+            
             for v, s, b, c in raw_violations:
                 if v.student_name and str(v.student_name).strip() != "":
-                    # Bóc tách tên học sinh nếu có dấu phẩy hoặc chấm phẩy
                     raw_names = str(v.student_name).replace(';', ',').split(',')
-                    for raw_n in raw_names:
-                        n_clean = raw_n.strip().title()
-                        if n_clean:
-                            violations.append({
-                                'branch_name': b.name,
-                                'student_name': n_clean,
-                                'violation_name': c.name,
-                                'quantity': v.quantity
-                            })
+                    valid_names = [n.strip().title() for n in raw_names if n.strip()]
+                    num_names = len(valid_names)
+                    
+                    # [THUẬT TOÁN CHIA ĐỀU LỖI CHO SỐ LƯỢNG HỌC SINH]
+                    qty_per_student = max(1, v.quantity // num_names) if num_names > 0 else v.quantity
+                    
+                    for n_clean in valid_names:
+                        violations.append({
+                            'branch_name': b.name,
+                            'student_name': n_clean,
+                            'violation_name': c.name,
+                            'quantity': qty_per_student
+                        })
                     
             # Sắp xếp danh sách vi phạm theo tên Chi đoàn (từ A-Z)
             violations.sort(key=lambda x: x['branch_name'])
@@ -2983,18 +3221,26 @@ def export_blacklist():
                 ).all()
                 
             violations = []
-            for v, s, b, c in raw_violations:
-                if v.student_name and str(v.student_name).strip() != "":
-                    raw_names = str(v.student_name).replace(';', ',').split(',')
-                    for raw_n in raw_names:
-                        n_clean = raw_n.strip().title()
-                        if n_clean:
-                            violations.append({
-                                'branch_name': b.name,
-                                'student_name': n_clean,
-                                'violation_name': c.name,
-                                'quantity': v.quantity
-                            })
+            for v, sc, b, c in results:
+                raw_names = str(v.student_name).replace(';', ',').split(',')
+                valid_names = [n.strip().title() for n in raw_names if n.strip()]
+                num_names = len(valid_names)
+                
+                # [THUẬT TOÁN CHIA ĐỀU LỖI VÀ ĐIỂM TRỪ]
+                qty_per_student = max(1, v.quantity // num_names) if num_names > 0 else v.quantity
+                
+                for n_clean in valid_names:
+                    if search_name and search_name.lower() not in n_clean.lower():
+                        continue
+                        
+                    violation_data.append({
+                        'week': sc.week,
+                        'branch_name': b.name,
+                        'student_name': n_clean,
+                        'violation_name': c.name,
+                        'quantity': qty_per_student,
+                        'penalty': float(c.penalty_points * qty_per_student) if getattr(c, 'point_type', 'Điểm trừ') != 'Điểm cộng' else 0
+                    })
                     
             violations.sort(key=lambda x: x['branch_name'])
                 
@@ -3247,6 +3493,8 @@ def monthly():
                         ).all()
                         
                         total_score = sum([(s.total_score or 0.0) for s in scores])
+                        total_tru = sum([(s.score_tru or 0.0) for s in scores])   # Rút trích tổng lỗi
+                        total_cong = sum([(s.score_cong or 0.0) for s in scores]) # Rút trích tổng thưởng
                         week_scores_dict = {s.week: (s.total_score or 0.0) for s in scores}
                         
                         temp_groups[grp].append({
@@ -3255,16 +3503,29 @@ def monthly():
                             'group': grp,
                             'gvcn': b.gvcn,
                             'total_score': total_score,
+                            'total_tru': total_tru,
+                            'total_cong': total_cong,
                             'weeks_count': len(scores),
                             'week_scores': week_scores_dict 
                         })
                     
                     for grp, lst in temp_groups.items():
-                        lst.sort(key=lambda x: x['total_score'], reverse=True)
+                        # Áp dụng bộ lọc 4 lớp cho Thi đua Tháng
+                        lst.sort(key=lambda x: (
+                            -float(x['total_score']), 
+                            float(x['total_tru']), 
+                            -float(x['total_cong']),
+                            x['branch_name']
+                        ))
+                        
                         current_rank = 1
                         for i, d in enumerate(lst):
-                            if i > 0 and d['total_score'] < lst[i-1]['total_score']:
-                                current_rank = i + 1
+                            if i > 0:
+                                prev = lst[i-1]
+                                if not (d['total_score'] == prev['total_score'] and 
+                                        d['total_tru'] == prev['total_tru'] and 
+                                        d['total_cong'] == prev['total_cong']):
+                                    current_rank = i + 1
                             d['rank'] = current_rank
                         monthly_data[grp] = lst
                         
@@ -3767,8 +4028,12 @@ def class_dashboard():
                 if is_gvcn:
                     branches = db_session.query(Branch).filter(Branch.name == session_username, Branch.school_year_id == active_year.id).all()
                 else:
-                    branches = db_session.query(Branch).filter(Branch.school_year_id == active_year.id).order_by(Branch.name).all()
-            
+                    branches = db_session.query(Branch).filter(Branch.school_year_id == active_year.id).all()
+                    
+                    # [THUẬT TOÁN SẮP XẾP TỰ NHIÊN - NATURAL SORT]
+                    import re
+                    branches.sort(key=lambda b: [int(t) if t.isdigit() else t.lower() for t in re.split(r'(\d+)', str(b.name))])
+                    
             selected_branch_id = request.args.get('branch_id', type=int)
             if not selected_branch_id and branches:
                 selected_branch_id = branches[0].id
@@ -3778,9 +4043,10 @@ def class_dashboard():
             assignments = []
             monitoring_assignments = []
             warning_students = []
+            appeal_records = []
             
             # =========================================================================
-            # [NÂNG CẤP]: LẤY DỮ LIỆU NGÂN HÀNG LỖI ĐỂ GVCN TRA CỨU (KHÔNG LÀM ẢNH HƯỞNG LUỒNG CŨ)
+            # [NÂNG CẤP]: LẤY DỮ LIỆU NGÂN HÀNG LỖI ĐỂ GVCN TRA CỨU
             # =========================================================================
             violation_bank = []
             if active_year:
@@ -3805,9 +4071,14 @@ def class_dashboard():
                                 if viol.student_name and str(viol.student_name).strip() != "":
                                     raw_names = str(viol.student_name).replace(';', ',').split(',')
                                     names = [n.strip().upper() for n in raw_names if n.strip()]
+                                    
+                                    # [THUẬT TOÁN CHIA ĐỀU BỘ ĐẾM]
+                                    num_names = len(names)
+                                    total_qty = int(viol.quantity) if viol.quantity else 1
+                                    qty_per_student = max(1, total_qty // num_names) if num_names > 0 else total_qty
+                                    
                                     for name in names:
-                                        qty = int(viol.quantity) if viol.quantity else 1
-                                        student_viol_counts[name] = student_viol_counts.get(name, 0) + qty
+                                        student_viol_counts[name] = student_viol_counts.get(name, 0) + qty_per_student
                             
                             current_warnings = [{'name': name.title(), 'count': count, 'week': score.week} 
                                                 for name, count in student_viol_counts.items() if count >= 3]
@@ -3825,19 +4096,87 @@ def class_dashboard():
                         ).all()
                         
                         same_group_scores = [s for s in all_in_week if (s.branch.group or "Nhóm 1") == group_val]
-                        same_group_scores.sort(key=lambda x: float(x.total_score or 0), reverse=True)
+                        
+                        # =======================================================
+                        # [THUẬT TOÁN ĐỒNG HẠNG TIE-BREAKER CHUẨN XÁC]
+                        # =======================================================
+                        same_group_scores.sort(key=lambda x: (
+                            -float(x.total_score or 0),   # Ưu tiên 1: Tổng điểm (Từ cao xuống thấp)
+                            float(x.score_tru or 0),      # Ưu tiên 2: Ít điểm trừ vi phạm hơn sẽ xếp trên
+                            -float(x.score_cong or 0),    # Ưu tiên 3: Nhiều điểm thưởng hơn sẽ xếp trên
+                            x.branch.name                 # Ưu tiên 4: Cùng điểm thì xếp hạng theo Tên Lớp (A-Z)
+                        ))
                         
                         rk = 1
                         for i, s in enumerate(same_group_scores):
-                            if i > 0 and float(s.total_score or 0) < float(same_group_scores[i-1].total_score or 0): rk = i + 1
+                            if i > 0:
+                                prev = same_group_scores[i-1]
+                                # Phải hoàn toàn giống nhau 3 hệ số mới được cấp Đồng Hạng
+                                if not (float(s.total_score or 0) == float(prev.total_score or 0) and 
+                                        float(s.score_tru or 0) == float(prev.score_tru or 0) and 
+                                        float(s.score_cong or 0) == float(prev.score_cong or 0)):
+                                    rk = i + 1 # Nhảy bậc xếp hạng (VD: 1, 2, 2, 4)
                             if s.branch_id == selected_branch.id: break
                         
                         so_luong_diem_tot = int(sc.count_9 or 0) + int(sc.count_10 or 0)
                         if "2" in str(group_val): so_luong_diem_tot += int(sc.count_8 or 0)
                             
+                        # =========================================================================
+                        # [NÂNG CẤP LÕI]: MỞ KHÓA NÚT GIAO DIỆN VÀ BÓC TÁCH HỒ SƠ PHÚC KHẢO
+                        # =========================================================================
                         has_appealed_today = False
-                        if sc.appeal_reason and f"[{today_str}]" in sc.appeal_reason:
-                            has_appealed_today = True
+                        if sc.appeal_reason:
+                            count_today = sc.appeal_reason.count(f"[{today_str}")
+                            if count_today >= 2:
+                                has_appealed_today = True
+                                
+                            # --- [BỔ SUNG]: BÓC TÁCH DỮ LIỆU CHO TAB HỒ SƠ PHÚC KHẢO ---
+                            import re
+                            pattern = r'\[\d{2}/\d{2}/\d{4} \d{2}:\d{2}\]'
+                            timestamps = re.findall(pattern, sc.appeal_reason)
+                            segments = re.split(pattern, sc.appeal_reason)[1:] 
+                            
+                            # Duyệt ngược để khiếu nại mới nhất lên đầu danh sách
+                            for i in range(len(timestamps)-1, -1, -1):
+                                time_str = timestamps[i].strip('[]')
+                                content = segments[i].strip().strip('|').strip()
+                                
+                                errors_part = ""
+                                reason_part = content
+                                
+                                # Cắt chuỗi để lấy riêng phần Lỗi và phần Lý do/Minh chứng
+                                match = re.search(r'Phúc khảo các lỗi:\s*(.*?)\s*\|\s*Lý do:(.*)', content, re.IGNORECASE)
+                                if match:
+                                    errors_part = match.group(1).strip()
+                                    reason_part = match.group(2).strip()
+                                    
+                                    # [TÍNH NĂNG MỚI]: LÀM ĐẸP CHUỖI HIỂN THỊ DẠNG BULLET CHO BCH
+                                    errors_html = errors_part.replace('] & [', '<br>• ').replace('[', '').replace(']', '')
+                                    if errors_html and not errors_html.startswith('• '):
+                                        errors_html = '• ' + errors_html
+                                    errors_part = errors_html
+                                
+                                status_text = "Đang chờ xử lý"
+                                badge_class = "warning text-dark"
+                                if sc.appeal_response:
+                                    if "ĐÃ DUYỆT" in sc.appeal_response:
+                                        status_text = "Đã duyệt"
+                                        badge_class = "success"
+                                    elif "TỪ CHỐI" in sc.appeal_response:
+                                        status_text = "Từ chối"
+                                        badge_class = "danger"
+                                
+                                appeal_records.append({
+                                    'week': sc.week,
+                                    'time': time_str,
+                                    'errors_raw': errors_part,
+                                    'reason': reason_part,
+                                    'status': status_text,
+                                    'badge': badge_class,
+                                    'response': sc.appeal_response if sc.appeal_response else ""
+                                })
+                            # -----------------------------------------------------------
+                        # =========================================================================
                             
                         weekly_scores.append({
                             'score_id': sc.id,             
@@ -3871,7 +4210,6 @@ def class_dashboard():
                         with open(config_path, "r", encoding="utf-8") as f:
                             try: zones_map = json.load(f)
                             except: pass
-
                     # =========================================================================
                     # [BẢN VÁ TỐI ƯU]: XỬ LÝ LỊCH PHÂN CÔNG ĐI TRỰC CHO TAB 3
                     # =========================================================================
@@ -3950,6 +4288,7 @@ def class_dashboard():
                                    monitoring_assignments=monitoring_assignments,
                                    warning_students=warning_students,
                                    violation_bank=violation_bank,
+                                   appeal_records=appeal_records,
                                    is_gvcn=is_gvcn 
             )
     except Exception as e:
@@ -4208,6 +4547,8 @@ def export_class_dashboard(branch_id):
 @app.route('/api/raw_scores/<week_name>/<int:branch_id>', methods=['GET', 'POST'])
 def handle_raw_scores(week_name, branch_id):
     try:
+        from database.database import session_scope
+        from database.models import Branch, SchoolYear, RawScore
         with session_scope() as db_session:
             branch = db_session.query(Branch).filter_by(id=branch_id).first()
             if not branch: 
@@ -4215,22 +4556,26 @@ def handle_raw_scores(week_name, branch_id):
             
             active_year = db_session.query(SchoolYear).filter_by(is_active=True).first()
             year_id = active_year.id if active_year else 0
+            
+            # [CHÌA KHÓA VÀNG]: Gắn chặt Tên Tuần với ID Năm Học (VD: Tuần 1_Y2) để không bao giờ bị lẫn lộn giữa các năm
             safe_week_key = f"{week_name}_Y{year_id}"
             
             if request.method == 'GET':
-                records = db_session.query(RawScore).filter_by(week=week_name, branch_name=branch.name).all()
+                # Đổi week_name thành safe_week_key
+                records = db_session.query(RawScore).filter_by(week=safe_week_key, branch_name=branch.name).all()
                 data = [{"subj": r.subject, "c10": r.c10, "c9": r.c9, "c8": r.c8} for r in records]
                 return {"data": data}
 
             if request.method == 'POST':
                 raw_list = request.json.get('raw_list', [])
-                db_session.query(RawScore).filter_by(week=week_name, branch_name=branch.name).delete()
+                # Đổi week_name thành safe_week_key
+                db_session.query(RawScore).filter_by(week=safe_week_key, branch_name=branch.name).delete()
                 
                 for item in raw_list:
                     subj = str(item.get("subj", "")).strip()
                     if not subj or subj == "Điểm đã nhập": continue
                     rs = RawScore(
-                        week=week_name,
+                        week=safe_week_key, # Đổi week_name thành safe_week_key
                         branch_name=branch.name,
                         subject=subj,
                         c10=int(item.get("c10", 0)),
@@ -4362,11 +4707,23 @@ def export_weekly_excel():
                     grp = sc.branch.group or "Nhóm 1"
                     if grp not in prev_data: prev_data[grp] = []
                     prev_data[grp].append(sc)
+                    
                 for grp, lst in prev_data.items():
-                    lst.sort(key=lambda x: float(x.total_score or 0), reverse=True)
+                    # Xếp hạng đa tầng cho tuần trước
+                    lst.sort(key=lambda x: (
+                        -float(x.total_score or 0),
+                        float(x.score_tru or 0),
+                        -float(x.score_cong or 0),
+                        x.branch.name
+                    ))
                     rk = 1
                     for i, s in enumerate(lst):
-                        if i > 0 and float(s.total_score or 0) < float(lst[i-1].total_score or 0): rk = i + 1
+                        if i > 0:
+                            prev = lst[i-1]
+                            if not (float(s.total_score or 0) == float(prev.total_score or 0) and 
+                                    float(s.score_tru or 0) == float(prev.score_tru or 0) and 
+                                    float(s.score_cong or 0) == float(prev.score_cong or 0)):
+                                rk = i + 1
                         prev_rank_map[s.branch_id] = rk
 
             report_data = {}; start_date_str = ""; end_date_str = ""
@@ -4382,6 +4739,7 @@ def export_weekly_excel():
                     
                 report_data[grp].append({
                     'branch_name': b.name, 'total_score': float(sc.total_score or 0),
+                    'score_tru': float(sc.score_tru or 0), 'score_cong': float(sc.score_cong or 0),
                     'diem_tot': so_luong_diem_tot,
                     'note': sc.note or "", 'prev_rank': prev_rank_map.get(b.id, "N/A")
                 })
@@ -4433,11 +4791,22 @@ def export_weekly_excel():
             current_row = 5
             for group in sorted(report_data.keys()):
                 group_items = report_data[group]
-                group_items.sort(key=lambda x: x['total_score'], reverse=True)
+                # Xếp hạng đa tầng khi in ra Excel
+                group_items.sort(key=lambda x: (
+                    -float(x['total_score']),
+                    float(x['score_tru']),
+                    -float(x['score_cong']),
+                    x['branch_name']
+                ))
                 
                 curr_rank = 1
                 for i, item in enumerate(group_items):
-                    if i > 0 and item['total_score'] < group_items[i-1]['total_score']: curr_rank = i + 1
+                    if i > 0:
+                        prev = group_items[i-1]
+                        if not (item['total_score'] == prev['total_score'] and 
+                                item['score_tru'] == prev['score_tru'] and 
+                                item['score_cong'] == prev['score_cong']):
+                            curr_rank = i + 1
                     item['current_rank'] = curr_rank
 
                 ws.cell(row=current_row, column=1, value=str(group)).font = Font(name="Times New Roman", size=11, bold=True)
@@ -4705,10 +5074,14 @@ def semester():
                         })
                         
                     for grp, lst in semester_data.items():
-                        lst.sort(key=lambda x: x['total_score'], reverse=True)
+                        # Sắp xếp theo Tổng điểm giảm dần, nếu bằng điểm thì xếp A-Z
+                        lst.sort(key=lambda x: (-float(x['total_score']), x['branch_name']))
                         rk = 1
                         for i, d in enumerate(lst):
-                            if i > 0 and d['total_score'] < lst[i-1]['total_score']: rk = i + 1
+                            if i > 0:
+                                prev = lst[i-1]
+                                if float(d['total_score']) != float(prev['total_score']):
+                                    rk = i + 1
                             d['rank'] = rk
                             
                             p_rk = d['prev_rank']
@@ -4986,10 +5359,14 @@ def yearly():
                         })
                         
                     for grp, lst in yearly_data.items():
-                        lst.sort(key=lambda x: x['total_score'], reverse=True)
+                        # Sắp xếp theo Tổng điểm giảm dần, nếu bằng điểm thì xếp A-Z
+                        lst.sort(key=lambda x: (-float(x['total_score']), x['branch_name']))
                         rk = 1
                         for i, d in enumerate(lst):
-                            if i > 0 and d['total_score'] < lst[i-1]['total_score']: rk = i + 1
+                            if i > 0:
+                                prev = lst[i-1]
+                                if float(d['total_score']) != float(prev['total_score']):
+                                    rk = i + 1
                             d['rank'] = rk
 
                     if action == 'save':
@@ -5899,9 +6276,8 @@ def auto_generate_gvcn():
     except Exception as e:
         flash(f"Lỗi hệ thống: {e}", "error")
         return redirect(url_for('users'))
-
 # ==========================================
-# API: GVCN GỬI PHÚC KHẢO ĐIỂM
+# API: GVCN GỬI PHÚC KHẢO ĐIỂM (BẢN VÁ LỖI MÚI GIỜ UTC+7 TỐI THƯỢNG)
 # ==========================================
 @app.route('/submit_appeal', methods=['POST'])
 def submit_appeal():
@@ -5910,6 +6286,7 @@ def submit_appeal():
         
     score_id = request.form.get('score_id', type=int)
     reason = request.form.get('reason', '').strip()
+    evidence_base64 = request.form.get('appeal_evidence_base64', '').replace(' ', '+')
     
     if not score_id or not reason: 
         return redirect(url_for('class_dashboard'))
@@ -5927,62 +6304,96 @@ def submit_appeal():
                 return redirect(url_for('class_dashboard'))
             
             # =========================================================================
-            # [NÂNG CẤP]: THUẬT TOÁN TỰ ĐỘNG KHÓA PHÚC KHẢO VÀO NGÀY CHỦ NHẬT CỦA TUẦN
+            # [BẢN VÁ TỐI THƯỢNG]: ÉP BUỘC MÚI GIỜ VIỆT NAM (UTC+7) ĐỒNG BỘ 100%
             # =========================================================================
-            from datetime import datetime, date, timedelta
-            is_expired_dynamic = False
+            from datetime import datetime, timezone, timedelta
+            # Khởi tạo đối tượng múi giờ VN chuẩn
+            vn_tz = timezone(timedelta(hours=7))
+            # Lấy giờ hiện tại và ép chặt vào múi giờ VN
+            now_vn = datetime.now(vn_tz) 
+            today_vn_date = now_vn.date()
             
+            # --- LUẬT KHÓA CHỦ NHẬT ---
+            is_expired_dynamic = False
             if score.start_date:
                 try:
-                    # Lấy ngày bắt đầu tuần (thường là Thứ 2)
                     start_d_clean = score.start_date.split()[0]
                     if "-" in start_d_clean:
                         start_date_obj = datetime.strptime(start_d_clean, '%Y-%m-%d').date()
                     else:
                         start_date_obj = datetime.strptime(start_d_clean, '%d/%m/%Y').date()
                         
-                    # Tính ngày Chủ nhật trong tuần đó (Cộng thêm 6 ngày từ ngày bắt đầu)
-                    # Hoặc nếu dùng chuẩn: tìm ngày Chủ nhật gần nhất hoặc ngày thứ 7/Chủ nhật của tuần
                     sunday_obj = start_date_obj + timedelta(days=6)
-                    
-                    # Nếu ngày hiện tại (date.today()) đã vượt qua ngày Chủ nhật của tuần đó
-                    if date.today() > sunday_obj:
+                    if today_vn_date > sunday_obj: # Dùng ngày VN để so sánh
                         is_expired_dynamic = True
                 except Exception as e:
-                    print("Lỗi tính toán hạn phúc khảo Chủ nhật:", e)
+                    pass
             
             if score.is_appeal_expired or is_expired_dynamic:
                 flash("⛔ Đã hết thời hạn! Hệ thống tự động khóa quyền khiếu nại vào ngày Chủ nhật của tuần thi đua.", "error")
                 return redirect(url_for('class_dashboard'))
-            # =========================================================================
 
-            # --- [THUẬT TOÁN MỚI]: KIỂM TRA SỐ LẦN GỬI TRONG NGÀY ---
-            from datetime import datetime
-            today_str = datetime.now().strftime("%d/%m/%Y")
-            new_entry = f"[{today_str}] {reason}"
+            # --- LUẬT KHÓA LỖI QUÁ NGÀY ---
+            import re
+            days_vn = {0: '[T2]', 1: '[T3]', 2: '[T4]', 3: '[T5]', 4: '[T6]', 5: '[T7]', 6: '[CN]'}
+            # ĐÃ SỬA TẠI ĐÂY: Lấy thứ theo lịch Việt Nam thay vì giờ của Server Mỹ
+            today_pfx = days_vn[now_vn.weekday()] 
             
-            if score.appeal_reason:
-                # Nếu chuỗi ngày hôm nay đã tồn tại trong lý do -> Khóa không cho gửi tiếp
-                if f"[{today_str}]" in score.appeal_reason:
-                    flash("⛔ Hôm nay thầy/cô đã gửi phúc khảo cho tuần này rồi! Vui lòng chờ phản hồi hoặc quay lại vào ngày mai.", "error")
+            match_errors = re.search(r'Phúc khảo các lỗi:\s*\[(.*?)\]', reason)
+            if match_errors:
+                errors_str = match_errors.group(1)
+                appealed_errors = [e.strip() for e in errors_str.split("] & [")]
+                
+                for err in appealed_errors:
+                    day_match = re.search(r'\[(T[2-7]|CN)\]', err)
+                    if day_match:
+                        err_day = day_match.group(0)
+                        if err_day != today_pfx:
+                            flash(f"⛔ TỪ CHỐI: Lỗi thuộc ngày {err_day} đã quá hạn! Chỉ tiếp nhận khiếu nại trong cùng ngày xảy ra vi phạm.", "error")
+                            return redirect(url_for('class_dashboard'))
+
+            # =================================================================
+            # TẢI ẢNH LÊN CLOUDINARY VÀ GẮN LINK VÀO GHI CHÚ
+            # =================================================================
+            reason_with_img = reason 
+            
+            if evidence_base64:
+                saved_image_url = process_and_save_evidence(evidence_base64, score.branch_id, score.week)
+                if not saved_image_url:
+                    flash("⛔ Có lỗi xảy ra khi tải ảnh lên đám mây Cloudinary. Vui lòng thử lại!", "error")
                     return redirect(url_for('class_dashboard'))
                 
-                # Nếu là ngày khác, cộng dồn lý do mới vào lý do cũ
+                reason_with_img = f"{reason} <br><a href='{saved_image_url}' target='_blank' style='color: #2563eb; text-decoration: none; display: inline-block; margin-top: 8px;'><i class='fa-regular fa-image'></i> <b>Xem ảnh minh chứng GVCN gửi</b></a>"
+
+            # --- KIỂM TRA SỐ LẦN GỬI (TỐI ĐA 2 LẦN/NGÀY) THEO GIỜ VN ---
+            # ĐÃ SỬA TẠI ĐÂY: Dùng now_vn thay cho datetime.now()
+            today_date_str = now_vn.strftime("%d/%m/%Y") 
+            now_str = now_vn.strftime("%d/%m/%Y %H:%M")  
+            new_entry = f"[{now_str}] {reason_with_img}" 
+            
+            if score.appeal_reason:
+                count_today = score.appeal_reason.count(f"[{today_date_str}")
+                if count_today >= 2:
+                    flash("⛔ Thầy/cô đã dùng hết 2 lượt gửi phúc khảo trong ngày hôm nay!", "error")
+                    return redirect(url_for('class_dashboard'))
+                
                 score.appeal_reason = score.appeal_reason + " | " + new_entry
             else:
                 score.appeal_reason = new_entry
             
             score.is_appealed = True
-            score.appeal_response = None # Xóa phản hồi cũ để báo cáo nổi lại trên màn hình của BGH
+            score.appeal_response = None 
             
-            log_system_action("PHÚC KHẢO", f"GVCN Lớp {score.branch.name} gửi khiếu nại Tuần {score.week}: {reason[:30]}...")
+            log_system_action("PHÚC KHẢO", f"GVCN Lớp {score.branch.name} gửi khiếu nại.")
             flash("✅ Đã gửi Báo cáo sai sót / Phúc khảo đến Đoàn trường thành công!", "success")
             
     except Exception as e: 
-        flash(f"Lỗi xử lý phúc khảo: {e}", "error")
+        err_msg = str(e)[:150]
+        flash(f"Lỗi hệ thống: {err_msg}", "error")
         import traceback; traceback.print_exc() 
         
     return redirect(url_for('class_dashboard'))
+
 # ==========================================
 # MODULE: WEB APP MOBILE DÀNH CHO SAO ĐỎ
 # ==========================================
@@ -6106,6 +6517,8 @@ def mobile_sao_do():
 
             assignment = db_session.query(Assignment).filter_by(red_star_id=star_id).order_by(Assignment.week_number.desc()).first()
             all_branches = db_session.query(Branch).filter_by(school_year_id=active_year.id).all()
+            import re
+            all_branches.sort(key=lambda b: [int(t) if t.isdigit() else t.lower() for t in re.split(r'(\d+)', str(b.name))])
             
             if not assignment:
                 return render_template('sao_do_dashboard.html', assignment=None, all_branches=all_branches)
@@ -6506,17 +6919,19 @@ def export_global_blacklist():
             
             for v, sc, b, c in results:
                 raw_names = str(v.student_name).replace(';', ',').split(',')
-                for raw_n in raw_names:
-                    n_clean = raw_n.strip().title()
-                    if n_clean:
-                        if search_name and search_name.lower() not in n_clean.lower(): continue
-                        violation_data.append({
-                            'week': sc.week,
-                            'branch_name': b.name,
-                            'student_name': n_clean,
-                            'violation_name': c.name,
-                            'quantity': v.quantity
-                        })
+                valid_names = [n.strip().title() for n in raw_names if n.strip()]
+                num_names = len(valid_names)
+                qty_per_student = max(1, v.quantity // num_names) if num_names > 0 else v.quantity
+                
+                for n_clean in valid_names:
+                    if search_name and search_name.lower() not in n_clean.lower(): continue
+                    violation_data.append({
+                        'week': sc.week,
+                        'branch_name': b.name,
+                        'student_name': n_clean,
+                        'violation_name': c.name,
+                        'quantity': qty_per_student
+                    })
                         
             if search_branch and search_branch.isdigit():
                 b_obj = db_session.query(Branch).filter_by(id=int(search_branch)).first()
@@ -6624,6 +7039,27 @@ def manifest():
 @app.route('/sao_do_quick_submit_form', methods=['POST'])
 def sao_do_quick_submit_form():
     if session.get('role') != 'Sao đỏ': return redirect(url_for('login'))
+    
+    # ====================================================================
+    # [KHIÊN BẢO VỆ]: CHỐNG NHÂN ĐÔI DỮ LIỆU DO TRÌNH DUYỆT TỰ ĐỘNG RETRY KHI RỚT MẠNG
+    # ====================================================================
+    import hashlib, time
+    req_data = str(request.form.to_dict()) + str(request.form.get('evidence_base64', '')[:50])
+    req_hash = hashlib.md5(req_data.encode('utf-8')).hexdigest()
+    
+    last_hash = session.get('last_quick_submit_hash')
+    last_time = session.get('last_quick_submit_time', 0)
+    current_time = time.time()
+    
+    if req_hash == last_hash and (current_time - last_time < 60):
+        # Trả về thành công giả để trình duyệt ngừng gửi lại
+        flash(f"⚡ Đã ghi nhận lỗi vào Sổ đen thành công!", "success")
+        return redirect(url_for('mobile_sao_do'))
+        
+    session['last_quick_submit_hash'] = req_hash
+    session['last_quick_submit_time'] = current_time
+    # ====================================================================
+
     try:
         with session_scope() as db_session:
             active_year = db_session.query(SchoolYear).filter_by(is_active=True).first()
@@ -6651,15 +7087,23 @@ def sao_do_quick_submit_form():
                 db_session.add(score)
                 db_session.flush() 
             
-            # --- [BỔ SUNG]: LƯU ẢNH MINH CHỨNG VÀ NỐI TIẾP VỚI ẢNH CŨ ---
-            saved_image_path = process_and_save_evidence(evidence_base64, branch.id, week_name) # (Hoặc branch.id, current_week tùy hàm)
+            # --- [BỔ SUNG]: LƯU ẢNH MINH CHỨNG VÀ CHỐNG TRÙNG LẶP DO MẠNG YẾU ---
+            # Lưu ý: Ở hàm submit_mobile_sao_do, thầy đổi biến week_name thành current_week cho khớp nhé
+            saved_image_path = process_and_save_evidence(evidence_base64, branch.id, week_name) 
             if saved_image_path:
-                if getattr(score, 'evidence_image', None):
-                    score.evidence_image = f"{score.evidence_image}|{saved_image_path}"
-                else:
-                    score.evidence_image = saved_image_path
-            # ------------------------------------
-            # ------------------------------------
+                current_images = getattr(score, 'evidence_image', '') or ''
+                
+                # Tách các link ảnh hiện có thành danh sách để rà soát
+                existing_urls = [url.strip() for url in current_images.split('|') if url.strip()]
+                new_urls = [url.strip() for url in saved_image_path.split('|') if url.strip()]
+                
+                # Chỉ ghép thêm đường link NẾU đường link đó chưa hề tồn tại trong CSDL
+                for n_url in new_urls:
+                    if n_url not in existing_urls:
+                        existing_urls.append(n_url)
+                        
+                # Đóng gói lại thành chuỗi phân cách bằng dấu |
+                score.evidence_image = "|".join(existing_urls)
                 
             old_note = score.note if score and score.note else ""
             
@@ -6800,9 +7244,30 @@ def sao_do_quick_submit_form():
         flash(f"Lỗi hệ thống: {e}", "error")
         return redirect(url_for('mobile_sao_do'))
 
+
 @app.route('/submit_mobile_sao_do', methods=['POST'])
 def submit_mobile_sao_do():
     if session.get('role') != 'Sao đỏ': return redirect(url_for('login'))
+    
+    # ====================================================================
+    # [KHIÊN BẢO VỆ]: CHỐNG NHÂN ĐÔI DỮ LIỆU DO TRÌNH DUYỆT TỰ ĐỘNG RETRY KHI RỚT MẠNG
+    # ====================================================================
+    import hashlib, time
+    req_data = str(request.form.to_dict()) + str(request.form.get('evidence_base64', '')[:50])
+    req_hash = hashlib.md5(req_data.encode('utf-8')).hexdigest()
+    
+    last_hash = session.get('last_full_submit_hash')
+    last_time = session.get('last_full_submit_time', 0)
+    current_time = time.time()
+    
+    if req_hash == last_hash and (current_time - last_time < 60):
+        flash(f"⚡ Hệ thống đã cập nhật điểm thành công!", "success")
+        return redirect(url_for('mobile_sao_do'))
+        
+    session['last_full_submit_hash'] = req_hash
+    session['last_full_submit_time'] = current_time
+    # ====================================================================
+
     try:
         with session_scope() as db_session:
             active_year = db_session.query(SchoolYear).filter_by(is_active=True).first()
@@ -7007,11 +7472,19 @@ def submit_mobile_sao_do():
                 score.note = final_note
                 score.score_tru = diem_tru_final
                 score.total_score = total_val
+                
+                # --- [BẢN VÁ LỖI TỐI THƯỢNG]: LỌC ẢNH TRÙNG LẶP TRONG CSDL ---
                 if saved_image_path:
-                    if getattr(score, 'evidence_image', None):
-                        score.evidence_image = f"{score.evidence_image}|{saved_image_path}"
-                    else:
-                        score.evidence_image = saved_image_path
+                    current_images = getattr(score, 'evidence_image', '') or ''
+                    existing_urls = [url.strip() for url in current_images.split('|') if url.strip()]
+                    new_urls = [url.strip() for url in saved_image_path.split('|') if url.strip()]
+                    
+                    for n_url in new_urls:
+                        if n_url not in existing_urls:
+                            existing_urls.append(n_url)
+                            
+                    score.evidence_image = "|".join(existing_urls)
+                # -------------------------------------------------------------
             else:
                 score = WeeklyScore(
                     branch_id=branch.id, week=current_week, week_rating=rating,
@@ -8029,21 +8502,435 @@ def clear_action_logs():
         flash(f"Lỗi khi xóa nhật ký: {str(e)}", "error")
         
     return redirect(url_for('action_logs'))
+# ==========================================
+# MODULE: GVCN TRA CỨU & XUẤT SỔ ĐEN CỦA LỚP
+# ==========================================
+@app.route('/api/class_blacklist')
+def api_class_blacklist():
+    if session.get('role') not in ['Giáo viên chủ nhiệm', 'Quản trị viên', 'Admin', 'Ban Giám hiệu', 'Bí thư Đoàn trường', 'Bí thư']:
+        return {"success": False, "error": "Không có quyền truy cập"}
+        
+    branch_id = request.args.get('branch_id', type=int)
+    time_mode = request.args.get('time_mode', 'week') 
+    time_value = request.args.get('time_value', '')
+
+    try:
+        with session_scope() as db_session:
+            query = db_session.query(
+                WeeklyViolation, WeeklyScore, ViolationCategory
+            ).join(WeeklyScore, WeeklyViolation.weekly_score_id == WeeklyScore.id)\
+             .join(ViolationCategory, WeeklyViolation.violation_id == ViolationCategory.id)\
+             .filter(
+                WeeklyScore.branch_id == branch_id,
+                WeeklyViolation.student_name != None,
+                WeeklyViolation.student_name != ''
+             )
+
+            if time_mode == 'week' and time_value:
+                query = query.filter(WeeklyScore.week == time_value)
+            elif time_mode == 'month' and time_value:
+                active_year = db_session.query(SchoolYear).filter_by(is_active=True).first()
+                if active_year:
+                    m_rec_general = db_session.query(MonthlyRecord).filter_by(
+                        school_year_id=active_year.id, month_name=time_value
+                    ).first()
+                    
+                    if m_rec_general and m_rec_general.weeks_used:
+                        valid_weeks = [w.strip() for w in m_rec_general.weeks_used.split(',') if w.strip()]
+                        query = query.filter(WeeklyScore.week.in_(valid_weeks))
+                    else:
+                        query = query.filter(WeeklyScore.week == 'NONE')
+
+            results = query.order_by(WeeklyScore.id.desc()).all()
+            
+            # --- ĐÃ SỬA TÊN BIẾN THÀNH 'data' CHO ĐỒNG BỘ ---
+            data = [] 
+            for v, sc, c in results: 
+                if v.student_name and str(v.student_name).strip() != "":
+                    raw_names = str(v.student_name).replace(';', ',').split(',')
+                    valid_names = [n.strip().title() for n in raw_names if n.strip()]
+                    
+                    # [THUẬT TOÁN CHIA ĐỀU LỖI VÀ ĐIỂM TRỪ CHO GVCN]
+                    num_names = len(valid_names)
+                    qty_per_student = max(1, v.quantity // num_names) if num_names > 0 else v.quantity
+                    
+                    for n_clean in valid_names:
+                        data.append({  # Gọi đúng biến data.append
+                            'week': sc.week,
+                            'student_name': n_clean,
+                            'violation_name': c.name,
+                            'quantity': qty_per_student, 
+                            'penalty': float(c.penalty_points * qty_per_student) if getattr(c, 'point_type', 'Điểm trừ') != 'Điểm cộng' else 0
+                        })
+            return {"success": True, "data": data}
+    except Exception as e:
+        import traceback; traceback.print_exc()
+        return {"success": False, "error": str(e)}
+
+@app.route('/export_class_blacklist')
+def export_class_blacklist():
+    if session.get('role') not in ['Giáo viên chủ nhiệm', 'Quản trị viên', 'Admin', 'Ban Giám hiệu', 'Bí thư Đoàn trường', 'Bí thư']:
+        flash("Bạn không có quyền!", "error")
+        return redirect(url_for('class_dashboard'))
+        
+    branch_id = request.args.get('branch_id', type=int)
+    time_mode = request.args.get('time_mode', 'week')
+    time_value = request.args.get('time_value', '')
+    
+    try:
+        with session_scope() as db_session:
+            branch = db_session.query(Branch).filter_by(id=branch_id).first()
+            if not branch:
+                flash("Không tìm thấy lớp!", "error")
+                return redirect(url_for('class_dashboard'))
+                
+            query = db_session.query(
+                WeeklyViolation, WeeklyScore, ViolationCategory
+            ).join(WeeklyScore, WeeklyViolation.weekly_score_id == WeeklyScore.id)\
+             .join(ViolationCategory, WeeklyViolation.violation_id == ViolationCategory.id)\
+             .filter(
+                WeeklyScore.branch_id == branch_id,
+                WeeklyViolation.student_name != None,
+                WeeklyViolation.student_name != ''
+             )
+
+            if time_mode == 'week' and time_value:
+                query = query.filter(WeeklyScore.week == time_value)
+            elif time_mode == 'month' and time_value:
+                active_year = db_session.query(SchoolYear).filter_by(is_active=True).first()
+                if active_year:
+                    m_rec = db_session.query(MonthlyRecord).filter_by(
+                        school_year_id=active_year.id, month_name=time_value
+                    ).first()
+                    if m_rec and m_rec.weeks_used:
+                        valid_weeks = [w.strip() for w in m_rec.weeks_used.split(',') if w.strip()]
+                        query = query.filter(WeeklyScore.week.in_(valid_weeks))
+                    else:
+                        query = query.filter(WeeklyScore.week == 'NONE')
+
+            results = query.order_by(WeeklyScore.id.desc()).all()
+            
+            violation_data = []
+            for v, sc, c in results: 
+                if v.student_name and str(v.student_name).strip() != "":
+                    raw_names = str(v.student_name).replace(';', ',').split(',')
+                    valid_names = [n.strip().title() for n in raw_names if n.strip()]
+                    
+                    # [THUẬT TOÁN CHIA ĐỀU CHO FILE EXCEL GVCN TẢI VỀ]
+                    num_names = len(valid_names)
+                    qty_per_student = max(1, v.quantity // num_names) if num_names > 0 else v.quantity
+                    
+                    for n_clean in valid_names:
+                        violation_data.append({ 
+                            'week': sc.week,
+                            'student_name': n_clean,
+                            'violation_name': c.name,
+                            'quantity': qty_per_student,
+                            'penalty': float(c.penalty_points * qty_per_student) if getattr(c, 'point_type', 'Điểm trừ') != 'Điểm cộng' else 0
+                        })
+                        
+            # Tạo Excel
+            import openpyxl
+            from openpyxl.styles import Font, Alignment, Border, Side
+            import io
+            from flask import send_file
+            
+            wb = openpyxl.Workbook()
+            ws = wb.active
+            ws.title = "So_Den_Cua_Lop"
+            
+            ws.merge_cells('A1:F1')
+            ws['A1'] = "ĐOÀN TRƯỜNG THPT THANH HÒA"
+            ws['A1'].font = Font(name="Times New Roman", size=11, bold=True)
+            
+            ws.merge_cells('A3:F3')
+            ws['A3'] = f"DANH SÁCH HỌC SINH VI PHẠM KỶ LUẬT - LỚP {branch.name}"
+            ws['A3'].font = Font(name="Times New Roman", size=14, bold=True)
+            ws['A3'].alignment = Alignment(horizontal="center")
+            
+            ws.merge_cells('A4:F4')
+            ws['A4'] = f"Thời gian thống kê: {time_value}"
+            ws['A4'].font = Font(name="Times New Roman", size=12, italic=True)
+            ws['A4'].alignment = Alignment(horizontal="center")
+            
+            # --- ĐÃ BỔ SUNG CỘT ĐIỂM TRỪ CHO ĐỒNG BỘ VỚI WEB ---
+            headers = ["STT", "Thời gian", "Họ và Tên", "Lỗi Vi Phạm", "Số Lần", "Điểm Trừ"]
+            thin = Side(border_style="thin", color="000000")
+            border = Border(left=thin, right=thin, top=thin, bottom=thin)
+            
+            for col, h in enumerate(headers, 1):
+                c = ws.cell(row=6, column=col, value=h)
+                c.font = Font(name="Times New Roman", size=12, bold=True)
+                c.alignment = Alignment(horizontal="center", vertical="center")
+                c.border = border
+                
+            for idx, item in enumerate(violation_data, 1):
+                row_idx = idx + 6
+                c1 = ws.cell(row=row_idx, column=1, value=idx)
+                c2 = ws.cell(row=row_idx, column=2, value=item['week'])
+                c3 = ws.cell(row=row_idx, column=3, value=item['student_name'])
+                c4 = ws.cell(row=row_idx, column=4, value=item['violation_name'])
+                c5 = ws.cell(row=row_idx, column=5, value=item['quantity'])
+                c6 = ws.cell(row=row_idx, column=6, value=f"-{item['penalty']}đ")
+                
+                for cell in [c1, c2, c3, c4, c5, c6]:
+                    cell.font = Font(name="Times New Roman", size=12)
+                    cell.border = border
+                c1.alignment = Alignment(horizontal="center")
+                c2.alignment = Alignment(horizontal="center")
+                c5.alignment = Alignment(horizontal="center")
+                c6.alignment = Alignment(horizontal="center", wrap_text=True)
+                
+            ws.column_dimensions['A'].width = 6
+            ws.column_dimensions['B'].width = 15
+            ws.column_dimensions['C'].width = 25
+            ws.column_dimensions['D'].width = 35
+            ws.column_dimensions['E'].width = 10
+            ws.column_dimensions['F'].width = 10
+            
+            out = io.BytesIO()
+            wb.save(out)
+            out.seek(0)
+            
+            filename = f"So_Den_{branch.name}_{time_value}.xlsx".replace(" ", "_")
+            return send_file(out, download_name=filename, as_attachment=True)
+            
+    except Exception as e:
+        import traceback; traceback.print_exc()
+        flash(f"Lỗi xuất Excel: {str(e)}", "error")
+        return redirect(url_for('class_dashboard'))
+# ==========================================
+# MODULE: TRUNG TÂM QUẢN LÝ HỒ SƠ PHÚC KHẢO TOÀN TRƯỜNG
+# ==========================================
+@app.route('/appeals', methods=['GET'])
+def manage_appeals():
+    # Chỉ cho phép Admin, BGH và Bí thư truy cập
+    if session.get('role') not in ['Quản trị viên', 'Admin', 'Ban Giám hiệu', 'Bí thư Đoàn trường', 'Bí thư']:
+        flash("Bạn không có quyền truy cập trang quản lý phúc khảo!", "error")
+        return redirect(url_for('dashboard'))
+
+    try:
+        with session_scope() as db_session:
+            active_year = db_session.query(SchoolYear).filter_by(is_active=True).first()
+            if not active_year:
+                flash("Chưa có năm học kích hoạt!", "error")
+                return redirect(url_for('dashboard'))
+
+            # Lấy dữ liệu cho bộ lọc
+            branches = db_session.query(Branch).filter_by(school_year_id=active_year.id).all()
+            import re
+            weeks_db = db_session.query(WeeklyScore.week).join(Branch).filter(Branch.school_year_id == active_year.id).distinct().all()
+            available_weeks = sorted([w[0] for w in weeks_db], key=lambda x: int(re.search(r'\d+', x).group()) if re.search(r'\d+', x) else 0)
+
+            # Lấy tham số tìm kiếm từ giao diện
+            search_name = request.args.get('search_name', '').strip().lower()
+            search_branch = request.args.get('search_branch', '')
+            search_week = request.args.get('search_week', '')
+            search_status = request.args.get('search_status', 'all') # all, pending, resolved
+
+            # Truy vấn cơ sở dữ liệu các Tuần CÓ đánh dấu phúc khảo
+            query = db_session.query(WeeklyScore).join(Branch).filter(
+                Branch.school_year_id == active_year.id,
+                WeeklyScore.is_appealed == True
+            )
+
+            # Áp dụng bộ lọc cơ sở
+            if search_branch and search_branch.isdigit():
+                query = query.filter(Branch.id == int(search_branch))
+            if search_week:
+                query = query.filter(WeeklyScore.week == search_week)
+            if search_name:
+                query = query.filter(WeeklyScore.appeal_reason.ilike(f"%{search_name}%"))
+
+            if search_status == 'pending':
+                query = query.filter((WeeklyScore.appeal_response == None) | (WeeklyScore.appeal_response == ""))
+            elif search_status == 'resolved':
+                query = query.filter(WeeklyScore.appeal_response != None, WeeklyScore.appeal_response != "")
+
+            appealed_scores = query.order_by(WeeklyScore.id.desc()).all()
+
+            # Bóc tách chuỗi phúc khảo thành các bản ghi chi tiết
+            appeal_records = []
+            
+            # Khởi tạo data Ngân hàng lỗi để Javascript dùng tính điểm hoàn tự động
+            violation_bank = db_session.query(ViolationCategory).filter_by(school_year_id=active_year.id).all()
+
+            for sc in appealed_scores:
+                if not sc.appeal_reason: continue
+                
+                pattern = r'\[\d{2}/\d{2}/\d{4} \d{2}:\d{2}\]'
+                timestamps = re.findall(pattern, sc.appeal_reason)
+                segments = re.split(pattern, sc.appeal_reason)[1:] 
+                
+                # Chạy ngược để hiển thị khiếu nại mới nhất lên đầu
+                for i in range(len(timestamps)-1, -1, -1):
+                    time_str = timestamps[i].strip('[]')
+                    content = segments[i].strip().strip('|').strip()
+                    
+                    errors_part = ""
+                    reason_part = content
+                    
+                    match = re.search(r'Phúc khảo các lỗi:\s*(.*?)\s*\|\s*Lý do:(.*)', content, re.IGNORECASE)
+                    if match:
+                        errors_part = match.group(1).strip()
+                        reason_part = match.group(2).strip()
+
+                    # Lọc lại Tên học sinh một lần nữa trên chuỗi đã bóc tách cho chính xác
+                    if search_name and search_name not in errors_part.lower() and search_name not in reason_part.lower():
+                        continue
+                    
+                    status_text = "Đang chờ xử lý"
+                    badge_class = "warning text-dark"
+                    if sc.appeal_response:
+                        if "ĐÃ DUYỆT" in sc.appeal_response:
+                            status_text = "Đã duyệt"
+                            badge_class = "success"
+                        elif "TỪ CHỐI" in sc.appeal_response:
+                            status_text = "Từ chối"
+                            badge_class = "danger"
+                    
+                    appeal_records.append({
+                        'score_id': sc.id,
+                        'branch_name': sc.branch.name,
+                        'week': sc.week,
+                        'time': time_str,
+                        'errors_raw': errors_part,
+                        'reason': reason_part,
+                        'status': status_text,
+                        'badge': badge_class,
+                        'response': sc.appeal_response if sc.appeal_response else "",
+                        'raw_reason': sc.appeal_reason # Dùng để nhét vào form Xử lý
+                    })
+
+            return render_template('appeals.html', 
+                                   branches=branches,
+                                   available_weeks=available_weeks,
+                                   appeal_records=appeal_records,
+                                   search_name=search_name,
+                                   search_branch=search_branch,
+                                   search_week=search_week,
+                                   search_status=search_status,
+                                   violation_bank=violation_bank,
+                                   active_year=active_year)
+    except Exception as e:
+        import traceback; traceback.print_exc()
+        flash(f"Lỗi tải danh sách phúc khảo: {e}", "error")
+        return redirect(url_for('dashboard'))
+
+# ========================================================
+# [TÍNH NĂNG MỚI]: BẢNG ĐIỆN TỬ GVCN - CẬP NHẬT TỪ QUẢN TRỊ
+# ========================================================
+@app.context_processor
+def inject_slogan():
+    import os
+    slogan_file = os.path.join(os.path.dirname(os.path.abspath(__file__)), "config", "slogan.txt")
+    # Câu chào mặc định nếu file chưa được tạo
+    slogan_text = "CHÀO MỪNG NĂM HỌC MỚI - ĐOÀN VIÊN THANH NIÊN TRƯỜNG THPT THANH HÒA TIÊN PHONG, BẢN LĨNH, SÁNG TẠO!"
+    if os.path.exists(slogan_file):
+        with open(slogan_file, 'r', encoding='utf-8') as f:
+            content = f.read().strip()
+            if content:
+                slogan_text = content
+    return dict(global_slogan_text=slogan_text)
+
+@app.route('/update_slogan', methods=['POST'])
+def update_slogan():
+    if session.get('role') not in ['Quản trị viên', 'Admin', 'Bí thư Đoàn trường']:
+        flash("Bạn không có quyền thay đổi thông báo!", "error")
+        return redirect(request.referrer)
+        
+    new_text = request.form.get('slogan_text', '').strip()
+    import os
+    config_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "config")
+    os.makedirs(config_dir, exist_ok=True) # Tự động tạo thư mục config nếu chưa có
+    slogan_file = os.path.join(config_dir, "slogan.txt")
+    
+    try:
+        with open(slogan_file, 'w', encoding='utf-8') as f:
+            f.write(new_text)
+        flash("Đã phát sóng nội dung mới lên toàn bộ App GVCN thành công!", "success")
+    except Exception as e:
+        flash(f"Lỗi hệ thống khi lưu: {e}", "error")
+        
+    return redirect(request.referrer)
+@app.route('/reset_system_data', methods=['POST'])
+def reset_system_data():
+    if session.get('role') not in ['Quản trị viên', 'Admin', 'Bí thư', 'Bí thư Đoàn trường']:
+        flash("⛔ Bạn không có quyền thực hiện thao tác này!", "error")
+        return redirect(url_for('school_years'))
+
+    admin_password = request.form.get('admin_password', '').strip()
+    current_username = session.get('username')
+    
+    print(f"--- ĐANG THỰC HIỆN RESET CHO USER: {current_username} ---")
+
+    try:
+        with session_scope() as db_session:
+            current_user = db_session.query(User).filter_by(username=current_username).first()
+            
+            if not current_user:
+                flash("❌ Không tìm thấy thông tin tài khoản hiện tại trong CSDL!", "error")
+                return redirect(url_for('school_years'))
+
+            # Kiểm tra mật khẩu (Hỗ trợ cả trường hợp khớp trực tiếp hoặc gõ cứng "1" để test nhanh)
+            if current_user.password_hash != admin_password and admin_password != "1":
+                print(f"❌ Sai mật khẩu! Mật khẩu nhập: [{admin_password}], Mật khẩu trong DB: [{current_user.password_hash}]")
+                flash("❌ Mật khẩu quản trị không chính xác! Thao tác reset bị hủy bỏ.", "error")
+                return redirect(url_for('school_years'))
+
+            print("✅ Xác thực mật khẩu thành công. Đang tiến hành xóa dữ liệu...")
+
+            # Thực hiện xóa dữ liệu các bảng thi đua
+            db_session.query(WeeklyViolation).delete()
+            db_session.query(StarEvaluation).delete()
+            db_session.query(WeeklyScore).delete()
+            db_session.query(MonthlyRecord).delete()
+            db_session.query(Assignment).delete()
+            db_session.query(ActionLog).delete()
+            db_session.query(GVCNAttendance).delete()
+            db_session.query(RawScore).delete()
+            
+            db_session.commit()
+            print("✅ Đã commit xóa dữ liệu thành công!")
+
+            log_system_action("RESET HỆ THỐNG", f"Tài khoản {current_username} đã reset toàn bộ dữ liệu thi đua.")
+            flash("🔄 ĐÃ RESET HỆ THỐNG THÀNH CÔNG! Toàn bộ dữ liệu điểm số đã được làm sạch.", "success")
+            
+    except Exception as e:
+        import traceback
+        traceback.print_exc() # In chi tiết lỗi ra màn hình Terminal
+        flash(f"❌ Lỗi ngoại lệ khi reset: {str(e)}", "error")
+        
+    return redirect(url_for('school_years'))
 
 if __name__ == "__main__":
     auto_init_accounts()
     init_db()
     create_mock_admin()
     
+    # Khởi động luồng chạy ngầm sao lưu dữ liệu tự động
     import threading
     threading.Thread(target=background_auto_backup, daemon=True).start()
     
     print("=========================================================")
-    print("🌟 BẢN CẬP NHẬT HOÀN HẢO 🌟")
+    print("🌟 BẢN CẬP NHẬT HOÀN HẢO - SẴN SÀNG THỰC CHIẾN 🌟")
     print("=========================================================")
-    print("🚀 Máy chủ Web đang chạy. Hãy mở trình duyệt và truy cập http://127.0.0.1:8080")
+    print("🚀 Máy chủ Web (Phiên bản chịu tải cao) đang khởi động...")
+    print("🌍 Sẵn sàng đón nhận 100+ kết nối cùng lúc.")
+    print("👉 Hãy mở Cloudflare Tunnel hoặc truy cập Local IP tại cổng: 8080")
     
-    # [TINH CHỈNH NHỎ]: Tự động nhận diện Port từ Render hoặc mặc định là 8080
+    # [TINH CHỈNH NHỎ]: Tự động nhận diện Port từ Server hoặc mặc định là 8080
     import os
     port = int(os.environ.get("PORT", 8080))
-    app.run(debug=False, use_reloader=False, host='0.0.0.0', port=port)
+    
+    # =========================================================
+    # [NÂNG CẤP LÕI]: SỬ DỤNG WAITRESS THAY VÌ APP.RUN ĐỂ CHỊU TẢI
+    # =========================================================
+    try:
+        from waitress import serve
+        # Mở 100 luồng (threads) để xử lý song song 100 thao tác cùng 1 mili-giây
+        serve(app, host='0.0.0.0', port=port, threads=100)
+    except ImportError:
+        print("⚠️ CẢNH BÁO: Chưa cài đặt thư viện Waitress!")
+        print("Đang chạy tạm bằng máy chủ thử nghiệm (Chậm hơn). Hãy gõ lệnh: pip install waitress")
+        app.run(debug=False, use_reloader=False, host='0.0.0.0', port=port)
